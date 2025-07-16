@@ -28,9 +28,15 @@ document.addEventListener('DOMContentLoaded', function() {
                     const drawRows = [];
                     for (let i = 0; i < data.length; i++) {
                         const row = data[i];
-                        const winNumbers = (row['Winning Numbers'] || '').replace(/®/g, '').toLowerCase().trim();
-                        if (row.Date && winNumbers.includes('powerball numbers')) {
-                            const mainNumbers = (row['Winning Numbers'] || '').replace(/.*Numbers\s*/i, '').replace(/®/g, '').trim();
+                        let winNumbers = (row['Winning Numbers'] || '').replace(/®/g, '').toLowerCase().trim();
+                        if (row.Date && (winNumbers.includes('powerball numbers') || winNumbers.match(/^(\d+\s*-\s*)+\d+$/))) {
+                            // --- Main Numbers ---
+                            let mainNumbers;
+                            if (winNumbers.includes('powerball numbers')) {
+                                mainNumbers = (row['Winning Numbers'] || '').replace(/.*Numbers\s*/i, '').replace(/®/g, '').trim();
+                            } else {
+                                mainNumbers = (row['Winning Numbers'] || '').replace(/®/g, '').trim();
+                            }
                             const mainArr = mainNumbers.split(' - ').map(x => x.trim()).filter(Boolean);
                             mainArr.forEach(num => {
                                 if (numberStats[num]) {
@@ -40,14 +46,32 @@ document.addEventListener('DOMContentLoaded', function() {
                             });
                             const powerball = row['Powerball'] || '';
                             const powerplay = row['PowerPlay'] || '';
+                            // --- Double Play ---
                             let doublePlayNumbers = '';
                             let doublePlayPowerball = '';
                             let doublePlayArr = [];
                             if (i + 1 < data.length) {
                                 const nextRow = data[i + 1];
-                                const nextWinNumbers = (nextRow['Winning Numbers'] || '').replace(/®/g, '').toLowerCase().trim();
-                                if (!nextRow.Date && nextWinNumbers.includes('double play numbers')) {
+                                let nextWinNumbers = (nextRow['Winning Numbers'] || '').replace(/®/g, '').toLowerCase().trim();
+                                if (nextWinNumbers.includes('double play numbers')) {
+                                    // Labeled Double Play
                                     const dpNums = (nextRow['Winning Numbers'] || '').replace(/.*Numbers\s*/i, '').replace(/®/g, '').trim();
+                                    doublePlayArr = dpNums.split(' - ').map(x => x.trim()).filter(Boolean);
+                                    doublePlayArr.forEach(num => {
+                                        if (numberStats[num]) {
+                                            numberStats[num].count++;
+                                            numberStats[num].dates.push(row.Date + ' (Double Play)');
+                                        }
+                                    });
+                                    const numsArr = dpNums.split(' - ');
+                                    if (numsArr.length > 0) {
+                                        doublePlayPowerball = nextRow['Powerball'] || numsArr[numsArr.length - 1];
+                                        doublePlayNumbers = numsArr.slice(0, numsArr.length - 1).join(' - ');
+                                    }
+                                    i++; // Skip the Double Play row in the next iteration
+                                } else if (nextWinNumbers.match(/^(\d+\s*-\s*)+\d+$/)) {
+                                    // Unlabeled Double Play (just numbers)
+                                    const dpNums = (nextRow['Winning Numbers'] || '').replace(/®/g, '').trim();
                                     doublePlayArr = dpNums.split(' - ').map(x => x.trim()).filter(Boolean);
                                     doublePlayArr.forEach(num => {
                                         if (numberStats[num]) {
