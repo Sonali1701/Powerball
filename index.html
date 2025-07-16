@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PowerBall Results</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container main-flex">
+        <div class="left-col">
+            <div class="legend">Click a ball to see stats. Use the search box to filter draws by date or number.</div>
+            <div class="ball-panel" id="ball-panel"></div>
+            <button id="check-combo-btn" style="margin: 18px 0 0 0; width: 100%; font-size: 1.1em; padding: 10px 0; border-radius: 8px; border: none; background: #3498db; color: #fff; cursor: pointer;">Check My Numbers</button>
+        </div>
+        <div class="center-col">
+            <input type="text" id="search-box" placeholder="Search by date or number..." autocomplete="off" />
+            <div id="combo-results"></div>
+            <!-- Removed the main results table for a cleaner layout -->
+        </div>
+        <div class="right-col">
+            <div id="number-info"></div>
+        </div>
+    </div>
+    <footer>
+        <b>How to use:</b> Click any ball to see how often it appeared and when. Use the search box to filter draws by date or number. Scroll the table for full history.<br>
+        Data updates automatically from CSV file.
+    </footer>
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+    <script src="script.js"></script>
+</body>
+</html> 
