@@ -434,6 +434,14 @@ tr:hover {
   color: #222 !important;
   border: 2px solid #888 !important;
   box-shadow: 0 2px 6px rgba(0,0,0,0.07);
+  width: 24px !important;
+  height: 24px !important;
+  font-size: 1em !important;
+  margin: 2px !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
 }
 
 .ball.selected {
@@ -521,7 +529,9 @@ tr:hover {
   width: 220px;
   background: #f8f8f8;
   border-right: 1px solid #eee;
-}
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+} 
 
 /* Layout: only two sections, left and center */
 #main-content {

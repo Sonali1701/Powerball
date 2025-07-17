@@ -173,8 +173,8 @@ document.addEventListener('DOMContentLoaded', function() {
                         const resultsDiv = document.getElementById('combo-results');
                         resultsDiv.innerHTML = '';
 
-                        if (selectedBalls.size < 2) {
-                            resultsDiv.innerHTML = '<div style="color:#e74c3c; margin:12px 0;">Select at least 2 numbers to check combinations.</div>';
+                        if (selectedBalls.size < 1) {
+                            resultsDiv.innerHTML = '<div style="color:#e74c3c; margin:12px 0;">Select at least 1 number to check combinations.</div>';
                             return;
                         }
                         // Efficient: For each draw, count how many selected numbers appear
