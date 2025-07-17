@@ -427,3 +427,46 @@ tr:hover {
         font-size: 0.98em;
     }
 } 
+
+/* --- Ball styling: all white, visible border, dark text --- */
+.ball {
+  background: #fff !important;
+  color: #222 !important;
+  border: 2px solid #888 !important;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.07);
+}
+
+.ball.selected {
+  border: 2px solid #3498db !important;
+  box-shadow: 0 0 0 2px #3498db33;
+}
+
+/* --- Align numbers in results panel --- */
+.aligned-numbers {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.aligned-numbers .highlight-cell {
+  background: #ffe066;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-weight: bold;
+  color: #222;
+}
+
+.aligned-numbers .dash {
+  color: #888;
+  font-weight: bold;
+  margin: 0 2px;
+  user-select: none;
+}
+
+/* --- Table cell tweaks for better alignment --- */
+.draws-list {
+  width: 100%;
+  display: flex;
+  align-items: center;
+} 

@@ -129,8 +129,9 @@ document.addEventListener('DOMContentLoaded', function() {
                         const ball = document.createElement('span');
                         ball.className = 'ball';
                         ball.textContent = n;
-                        ball.style.background = getBallColor(n);
-                        ball.style.color = '#fff';
+                        ball.style.background = '#fff';
+                        ball.style.color = '#222';
+                        ball.style.border = '2px solid #888';
                         // Tooltip
                         const tooltip = document.createElement('span');
                         tooltip.className = 'tooltip';
@@ -187,31 +188,28 @@ document.addEventListener('DOMContentLoaded', function() {
                         drawRows.forEach(draw => {
                             // Main draw
                             const matchCount = draw.mainArr.filter(num => selectedBalls.has(Number(num))).length;
-                            if (matchCount >= 2) {
+                            if (matchCount >= 1) {
                                 if (!groups[matchCount]) groups[matchCount] = [];
                                 // Prepare highlighted main numbers
-                                const highlighted = draw.mainArr.map(num => {
-                                    if (selectedBalls.has(Number(num))) {
-                                        return `<span class='highlight-cell'>${num}</span>`;
-                                    } else {
-                                        return num;
-                                    }
-                                }).join(' ');
+                                const highlighted = draw.mainArr.map((num, idx) => {
+                                    let content = selectedBalls.has(Number(num)) ? `<span class='highlight-cell'>${num}</span>` : num;
+                                    // Add dash between numbers except after last
+                                    if (idx < draw.mainArr.length - 1) content += ' <span class="dash">-</span> ';
+                                    return content;
+                                }).join('');
                                 groups[matchCount].push({date: draw.date, numbers: highlighted, powerball: draw.powerball});
                             }
                             // Double Play draw
                             if (draw.doublePlayArr && draw.doublePlayArr.length > 0) {
                                 const matchCountDP = draw.doublePlayArr.filter(num => selectedBalls.has(Number(num))).length;
-                                if (matchCountDP >= 2) {
+                                if (matchCountDP >= 1) {
                                     if (!groupsDP[matchCountDP]) groupsDP[matchCountDP] = [];
                                     // Prepare highlighted double play numbers
-                                    const highlightedDP = draw.doublePlayArr.map(num => {
-                                        if (selectedBalls.has(Number(num))) {
-                                            return `<span class='highlight-cell'>${num}</span>`;
-                                        } else {
-                                            return num;
-                                        }
-                                    }).join(' ');
+                                    const highlightedDP = draw.doublePlayArr.map((num, idx) => {
+                                        let content = selectedBalls.has(Number(num)) ? `<span class='highlight-cell'>${num}</span>` : num;
+                                        if (idx < draw.doublePlayArr.length - 1) content += ' <span class="dash">-</span> ';
+                                        return content;
+                                    }).join('');
                                     groupsDP[matchCountDP].push({date: draw.date + ' (Double Play)', numbers: highlightedDP, powerball: draw.doublePlayPowerball});
                                 }
                             }
@@ -220,7 +218,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         const sortedCounts = Object.keys(groups).map(Number).sort((a,b) => b-a);
                         const sortedCountsDP = Object.keys(groupsDP).map(Number).sort((a,b) => b-a);
                         if (sortedCounts.length === 0 && sortedCountsDP.length === 0) {
-                            resultsDiv.innerHTML = '<div style="color:#e74c3c; margin:12px 0;">No draws found with 2 or more of your numbers in either draw.</div>';
+                            resultsDiv.innerHTML = '<div style="color:#e74c3c; margin:12px 0;">No draws found with your selected number(s) in either draw.</div>';
                             return;
                         }
                         // Render main draw results
@@ -236,7 +234,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 const drawsToShow = groups[count].slice(0, 20);
                                 drawsToShow.forEach(draw => {
                                     const tr = document.createElement('tr');
-                                    tr.innerHTML = `<td>${draw.date}</td><td><div class='draws-list'><div>${draw.numbers}</div></div></td>`;
+                                    tr.innerHTML = `<td>${draw.date}</td><td><div class='draws-list aligned-numbers'><div>${draw.numbers}</div></div></td>`;
                                     table.querySelector('tbody').appendChild(tr);
                                 });
                                 // If more than 20, add Show all/Show less button
@@ -256,7 +254,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                         table.querySelector('tbody').innerHTML = '';
                                         groups[count].forEach(draw => {
                                             const tr2 = document.createElement('tr');
-                                            tr2.innerHTML = `<td>${draw.date}</td><td><div class='draws-list'><div>${draw.numbers}</div></div></td>`;
+                                            tr2.innerHTML = `<td>${draw.date}</td><td><div class='draws-list aligned-numbers'><div>${draw.numbers}</div></div></td>`;
                                             table.querySelector('tbody').appendChild(tr2);
                                         });
                                         // Add Show less button
@@ -275,7 +273,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                             table.querySelector('tbody').innerHTML = '';
                                             drawsToShow.forEach(draw => {
                                                 const tr3 = document.createElement('tr');
-                                                tr3.innerHTML = `<td>${draw.date}</td><td><div class='draws-list'><div>${draw.numbers}</div></div></td>`;
+                                                tr3.innerHTML = `<td>${draw.date}</td><td><div class='draws-list aligned-numbers'><div>${draw.numbers}</div></div></td>`;
                                                 table.querySelector('tbody').appendChild(tr3);
                                             });
                                             table.querySelector('tbody').appendChild(tr);
@@ -305,7 +303,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 const drawsToShow = groupsDP[count].slice(0, 20);
                                 drawsToShow.forEach(draw => {
                                     const tr = document.createElement('tr');
-                                    tr.innerHTML = `<td>${draw.date}</td><td><div class='draws-list'><div>${draw.numbers}</div></div></td>`;
+                                    tr.innerHTML = `<td>${draw.date}</td><td><div class='draws-list aligned-numbers'><div>${draw.numbers}</div></div></td>`;
                                     table.querySelector('tbody').appendChild(tr);
                                 });
                                 // If more than 20, add Show all/Show less button
@@ -325,7 +323,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                         table.querySelector('tbody').innerHTML = '';
                                         groupsDP[count].forEach(draw => {
                                             const tr2 = document.createElement('tr');
-                                            tr2.innerHTML = `<td>${draw.date}</td><td><div class='draws-list'><div>${draw.numbers}</div></div></td>`;
+                                            tr2.innerHTML = `<td>${draw.date}</td><td><div class='draws-list aligned-numbers'><div>${draw.numbers}</div></div></td>`;
                                             table.querySelector('tbody').appendChild(tr2);
                                         });
                                         // Add Show less button
@@ -344,7 +342,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                             table.querySelector('tbody').innerHTML = '';
                                             drawsToShow.forEach(draw => {
                                                 const tr3 = document.createElement('tr');
-                                                tr3.innerHTML = `<td>${draw.date}</td><td><div class='draws-list'><div>${draw.numbers}</div></div></td>`;
+                                                tr3.innerHTML = `<td>${draw.date}</td><td><div class='draws-list aligned-numbers'><div>${draw.numbers}</div></div></td>`;
                                                 table.querySelector('tbody').appendChild(tr3);
                                             });
                                             table.querySelector('tbody').appendChild(tr);
