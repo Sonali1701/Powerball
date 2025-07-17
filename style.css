@@ -470,3 +470,72 @@ tr:hover {
   display: flex;
   align-items: center;
 } 
+
+.red-ball {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: #e74c3c;
+  color: #fff;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  font-weight: bold;
+  font-size: 1.1em;
+  margin: 0 2px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.10);
+}
+
+.plain-number {
+  color: #111;
+  font-size: 1.1em;
+  margin: 0 2px;
+  display: inline-block;
+  min-width: 24px;
+  text-align: center;
+}
+
+/* Make results area wider and allow wrapping */
+#combo-results {
+  max-width: 900px;
+  min-width: 500px;
+  width: 100%;
+  overflow-x: auto;
+} 
+
+/* Remove right stats panel styles if present */
+#number-info, .number-info, .hot, .cold, .big-count, .date-list, .toggle-dates {
+  display: none !important;
+}
+
+/* Ball panel: vertical scroll only, no horizontal scroll, taller area */
+#ball-panel {
+  height: calc(100vh - 60px) !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-content: flex-start !important;
+  max-width: none !important;
+  min-width: 180px;
+  width: 220px;
+  background: #f8f8f8;
+  border-right: 1px solid #eee;
+}
+
+/* Layout: only two sections, left and center */
+#main-content {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  width: 100vw;
+  min-height: 100vh;
+}
+
+#combo-results {
+  max-width: 900px;
+  min-width: 500px;
+  width: 100%;
+  overflow-x: auto;
+  margin-left: 32px;
+} 
