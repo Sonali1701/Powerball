@@ -183,7 +183,9 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                         // Efficient: For each draw, count how many selected numbers appear
                         const groups = {};
+                        const groupsDP = {};
                         drawRows.forEach(draw => {
+                            // Main draw
                             const matchCount = draw.mainArr.filter(num => selectedBalls.has(Number(num))).length;
                             if (matchCount >= 2) {
                                 if (!groups[matchCount]) groups[matchCount] = [];
@@ -197,79 +199,168 @@ document.addEventListener('DOMContentLoaded', function() {
                                 }).join(' ');
                                 groups[matchCount].push({date: draw.date, numbers: highlighted, powerball: draw.powerball});
                             }
+                            // Double Play draw
+                            if (draw.doublePlayArr && draw.doublePlayArr.length > 0) {
+                                const matchCountDP = draw.doublePlayArr.filter(num => selectedBalls.has(Number(num))).length;
+                                if (matchCountDP >= 2) {
+                                    if (!groupsDP[matchCountDP]) groupsDP[matchCountDP] = [];
+                                    // Prepare highlighted double play numbers
+                                    const highlightedDP = draw.doublePlayArr.map(num => {
+                                        if (selectedBalls.has(Number(num))) {
+                                            return `<span class='highlight-cell'>${num}</span>`;
+                                        } else {
+                                            return num;
+                                        }
+                                    }).join(' ');
+                                    groupsDP[matchCountDP].push({date: draw.date + ' (Double Play)', numbers: highlightedDP, powerball: draw.doublePlayPowerball});
+                                }
+                            }
                         });
                         // Sort groups by match count descending
                         const sortedCounts = Object.keys(groups).map(Number).sort((a,b) => b-a);
-                        if (sortedCounts.length === 0) {
-                            resultsDiv.innerHTML = '<div style="color:#e74c3c; margin:12px 0;">No draws found with 2 or more of your numbers.</div>';
+                        const sortedCountsDP = Object.keys(groupsDP).map(Number).sort((a,b) => b-a);
+                        if (sortedCounts.length === 0 && sortedCountsDP.length === 0) {
+                            resultsDiv.innerHTML = '<div style="color:#e74c3c; margin:12px 0;">No draws found with 2 or more of your numbers in either draw.</div>';
                             return;
                         }
-                        sortedCounts.forEach(count => {
-                            const section = document.createElement('div');
-                            section.style.margin = '18px 0';
-                            section.innerHTML = `<b style='font-size:1.15em;'>Draws with ${count} of your numbers</b> <span style='color:#888'>(Total: ${groups[count].length})</span>`;
-                            const table = document.createElement('table');
-                            table.style.marginTop = '8px';
-                            table.innerHTML = `<thead><tr><th>Date</th><th>Main Numbers</th></tr></thead><tbody></tbody>`;
-                            // Show only first 20 draws by default
-                            const drawsToShow = groups[count].slice(0, 20);
-                            drawsToShow.forEach(draw => {
-                                const tr = document.createElement('tr');
-                                tr.innerHTML = `<td>${draw.date}</td><td><div class='draws-list'><div>${draw.numbers}</div></div></td>`;
-                                table.querySelector('tbody').appendChild(tr);
-                            });
-                            // If more than 20, add Show all/Show less button
-                            if (groups[count].length > 20) {
-                                const tr = document.createElement('tr');
-                                const td = document.createElement('td');
-                                td.colSpan = 2;
-                                td.style.textAlign = 'center';
-                                td.style.padding = '12px 0';
-                                const showMore = document.createElement('span');
-                                showMore.textContent = `Show all (${groups[count].length})`;
-                                showMore.style.color = '#3498db';
-                                showMore.style.cursor = 'pointer';
-                                showMore.style.fontWeight = 'bold';
-                                showMore.onclick = function() {
-                                    // Show all draws
-                                    table.querySelector('tbody').innerHTML = '';
-                                    groups[count].forEach(draw => {
-                                        const tr2 = document.createElement('tr');
-                                        tr2.innerHTML = `<td>${draw.date}</td><td><div class='draws-list'><div>${draw.numbers}</div></div></td>`;
-                                        table.querySelector('tbody').appendChild(tr2);
-                                    });
-                                    // Add Show less button
-                                    const trLess = document.createElement('tr');
-                                    const tdLess = document.createElement('td');
-                                    tdLess.colSpan = 2;
-                                    tdLess.style.textAlign = 'center';
-                                    tdLess.style.padding = '12px 0';
-                                    const showLess = document.createElement('span');
-                                    showLess.textContent = 'Show less';
-                                    showLess.style.color = '#3498db';
-                                    showLess.style.cursor = 'pointer';
-                                    showLess.style.fontWeight = 'bold';
-                                    showLess.onclick = function() {
-                                        // Collapse back to first 20
+                        // Render main draw results
+                        if (sortedCounts.length > 0) {
+                            sortedCounts.forEach(count => {
+                                const section = document.createElement('div');
+                                section.style.margin = '18px 0';
+                                section.innerHTML = `<b style='font-size:1.15em;'>Main Draws with ${count} of your numbers</b> <span style='color:#888'>(Total: ${groups[count].length})</span>`;
+                                const table = document.createElement('table');
+                                table.style.marginTop = '8px';
+                                table.innerHTML = `<thead><tr><th>Date</th><th>Main Numbers</th></tr></thead><tbody></tbody>`;
+                                // Show only first 20 draws by default
+                                const drawsToShow = groups[count].slice(0, 20);
+                                drawsToShow.forEach(draw => {
+                                    const tr = document.createElement('tr');
+                                    tr.innerHTML = `<td>${draw.date}</td><td><div class='draws-list'><div>${draw.numbers}</div></div></td>`;
+                                    table.querySelector('tbody').appendChild(tr);
+                                });
+                                // If more than 20, add Show all/Show less button
+                                if (groups[count].length > 20) {
+                                    const tr = document.createElement('tr');
+                                    const td = document.createElement('td');
+                                    td.colSpan = 2;
+                                    td.style.textAlign = 'center';
+                                    td.style.padding = '12px 0';
+                                    const showMore = document.createElement('span');
+                                    showMore.textContent = `Show all (${groups[count].length})`;
+                                    showMore.style.color = '#3498db';
+                                    showMore.style.cursor = 'pointer';
+                                    showMore.style.fontWeight = 'bold';
+                                    showMore.onclick = function() {
+                                        // Show all draws
                                         table.querySelector('tbody').innerHTML = '';
-                                        drawsToShow.forEach(draw => {
-                                            const tr3 = document.createElement('tr');
-                                            tr3.innerHTML = `<td>${draw.date}</td><td><div class='draws-list'><div>${draw.numbers}</div></div></td>`;
-                                            table.querySelector('tbody').appendChild(tr3);
+                                        groups[count].forEach(draw => {
+                                            const tr2 = document.createElement('tr');
+                                            tr2.innerHTML = `<td>${draw.date}</td><td><div class='draws-list'><div>${draw.numbers}</div></div></td>`;
+                                            table.querySelector('tbody').appendChild(tr2);
                                         });
-                                        table.querySelector('tbody').appendChild(tr);
+                                        // Add Show less button
+                                        const trLess = document.createElement('tr');
+                                        const tdLess = document.createElement('td');
+                                        tdLess.colSpan = 2;
+                                        tdLess.style.textAlign = 'center';
+                                        tdLess.style.padding = '12px 0';
+                                        const showLess = document.createElement('span');
+                                        showLess.textContent = 'Show less';
+                                        showLess.style.color = '#3498db';
+                                        showLess.style.cursor = 'pointer';
+                                        showLess.style.fontWeight = 'bold';
+                                        showLess.onclick = function() {
+                                            // Collapse back to first 20
+                                            table.querySelector('tbody').innerHTML = '';
+                                            drawsToShow.forEach(draw => {
+                                                const tr3 = document.createElement('tr');
+                                                tr3.innerHTML = `<td>${draw.date}</td><td><div class='draws-list'><div>${draw.numbers}</div></div></td>`;
+                                                table.querySelector('tbody').appendChild(tr3);
+                                            });
+                                            table.querySelector('tbody').appendChild(tr);
+                                        };
+                                        tdLess.appendChild(showLess);
+                                        trLess.appendChild(tdLess);
+                                        table.querySelector('tbody').appendChild(trLess);
                                     };
-                                    tdLess.appendChild(showLess);
-                                    trLess.appendChild(tdLess);
-                                    table.querySelector('tbody').appendChild(trLess);
-                                };
-                                td.appendChild(showMore);
-                                tr.appendChild(td);
-                                table.querySelector('tbody').appendChild(tr);
-                            }
-                            section.appendChild(table);
-                            resultsDiv.appendChild(section);
-                        });
+                                    td.appendChild(showMore);
+                                    tr.appendChild(td);
+                                    table.querySelector('tbody').appendChild(tr);
+                                }
+                                section.appendChild(table);
+                                resultsDiv.appendChild(section);
+                            });
+                        }
+                        // Render double play results
+                        if (sortedCountsDP.length > 0) {
+                            sortedCountsDP.forEach(count => {
+                                const section = document.createElement('div');
+                                section.style.margin = '18px 0';
+                                section.innerHTML = `<b style='font-size:1.15em;'>Double Play Draws with ${count} of your numbers</b> <span style='color:#888'>(Total: ${groupsDP[count].length})</span>`;
+                                const table = document.createElement('table');
+                                table.style.marginTop = '8px';
+                                table.innerHTML = `<thead><tr><th>Date</th><th>Double Play Numbers</th></tr></thead><tbody></tbody>`;
+                                // Show only first 20 draws by default
+                                const drawsToShow = groupsDP[count].slice(0, 20);
+                                drawsToShow.forEach(draw => {
+                                    const tr = document.createElement('tr');
+                                    tr.innerHTML = `<td>${draw.date}</td><td><div class='draws-list'><div>${draw.numbers}</div></div></td>`;
+                                    table.querySelector('tbody').appendChild(tr);
+                                });
+                                // If more than 20, add Show all/Show less button
+                                if (groupsDP[count].length > 20) {
+                                    const tr = document.createElement('tr');
+                                    const td = document.createElement('td');
+                                    td.colSpan = 2;
+                                    td.style.textAlign = 'center';
+                                    td.style.padding = '12px 0';
+                                    const showMore = document.createElement('span');
+                                    showMore.textContent = `Show all (${groupsDP[count].length})`;
+                                    showMore.style.color = '#3498db';
+                                    showMore.style.cursor = 'pointer';
+                                    showMore.style.fontWeight = 'bold';
+                                    showMore.onclick = function() {
+                                        // Show all draws
+                                        table.querySelector('tbody').innerHTML = '';
+                                        groupsDP[count].forEach(draw => {
+                                            const tr2 = document.createElement('tr');
+                                            tr2.innerHTML = `<td>${draw.date}</td><td><div class='draws-list'><div>${draw.numbers}</div></div></td>`;
+                                            table.querySelector('tbody').appendChild(tr2);
+                                        });
+                                        // Add Show less button
+                                        const trLess = document.createElement('tr');
+                                        const tdLess = document.createElement('td');
+                                        tdLess.colSpan = 2;
+                                        tdLess.style.textAlign = 'center';
+                                        tdLess.style.padding = '12px 0';
+                                        const showLess = document.createElement('span');
+                                        showLess.textContent = 'Show less';
+                                        showLess.style.color = '#3498db';
+                                        showLess.style.cursor = 'pointer';
+                                        showLess.style.fontWeight = 'bold';
+                                        showLess.onclick = function() {
+                                            // Collapse back to first 20
+                                            table.querySelector('tbody').innerHTML = '';
+                                            drawsToShow.forEach(draw => {
+                                                const tr3 = document.createElement('tr');
+                                                tr3.innerHTML = `<td>${draw.date}</td><td><div class='draws-list'><div>${draw.numbers}</div></div></td>`;
+                                                table.querySelector('tbody').appendChild(tr3);
+                                            });
+                                            table.querySelector('tbody').appendChild(tr);
+                                        };
+                                        tdLess.appendChild(showLess);
+                                        trLess.appendChild(tdLess);
+                                        table.querySelector('tbody').appendChild(trLess);
+                                    };
+                                    td.appendChild(showMore);
+                                    tr.appendChild(td);
+                                    table.querySelector('tbody').appendChild(tr);
+                                }
+                                section.appendChild(table);
+                                resultsDiv.appendChild(section);
+                            });
+                        }
                         // After rendering results, scroll to them for user focus
                         setTimeout(() => {
                             if (resultsDiv && resultsDiv.children.length > 0) {
