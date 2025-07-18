@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PowerBall Random Generator</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header class="main-header">
+        <h1>PowerBall Random Generator</h1>
+        <p class="subtitle">Generate multiple random Powerball combinations instantly!</p>
+    </header>
+    <div class="container" style="max-width: 600px; margin: 40px auto; background: #fff; border-radius: 16px; box-shadow: 0 4px 24px rgba(44,62,80,0.08); padding: 32px 18px 32px 18px; text-align: center;">
+        <div class="generator-panel" id="generator-panel">
+            <h2>Generate Your Powerball Combinations</h2>
+            <div style="margin-bottom: 18px;">
+                <button class="multi-gen-btn" data-count="4">Generate 4</button>
+                <button class="multi-gen-btn" data-count="8">Generate 8</button>
+                <button class="multi-gen-btn" data-count="16">Generate 16</button>
+            </div>
+            <div id="generated-table" style="margin-top:18px;"></div>
+            <div id="csv-loading" style="margin-top:10px; color:#888; font-size:1.05em;"></div>
+            <div style="margin-top:18px; color:#888; font-size:1.05em;">Each combination: 5 unique white balls (1-69) and 1 red Powerball (1-26).</div>
+        </div>
+        <a href="index.html" style="display:inline-block; margin-top:32px; color:#3498db; font-weight:600; text-decoration:none;">&larr; Back to Analyzer</a>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+    <script>
+    let historicalCombos = [];
+    const csvLoading = document.getElementById('csv-loading');
+    // Load and parse the CSV file
+    csvLoading.textContent = 'Loading historical Powerball data...';
+    fetch('powerball.csv')
+        .then(response => response.text())
+        .then(rawCsv => {
+            // Clean the CSV: remove all quotes, trim spaces, standardize header
+            let lines = rawCsv.split('\n').map(line => line.replace(/"/g, '').trim());
+            if (lines[0].toLowerCase().includes('date') && lines[0].toLowerCase().includes('winning numbers')) {
+                lines[0] = 'Date,Winning Numbers,Powerball,PowerPlay';
+            }
+            lines = lines.map(line => line.split(',').map(f => f.trim()).join(','));
+            const cleanedCsv = lines.join('\n');
+            Papa.parse(cleanedCsv, {
+                header: true,
+                skipEmptyLines: true,
+                complete: function(results) {
+                    const data = results.data;
+                    // Extract all main draw combinations
+                    historicalCombos = [];
+                    for (let i = 0; i < data.length; i++) {
+                        const row = data[i];
+                        let winNumbers = (row['Winning Numbers'] || '').replace(/®/g, '').toLowerCase().trim();
+                        if (row.Date && (winNumbers.includes('powerball numbers') || winNumbers.match(/^(\d+\s*-\s*)+\d+$/))) {
+                            let mainNumbers;
+                            if (winNumbers.includes('powerball numbers')) {
+                                mainNumbers = (row['Winning Numbers'] || '').replace(/.*Numbers\s*/i, '').replace(/®/g, '').trim();
+                            } else {
+                                mainNumbers = (row['Winning Numbers'] || '').replace(/®/g, '').trim();
+                            }
+                            const mainArr = mainNumbers.split(' - ').map(x => x.trim()).filter(Boolean);
+                            const powerball = (row['Powerball'] || '').trim();
+                            if (mainArr.length === 5 && powerball) {
+                                // Store as sorted string for easy comparison
+                                historicalCombos.push({
+                                    combo: mainArr.map(Number).sort((a,b)=>a-b).join('-') + '|' + powerball
+                                });
+                            }
+                        }
+                    }
+                    csvLoading.textContent = '';
+                }
+            });
+        });
+    function getRandomInt(min, max) {
+        return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+    function generateUniqueNumbers(count, min, max) {
+        const nums = new Set();
+        while (nums.size < count) {
+            nums.add(getRandomInt(min, max));
+        }
+        return Array.from(nums).sort((a, b) => a - b);
+    }
+    function generateCombination() {
+        const whiteBalls = generateUniqueNumbers(5, 1, 69);
+        const redBall = getRandomInt(1, 26);
+        return { whiteBalls, redBall };
+    }
+    function countComboInHistory(whiteBalls, redBall) {
+        const key = whiteBalls.slice().sort((a,b)=>a-b).join('-') + '|' + redBall;
+        return historicalCombos.filter(h => h.combo === key).length;
+    }
+    function renderCombinations(n) {
+        let html = '<table style="width:100%; border-collapse:collapse; font-size:1.12em;">';
+        html += '<thead><tr><th>#</th><th>Combination</th><th>Results</th></tr></thead><tbody>';
+        for (let i = 0; i < n; i++) {
+            const combo = generateCombination();
+            const count = countComboInHistory(combo.whiteBalls, combo.redBall);
+            html += `<tr><td style='font-weight:bold;'>${i+1}</td><td>` +
+                combo.whiteBalls.map(num => `<span class='generated-ball'>${num}</span>`).join('') +
+                `<span class='generated-ball red'>${combo.redBall}</span>` +
+                `</td><td style='color:#234; font-weight:600;'>${count > 0 ? count + ' time' + (count > 1 ? 's' : '') : 'Never'}</td></tr>`;
+        }
+        html += '</tbody></table>';
+        document.getElementById('generated-table').innerHTML = html;
+    }
+    document.querySelectorAll('.multi-gen-btn').forEach(btn => {
+        btn.onclick = function() {
+            renderCombinations(parseInt(btn.getAttribute('data-count')));
+        };
+    });
+    </script>
+</body>
+</html> 

@@ -247,45 +247,70 @@ document.addEventListener('DOMContentLoaded', function() {
                     // --- Show info for a number ---
                     // Remove old single-ball info panel logic
                     // --- Add new always-visible number frequency panel ---
-                    let freqPanel = document.getElementById('number-freq-panel');
-                    if (!freqPanel) {
-                        freqPanel = document.createElement('div');
-                        freqPanel.id = 'number-freq-panel';
-                        freqPanel.style.position = 'fixed';
-                        freqPanel.style.top = '60px';
-                        freqPanel.style.right = '0';
-                        freqPanel.style.width = '180px';
-                        freqPanel.style.height = 'calc(100vh - 60px)';
-                        freqPanel.style.overflowY = 'auto';
-                        freqPanel.style.background = '#f9f9f9';
-                        freqPanel.style.borderLeft = '1px solid #ddd';
-                        freqPanel.style.padding = '12px 8px';
-                        freqPanel.style.zIndex = '10';
+                    // --- Always render number frequency panel after parsing CSV ---
+                    const freqPanel = document.getElementById('number-freq-panel');
+                    if (freqPanel) {
                         freqPanel.innerHTML = `<div style='font-weight:bold; font-size:1.1em; margin-bottom:8px;'>Number Frequency</div><div id='freq-list'></div>`;
-                        document.body.appendChild(freqPanel);
+                        const freqList = freqPanel.querySelector('#freq-list');
+                        freqList.innerHTML = '<table style="width:100%; font-size:1em; border-collapse:collapse;">' +
+                            '<thead><tr><th style="text-align:left;">#</th><th style="text-align:right;">Count</th></tr></thead><tbody>' +
+                            Array.from({length: 69}, (_, i) => `<tr><td>${i+1}</td><td style="text-align:right;">${numberStats[i+1].count}</td></tr>`).join('') +
+                            '</tbody></table>';
                     }
-                    const freqList = freqPanel.querySelector('#freq-list');
-                    freqList.innerHTML = '<table style="width:100%; font-size:1em; border-collapse:collapse;">' +
-                        '<thead><tr><th style="text-align:left;">#</th><th style="text-align:right;">Count</th></tr></thead><tbody>' +
-                        Array.from({length: 69}, (_, i) => `<tr><td>${i+1}</td><td style="text-align:right;">${numberStats[i+1].count}</td></tr>`).join('') +
-                        '</tbody></table>';
                     // --- Highlight draws in table ---
                     // Remove any logic that renders the main results table or highlights draws in the table.
                     // --- Search/filter functionality ---
                     const searchBox = document.getElementById('search-box');
                     searchBox.addEventListener('input', function() {
                         const query = searchBox.value.trim().toLowerCase();
-                        drawRows.forEach(({tr, mainNumbers, doublePlayNumbers, powerball, doublePlayPowerball, powerplay, date}) => {
-                            // Search in date, main numbers, double play numbers, powerball, double play powerball, powerplay
-                            const rowText = [date, mainNumbers, doublePlayNumbers, powerball, doublePlayPowerball, powerplay].join(' ').toLowerCase();
-                            if (rowText.includes(query)) {
-                                tr.style.display = '';
-                            } else {
-                                tr.style.display = 'none';
-                            }
+                        const resultsDiv = document.getElementById('combo-results');
+                        const tables = resultsDiv.querySelectorAll('table');
+                        let anyVisible = false;
+                        tables.forEach(table => {
+                            const rows = table.querySelectorAll('tbody tr');
+                            rows.forEach(row => {
+                                const rowText = row.textContent.toLowerCase();
+                                if (rowText.includes(query)) {
+                                    row.style.display = '';
+                                    anyVisible = true;
+                                } else {
+                                    row.style.display = 'none';
+                                }
+                            });
                         });
+                        if (!anyVisible) {
+                            resultsDiv.innerHTML = '<div style="color:#e74c3c; margin:12px 0;">No draws found matching your search.</div>';
+                        }
                     });
                 }
             });
         });
-}); 
+});
+
+// --- RANDOM GENERATOR LOGIC ---
+function getRandomInt(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+function generateUniqueNumbers(count, min, max) {
+    const nums = new Set();
+    while (nums.size < count) {
+        nums.add(getRandomInt(min, max));
+    }
+    return Array.from(nums).sort((a, b) => a - b);
+}
+const genComboBtn = document.getElementById('generate-combo-btn');
+const genSingleBtn = document.getElementById('generate-single-btn');
+const genResult = document.getElementById('generated-result');
+if (genComboBtn && genSingleBtn && genResult) {
+    genComboBtn.onclick = function() {
+        const whiteBalls = generateUniqueNumbers(5, 1, 69);
+        const redBall = getRandomInt(1, 26);
+        genResult.innerHTML =
+            whiteBalls.map(n => `<span class='generated-ball'>${n}</span>`).join('') +
+            `<span class='generated-ball red'>${redBall}</span>`;
+    };
+    genSingleBtn.onclick = function() {
+        const n = getRandomInt(1, 69);
+        genResult.innerHTML = `<span class='generated-ball'>${n}</span>`;
+    };
+} 
