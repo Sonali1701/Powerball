@@ -759,3 +759,135 @@ tr:hover {
     box-shadow: 0 2px 12px rgba(44,62,80,0.18);
     transform: scale(1.03);
 } 
+
+/* --- FREQUENT SETS PANEL (Most Common Sets) --- */
+#frequent-sets-panel {
+    background: #f8faff;
+    border-radius: 14px;
+    box-shadow: 0 2px 12px rgba(44,62,80,0.10);
+    padding: 24px 18px 20px 18px;
+    margin-top: 36px;
+    margin-bottom: 18px;
+    text-align: center;
+    width: 100%;
+    max-width: 480px;
+    margin-left: auto;
+    margin-right: auto;
+    border: 1.5px solid #e0e7ef;
+}
+#frequent-sets-panel h2 {
+    font-size: 1.18em;
+    margin: 0 0 18px 0;
+    color: #234;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+}
+#frequent-sets-content > div {
+    margin-bottom: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 10px 16px;
+}
+#frequent-sets-content b {
+    margin-right: 8px;
+    color: #3498db;
+    font-size: 1.08em;
+}
+#frequent-sets-content .generated-ball {
+    margin: 0 2px;
+    font-size: 1.08em;
+    width: 30px;
+    height: 30px;
+}
+#frequent-sets-content span[style*='color:#888'] {
+    margin-left: 2px;
+    font-size: 0.98em;
+    color: #888 !important;
+}
+.freq-gen-btn {
+    background: linear-gradient(90deg, #e67e22 0%, #f1c40f 100%);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-size: 1.04em;
+    font-weight: 600;
+    margin-left: 12px;
+    cursor: pointer;
+    transition: background 0.18s, box-shadow 0.18s, transform 0.13s;
+    box-shadow: 0 1px 4px rgba(44,62,80,0.10);
+    outline: none;
+}
+.freq-gen-btn:hover, .freq-gen-btn:focus {
+    background: linear-gradient(90deg, #f1c40f 0%, #e67e22 100%);
+    box-shadow: 0 2px 12px rgba(44,62,80,0.18);
+    transform: scale(1.05);
+}
+@media (max-width: 700px) {
+    #frequent-sets-panel {
+        padding: 12px 2px 10px 2px;
+        max-width: 99vw;
+    }
+    #frequent-sets-content .generated-ball {
+        width: 22px;
+        height: 22px;
+        font-size: 0.92em;
+    }
+    #frequent-sets-content > div {
+        gap: 6px 6px;
+    }
+} 
+
+/* --- IMPROVED FREQUENT SETS PILL STYLE --- */
+.freq-set-pill {
+    display: inline-flex;
+    align-items: center;
+    background: #eaf1fb;
+    border-radius: 22px;
+    padding: 4px 6px 4px 8px;
+    margin: 0 10px 10px 0;
+    box-shadow: 0 1px 4px rgba(44,62,80,0.07);
+    min-width: 60px;
+    min-height: 36px;
+    gap: 2px;
+    position: relative;
+}
+.freq-set-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: -2px;
+    color: #fff;
+    font-size: 1.01em;
+    font-weight: 700;
+    background: linear-gradient(90deg, #3498db 0%, #e74c3c 100%);
+    border-radius: 12px;
+    padding: 2px 10px;
+    min-width: 32px;
+    min-height: 28px;
+    text-align: center;
+    box-shadow: 0 1px 4px rgba(44,62,80,0.10);
+    border: 2px solid #fff;
+    position: relative;
+    left: -4px;
+    z-index: 1;
+}
+#frequent-sets-content .freq-set-pill {
+    margin-bottom: 10px;
+}
+@media (max-width: 700px) {
+    .freq-set-pill {
+        padding: 2px 3px 2px 4px;
+        min-width: 36px;
+        min-height: 22px;
+    }
+    .freq-set-count {
+        font-size: 0.92em;
+        padding: 1px 6px;
+        min-width: 18px;
+        min-height: 18px;
+        left: -2px;
+    }
+} 

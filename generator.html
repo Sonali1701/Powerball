@@ -23,12 +23,36 @@
             <div id="csv-loading" style="margin-top:10px; color:#888; font-size:1.05em;"></div>
             <div style="margin-top:18px; color:#888; font-size:1.05em;">Each combination: 5 unique white balls (1-69) and 1 red Powerball (1-26).</div>
         </div>
+        <div class="generator-panel" id="frequent-sets-panel" style="margin-top:32px;">
+            <h2>Most Common Sets</h2>
+            <div id="frequent-sets-loading" style="color:#888; font-size:1.05em;">Analyzing historical data...</div>
+            <div id="frequent-sets-content" style="display:none;">
+                <div style="margin-bottom:12px;">
+                    <b>Top 5 Pairs:</b>
+                    <span id="top-pairs"></span>
+                    <button class="freq-gen-btn" data-type="pair">Generate from Pair</button>
+                </div>
+                <div style="margin-bottom:12px;">
+                    <b>Top 5 Triplets:</b>
+                    <span id="top-triplets"></span>
+                    <button class="freq-gen-btn" data-type="triplet">Generate from Triplet</button>
+                </div>
+                <div style="margin-bottom:12px;">
+                    <b>Top 5 Quadruplets:</b>
+                    <span id="top-quads"></span>
+                    <button class="freq-gen-btn" data-type="quad">Generate from Quadruplet</button>
+                </div>
+            </div>
+        </div>
         <a href="index.html" style="display:inline-block; margin-top:32px; color:#3498db; font-weight:600; text-decoration:none;">&larr; Back to Analyzer</a>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
     <script>
     let historicalCombos = [];
+    let allMainDraws = [];
     const csvLoading = document.getElementById('csv-loading');
+    const freqSetsLoading = document.getElementById('frequent-sets-loading');
+    const freqSetsContent = document.getElementById('frequent-sets-content');
     // Load and parse the CSV file
     csvLoading.textContent = 'Loading historical Powerball data...';
     fetch('powerball.csv')
@@ -48,6 +72,7 @@
                     const data = results.data;
                     // Extract all main draw combinations
                     historicalCombos = [];
+                    allMainDraws = [];
                     for (let i = 0; i < data.length; i++) {
                         const row = data[i];
                         let winNumbers = (row['Winning Numbers'] || '').replace(/®/g, '').toLowerCase().trim();
@@ -65,22 +90,24 @@
                                 historicalCombos.push({
                                     combo: mainArr.map(Number).sort((a,b)=>a-b).join('-') + '|' + powerball
                                 });
+                                allMainDraws.push(mainArr.map(Number));
                             }
                         }
                     }
                     csvLoading.textContent = '';
+                    analyzeFrequentSets();
                 }
             });
         });
     function getRandomInt(min, max) {
         return Math.floor(Math.random() * (max - min + 1)) + min;
     }
-    function generateUniqueNumbers(count, min, max) {
-        const nums = new Set();
-        while (nums.size < count) {
+    function generateUniqueNumbers(count, min, max, exclude=[]) {
+        const nums = new Set(exclude);
+        while (nums.size < count + exclude.length) {
             nums.add(getRandomInt(min, max));
         }
-        return Array.from(nums).sort((a, b) => a - b);
+        return Array.from(nums).filter(n => !exclude.includes(n)).sort((a, b) => a - b);
     }
     function generateCombination() {
         const whiteBalls = generateUniqueNumbers(5, 1, 69);
@@ -108,6 +135,121 @@
     document.querySelectorAll('.multi-gen-btn').forEach(btn => {
         btn.onclick = function() {
             renderCombinations(parseInt(btn.getAttribute('data-count')));
+        };
+    });
+
+    // --- FREQUENT SETS ANALYSIS ---
+    let topPairs = [], topTriplets = [], topQuads = [];
+    function analyzeFrequentSets() {
+        // Count pairs, triplets, quads
+        const pairCounts = new Map();
+        const tripletCounts = new Map();
+        const quadCounts = new Map();
+        for (const draw of allMainDraws) {
+            // Pairs
+            for (let i = 0; i < 5; i++) {
+                for (let j = i+1; j < 5; j++) {
+                    const pair = [draw[i], draw[j]].sort((a,b)=>a-b).join('-');
+                    pairCounts.set(pair, (pairCounts.get(pair)||0)+1);
+                }
+            }
+            // Triplets
+            for (let i = 0; i < 5; i++) {
+                for (let j = i+1; j < 5; j++) {
+                    for (let k = j+1; k < 5; k++) {
+                        const triplet = [draw[i], draw[j], draw[k]].sort((a,b)=>a-b).join('-');
+                        tripletCounts.set(triplet, (tripletCounts.get(triplet)||0)+1);
+                    }
+                }
+            }
+            // Quads
+            for (let i = 0; i < 5; i++) {
+                for (let j = i+1; j < 5; j++) {
+                    for (let k = j+1; k < 5; k++) {
+                        for (let l = k+1; l < 5; l++) {
+                            const quad = [draw[i], draw[j], draw[k], draw[l]].sort((a,b)=>a-b).join('-');
+                            quadCounts.set(quad, (quadCounts.get(quad)||0)+1);
+                        }
+                    }
+                }
+            }
+        }
+        // Get top 5 for each
+        topPairs = Array.from(pairCounts.entries()).sort((a,b)=>b[1]-a[1]).slice(0,5);
+        topTriplets = Array.from(tripletCounts.entries()).sort((a,b)=>b[1]-a[1]).slice(0,5);
+        topQuads = Array.from(quadCounts.entries()).sort((a,b)=>b[1]-a[1]).slice(0,5);
+        // Render
+        renderFrequentSets();
+    }
+    function renderFrequentSets() {
+        // Helper to render a set as a pill
+        function setPillHtml(nums, count) {
+            return `<span class='freq-set-pill'>${nums.map(n => `<span class='generated-ball'>${n}</span>`).join('')}</span><span class='freq-set-count'>${count}</span>`;
+        }
+        // Pairs
+        const pairsHtml = topPairs.map(([set, count]) => {
+            const nums = set.split('-').map(Number);
+            return setPillHtml(nums, count);
+        }).join('');
+        document.getElementById('top-pairs').innerHTML = pairsHtml;
+        // Triplets
+        const tripletsHtml = topTriplets.map(([set, count]) => {
+            const nums = set.split('-').map(Number);
+            return setPillHtml(nums, count);
+        }).join('');
+        document.getElementById('top-triplets').innerHTML = tripletsHtml;
+        // Quads
+        const quadsHtml = topQuads.map(([set, count]) => {
+            const nums = set.split('-').map(Number);
+            return setPillHtml(nums, count);
+        }).join('');
+        document.getElementById('top-quads').innerHTML = quadsHtml;
+        freqSetsLoading.style.display = 'none';
+        freqSetsContent.style.display = '';
+    }
+    // --- GENERATE FROM FREQUENT SETS ---
+    function generateFromFrequentSet(type) {
+        let baseSet = [];
+        let baseSetType = '';
+        let baseSetCount = 0;
+        if (type === 'pair' && topPairs.length > 0) {
+            const entry = topPairs[Math.floor(Math.random()*topPairs.length)];
+            baseSet = entry[0].split('-').map(Number);
+            baseSetType = 'Pair';
+            baseSetCount = entry[1];
+        } else if (type === 'triplet' && topTriplets.length > 0) {
+            const entry = topTriplets[Math.floor(Math.random()*topTriplets.length)];
+            baseSet = entry[0].split('-').map(Number);
+            baseSetType = 'Triplet';
+            baseSetCount = entry[1];
+        } else if (type === 'quad' && topQuads.length > 0) {
+            const entry = topQuads[Math.floor(Math.random()*topQuads.length)];
+            baseSet = entry[0].split('-').map(Number);
+            baseSetType = 'Quadruplet';
+            baseSetCount = entry[1];
+        }
+        if (baseSet.length > 0) {
+            // Fill up to 5 unique numbers
+            const rest = generateUniqueNumbers(5-baseSet.length, 1, 69, baseSet);
+            const whiteBalls = baseSet.concat(rest).sort((a,b)=>a-b);
+            const redBall = getRandomInt(1, 26);
+            const count = countComboInHistory(whiteBalls, redBall);
+            let html = '<table style="width:100%; border-collapse:collapse; font-size:1.12em;">';
+            html += '<thead><tr><th>#</th><th>Combination</th><th>Results</th></tr></thead><tbody>';
+            html += `<tr><td style='font-weight:bold;'>1</td><td>` +
+                whiteBalls.map(num => `<span class='generated-ball'>${num}</span>`).join('') +
+                `<span class='generated-ball red'>${redBall}</span>` +
+                `</td><td style='color:#234; font-weight:600;'>` +
+                (count > 0 ? `${count} time${count > 1 ? 's' : ''} (full combo)` : 'Never (full combo)') +
+                `<br><span style='color:#888; font-weight:400;'>${baseSetType} ${baseSet.join('-')} appeared together ${baseSetCount} time${baseSetCount > 1 ? 's' : ''} in history.</span>` +
+                `</td></tr>`;
+            html += '</tbody></table>';
+            document.getElementById('generated-table').innerHTML = html;
+        }
+    }
+    document.querySelectorAll('.freq-gen-btn').forEach(btn => {
+        btn.onclick = function() {
+            generateFromFrequentSet(btn.getAttribute('data-type'));
         };
     });
     </script>
