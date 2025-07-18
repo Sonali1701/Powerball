@@ -9,43 +9,56 @@
 <body>
     <header class="main-header">
         <h1>PowerBall Random Generator</h1>
-        <p class="subtitle">Generate multiple random Powerball combinations instantly!</p>
+        <p class="subtitle">Generate, analyze, and build Powerball combinations with advanced tools</p>
     </header>
-    <div class="container" style="max-width: 600px; margin: 40px auto; background: #fff; border-radius: 16px; box-shadow: 0 4px 24px rgba(44,62,80,0.08); padding: 32px 18px 32px 18px; text-align: center;">
-        <div class="generator-panel" id="generator-panel">
-            <h2>Generate Your Powerball Combinations</h2>
-            <div style="margin-bottom: 18px;">
-                <button class="multi-gen-btn" data-count="4">Generate 4</button>
-                <button class="multi-gen-btn" data-count="8">Generate 8</button>
-                <button class="multi-gen-btn" data-count="16">Generate 16</button>
+    <div class="generator-flex-layout">
+        <section class="generator-section">
+            <div class="generator-panel">
+                <h2>Quick Random Generator</h2>
+                <div style="margin-bottom: 18px;">
+                    <button class="multi-gen-btn" data-count="4">Generate 4</button>
+                    <button class="multi-gen-btn" data-count="8">Generate 8</button>
+                    <button class="multi-gen-btn" data-count="16">Generate 16</button>
+                </div>
+                <div id="generated-table" style="margin-top:18px;"></div>
+                <div id="csv-loading" style="margin-top:10px; color:#888; font-size:1.05em;"></div>
+                <div style="margin-top:18px; color:#888; font-size:1.05em;">Each combination: 5 unique white balls (1-69).</div>
             </div>
-            <div id="generated-table" style="margin-top:18px;"></div>
-            <div id="csv-loading" style="margin-top:10px; color:#888; font-size:1.05em;"></div>
-            <div style="margin-top:18px; color:#888; font-size:1.05em;">Each combination: 5 unique white balls (1-69) and 1 red Powerball (1-26).</div>
-        </div>
-        <div class="generator-panel" id="frequent-sets-panel" style="margin-top:32px;">
-            <h2>Most Common Sets</h2>
-            <div id="frequent-sets-loading" style="color:#888; font-size:1.05em;">Analyzing historical data...</div>
-            <div id="frequent-sets-content" style="display:none;">
-                <div style="margin-bottom:12px;">
-                    <b>Top 5 Pairs:</b>
-                    <span id="top-pairs"></span>
-                    <button class="freq-gen-btn" data-type="pair">Generate from Pair</button>
-                </div>
-                <div style="margin-bottom:12px;">
-                    <b>Top 5 Triplets:</b>
-                    <span id="top-triplets"></span>
-                    <button class="freq-gen-btn" data-type="triplet">Generate from Triplet</button>
-                </div>
-                <div style="margin-bottom:12px;">
-                    <b>Top 5 Quadruplets:</b>
-                    <span id="top-quads"></span>
-                    <button class="freq-gen-btn" data-type="quad">Generate from Quadruplet</button>
+        </section>
+        <section class="generator-section">
+            <div class="generator-panel" id="frequent-sets-panel">
+                <h2>Most Common Sets</h2>
+                <div id="frequent-sets-loading" style="color:#888; font-size:1.05em;">Analyzing historical data...</div>
+                <div id="frequent-sets-content" style="display:none;">
+                    <div style="margin-bottom:12px;">
+                        <span class="section-label">Top 5 Pairs:</span>
+                        <span id="top-pairs"></span>
+                        <button class="freq-gen-btn" data-type="pair">Generate from Pair</button>
+                    </div>
+                    <div style="margin-bottom:12px;">
+                        <span class="section-label">Top 5 Triplets:</span>
+                        <span id="top-triplets"></span>
+                        <button class="freq-gen-btn" data-type="triplet">Generate from Triplet</button>
+                    </div>
+                    <div style="margin-bottom:12px;">
+                        <span class="section-label">Top 5 Quadruplets:</span>
+                        <span id="top-quads"></span>
+                        <button class="freq-gen-btn" data-type="quad">Generate from Quadruplet</button>
+                    </div>
                 </div>
             </div>
-        </div>
-        <a href="index.html" style="display:inline-block; margin-top:32px; color:#3498db; font-weight:600; text-decoration:none;">&larr; Back to Analyzer</a>
+        </section>
+        <section class="generator-section">
+            <div class="generator-panel" id="combo-builder-panel">
+                <h2>Build Combination: Most-Drawn Triplet + Pair</h2>
+                <div id="triplet-pills" style="margin-bottom:12px;"></div>
+                <div id="pair-pills" style="margin-bottom:12px;"></div>
+                <button id="build-combo-btn" class="freq-gen-btn" style="margin-top:8px;" disabled>Generate from Triplet + Pair</button>
+                <div id="built-combo-result" style="margin-top:18px;"></div>
+            </div>
+        </section>
     </div>
+    <a href="index.html" style="display:inline-block; margin:32px auto 0 auto; color:#3498db; font-weight:600; text-decoration:none; text-align:center; width:100%;">&larr; Back to Analyzer</a>
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
     <script>
     let historicalCombos = [];
@@ -83,14 +96,12 @@
                             } else {
                                 mainNumbers = (row['Winning Numbers'] || '').replace(/®/g, '').trim();
                             }
-                            const mainArr = mainNumbers.split(' - ').map(x => x.trim()).filter(Boolean);
-                            const powerball = (row['Powerball'] || '').trim();
-                            if (mainArr.length === 5 && powerball) {
-                                // Store as sorted string for easy comparison
+                            let mainArr = mainNumbers.split(' - ').map(x => parseInt(x.trim(), 10)).filter(n => n >= 1 && n <= 69);
+                            if (mainArr.length === 5) {
                                 historicalCombos.push({
-                                    combo: mainArr.map(Number).sort((a,b)=>a-b).join('-') + '|' + powerball
+                                    combo: mainArr.slice().sort((a,b)=>a-b).join('-')
                                 });
-                                allMainDraws.push(mainArr.map(Number));
+                                allMainDraws.push(mainArr);
                             }
                         }
                     }
@@ -105,17 +116,16 @@
     function generateUniqueNumbers(count, min, max, exclude=[]) {
         const nums = new Set(exclude);
         while (nums.size < count + exclude.length) {
-            nums.add(getRandomInt(min, max));
+            nums.add(Math.floor(Math.random() * (max - min + 1)) + min);
         }
         return Array.from(nums).filter(n => !exclude.includes(n)).sort((a, b) => a - b);
     }
     function generateCombination() {
         const whiteBalls = generateUniqueNumbers(5, 1, 69);
-        const redBall = getRandomInt(1, 26);
-        return { whiteBalls, redBall };
+        return { whiteBalls };
     }
-    function countComboInHistory(whiteBalls, redBall) {
-        const key = whiteBalls.slice().sort((a,b)=>a-b).join('-') + '|' + redBall;
+    function countComboInHistory(whiteBalls) {
+        const key = whiteBalls.slice().sort((a,b)=>a-b).join('-');
         return historicalCombos.filter(h => h.combo === key).length;
     }
     function renderCombinations(n) {
@@ -123,10 +133,9 @@
         html += '<thead><tr><th>#</th><th>Combination</th><th>Results</th></tr></thead><tbody>';
         for (let i = 0; i < n; i++) {
             const combo = generateCombination();
-            const count = countComboInHistory(combo.whiteBalls, combo.redBall);
+            const count = countComboInHistory(combo.whiteBalls);
             html += `<tr><td style='font-weight:bold;'>${i+1}</td><td>` +
                 combo.whiteBalls.map(num => `<span class='generated-ball'>${num}</span>`).join('') +
-                `<span class='generated-ball red'>${combo.redBall}</span>` +
                 `</td><td style='color:#234; font-weight:600;'>${count > 0 ? count + ' time' + (count > 1 ? 's' : '') : 'Never'}</td></tr>`;
         }
         html += '</tbody></table>';
@@ -146,40 +155,43 @@
         const tripletCounts = new Map();
         const quadCounts = new Map();
         for (const draw of allMainDraws) {
+            // Only use numbers 1-69
+            const cleanDraw = draw.filter(n => n >= 1 && n <= 69);
             // Pairs
-            for (let i = 0; i < 5; i++) {
-                for (let j = i+1; j < 5; j++) {
-                    const pair = [draw[i], draw[j]].sort((a,b)=>a-b).join('-');
-                    pairCounts.set(pair, (pairCounts.get(pair)||0)+1);
+            for (let i = 0; i < cleanDraw.length; i++) {
+                for (let j = i+1; j < cleanDraw.length; j++) {
+                    const pair = [cleanDraw[i], cleanDraw[j]].sort((a,b)=>a-b).join('-');
+                    if (!pair.includes('0')) pairCounts.set(pair, (pairCounts.get(pair)||0)+1);
                 }
             }
             // Triplets
-            for (let i = 0; i < 5; i++) {
-                for (let j = i+1; j < 5; j++) {
-                    for (let k = j+1; k < 5; k++) {
-                        const triplet = [draw[i], draw[j], draw[k]].sort((a,b)=>a-b).join('-');
-                        tripletCounts.set(triplet, (tripletCounts.get(triplet)||0)+1);
+            for (let i = 0; i < cleanDraw.length; i++) {
+                for (let j = i+1; j < cleanDraw.length; j++) {
+                    for (let k = j+1; k < cleanDraw.length; k++) {
+                        const triplet = [cleanDraw[i], cleanDraw[j], cleanDraw[k]].sort((a,b)=>a-b).join('-');
+                        if (!triplet.includes('0')) tripletCounts.set(triplet, (tripletCounts.get(triplet)||0)+1);
                     }
                 }
             }
             // Quads
-            for (let i = 0; i < 5; i++) {
-                for (let j = i+1; j < 5; j++) {
-                    for (let k = j+1; k < 5; k++) {
-                        for (let l = k+1; l < 5; l++) {
-                            const quad = [draw[i], draw[j], draw[k], draw[l]].sort((a,b)=>a-b).join('-');
-                            quadCounts.set(quad, (quadCounts.get(quad)||0)+1);
+            for (let i = 0; i < cleanDraw.length; i++) {
+                for (let j = i+1; j < cleanDraw.length; j++) {
+                    for (let k = j+1; k < cleanDraw.length; k++) {
+                        for (let l = k+1; l < cleanDraw.length; l++) {
+                            const quad = [cleanDraw[i], cleanDraw[j], cleanDraw[k], cleanDraw[l]].sort((a,b)=>a-b).join('-');
+                            if (!quad.includes('0')) quadCounts.set(quad, (quadCounts.get(quad)||0)+1);
                         }
                     }
                 }
             }
         }
-        // Get top 5 for each
-        topPairs = Array.from(pairCounts.entries()).sort((a,b)=>b[1]-a[1]).slice(0,5);
-        topTriplets = Array.from(tripletCounts.entries()).sort((a,b)=>b[1]-a[1]).slice(0,5);
-        topQuads = Array.from(quadCounts.entries()).sort((a,b)=>b[1]-a[1]).slice(0,5);
+        // Get top 5 for each, filter out any with 0
+        topPairs = Array.from(pairCounts.entries()).filter(([set]) => !set.split('-').includes('0')).sort((a,b)=>b[1]-a[1]).slice(0,5);
+        topTriplets = Array.from(tripletCounts.entries()).filter(([set]) => !set.split('-').includes('0')).sort((a,b)=>b[1]-a[1]).slice(0,5);
+        topQuads = Array.from(quadCounts.entries()).filter(([set]) => !set.split('-').includes('0')).sort((a,b)=>b[1]-a[1]).slice(0,5);
         // Render
         renderFrequentSets();
+        renderComboBuilderPills();
     }
     function renderFrequentSets() {
         // Helper to render a set as a pill
@@ -207,6 +219,83 @@
         freqSetsLoading.style.display = 'none';
         freqSetsContent.style.display = '';
     }
+    // Replace combo builder section with clickable pills
+    const comboBuilderPanel = document.getElementById('combo-builder-panel');
+    comboBuilderPanel.innerHTML = `
+        <h2>Build Combination: Most-Drawn Triplet + Pair</h2>
+        <div id="triplet-pills" style="margin-bottom:12px;"></div>
+        <div id="pair-pills" style="margin-bottom:12px;"></div>
+        <button id="build-combo-btn" class="freq-gen-btn" style="margin-top:8px;" disabled>Generate from Triplet + Pair</button>
+        <div id="built-combo-result" style="margin-top:18px;"></div>
+    `;
+    // Robust stateful selection for triplet+pair
+    let selectedTriplet = null;
+    let selectedPair = null;
+    function renderComboBuilderPills() {
+        const tripletPillsDiv = document.getElementById('triplet-pills');
+        const pairPillsDiv = document.getElementById('pair-pills');
+        // Render triplet pills once
+        tripletPillsDiv.innerHTML = topTriplets.map(([set, count], idx) => {
+            return `<span class="pill-group"><button class="pill-btn triplet-pill" data-set="${set}" style="margin:0 4px 8px 0;">${set.split('-').join(', ')}</button><span class='freq-set-count pill-count'>${count}</span></span>`;
+        }).join('');
+        // Render pair pills (initially all enabled)
+        function renderPairPills(tripletSet) {
+            pairPillsDiv.innerHTML = topPairs.map(([set, count]) => {
+                const pairNums = set.split('-').map(Number);
+                const disabled = tripletSet && pairNums.some(n => tripletSet.includes(n));
+                return `<span class="pill-group"><button class="pill-btn pair-pill" data-set="${set}" style="margin:0 4px 8px 0;" ${disabled ? 'disabled' : ''}>${set.split('-').join(', ')}</button><span class='freq-set-count pill-count'>${count}</span></span>`;
+            }).join('');
+        }
+        renderPairPills(null);
+        // Selection logic
+        tripletPillsDiv.onclick = function(e) {
+            const btn = e.target.closest('.triplet-pill');
+            if (!btn) return;
+            tripletPillsDiv.querySelectorAll('.triplet-pill').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+            selectedTriplet = btn.getAttribute('data-set').split('-').map(Number);
+            selectedPair = null;
+            renderPairPills(selectedTriplet);
+            document.getElementById('build-combo-btn').disabled = true;
+            // Attach pair pill click events after re-render
+            attachPairPillEvents();
+        };
+        function attachPairPillEvents() {
+            pairPillsDiv.querySelectorAll('.pair-pill').forEach(btn => {
+                btn.onclick = function() {
+                    if (btn.disabled) return;
+                    pairPillsDiv.querySelectorAll('.pair-pill').forEach(b => b.classList.remove('selected'));
+                    btn.classList.add('selected');
+                    selectedPair = btn.getAttribute('data-set').split('-').map(Number);
+                    if (selectedTriplet && selectedPair) {
+                        document.getElementById('build-combo-btn').disabled = false;
+                    }
+                };
+            });
+        }
+        attachPairPillEvents();
+        document.getElementById('build-combo-btn').onclick = function() {
+            if (!selectedTriplet || !selectedPair) return;
+            let comboSet = Array.from(new Set([...selectedTriplet, ...selectedPair]));
+            if (comboSet.length < 5) {
+                const rest = generateUniqueNumbers(5-comboSet.length, 1, 69, comboSet);
+                comboSet = comboSet.concat(rest).sort((a,b)=>a-b);
+            } else {
+                comboSet = comboSet.slice(0,5).sort((a,b)=>a-b);
+            }
+            const count = countComboInHistory(comboSet);
+            let html = '<table style="width:100%; border-collapse:collapse; font-size:1.12em;">';
+            html += '<thead><tr><th>#</th><th>Combination</th><th>Results</th></tr></thead><tbody>';
+            html += `<tr><td style='font-weight:bold;'>1</td><td>` +
+                comboSet.map(num => `<span class='generated-ball'>${num}</span>`).join('') +
+                `</td><td style='color:#234; font-weight:600;'>${count > 0 ? count + ' time' + (count > 1 ? 's' : '') : 'Never'}` +
+                `<br><span style='color:#888; font-weight:400;'>Triplet: ${selectedTriplet.join('-')}, Pair: ${selectedPair.join('-')}</span>` +
+                `</td></tr>`;
+            html += '</tbody></table>';
+            document.getElementById('built-combo-result').innerHTML = html;
+        };
+    }
+    renderComboBuilderPills();
     // --- GENERATE FROM FREQUENT SETS ---
     function generateFromFrequentSet(type) {
         let baseSet = [];
@@ -232,15 +321,13 @@
             // Fill up to 5 unique numbers
             const rest = generateUniqueNumbers(5-baseSet.length, 1, 69, baseSet);
             const whiteBalls = baseSet.concat(rest).sort((a,b)=>a-b);
-            const redBall = getRandomInt(1, 26);
-            const count = countComboInHistory(whiteBalls, redBall);
+            const count = countComboInHistory(whiteBalls);
             let html = '<table style="width:100%; border-collapse:collapse; font-size:1.12em;">';
             html += '<thead><tr><th>#</th><th>Combination</th><th>Results</th></tr></thead><tbody>';
             html += `<tr><td style='font-weight:bold;'>1</td><td>` +
                 whiteBalls.map(num => `<span class='generated-ball'>${num}</span>`).join('') +
-                `<span class='generated-ball red'>${redBall}</span>` +
                 `</td><td style='color:#234; font-weight:600;'>` +
-                (count > 0 ? `${count} time${count > 1 ? 's' : ''} (full combo)` : 'Never (full combo)') +
+                (count > 0 ? `${count} time${count > 1 ? 's' : ''}` : 'Never') +
                 `<br><span style='color:#888; font-weight:400;'>${baseSetType} ${baseSet.join('-')} appeared together ${baseSetCount} time${baseSetCount > 1 ? 's' : ''} in history.</span>` +
                 `</td></tr>`;
             html += '</tbody></table>';
@@ -252,6 +339,96 @@
             generateFromFrequentSet(btn.getAttribute('data-type'));
         };
     });
+    // Replace duo builder section with clickable pills
+    function insertDuoSectionPills() {
+        if (document.getElementById('duo1-pills')) return; // Prevent duplicate
+        const comboBuilderPanel = document.getElementById('combo-builder-panel');
+        const duoSection = document.createElement('div');
+        duoSection.className = 'generator-panel';
+        duoSection.style.marginTop = '36px';
+        duoSection.innerHTML = `
+            <h2>Build Combination: Two Most-Drawn Duos</h2>
+            <div id="duo1-pills" style="margin-bottom:12px;"></div>
+            <div id="duo2-pills" style="margin-bottom:12px;"></div>
+            <button id="build-duo-combo-btn" class="freq-gen-btn" style="margin-top:8px;" disabled>Generate from Two Duos</button>
+            <div id="built-duo-combo-result" style="margin-top:18px;"></div>
+        `;
+        comboBuilderPanel.parentNode.insertBefore(duoSection, comboBuilderPanel.nextSibling);
+    }
+    // Robust stateful selection for duo1/duo2
+    let selectedDuo1 = null;
+    let selectedDuo2 = null;
+    function renderDuoBuilderPills() {
+        const duo1PillsDiv = document.getElementById('duo1-pills');
+        const duo2PillsDiv = document.getElementById('duo2-pills');
+        // Render duo1 pills once
+        duo1PillsDiv.innerHTML = topPairs.map(([set, count], idx) => {
+            return `<span class="pill-group"><button class="pill-btn duo1-pill" data-set="${set}" style="margin:0 4px 8px 0;">${set.split('-').join(', ')}</button><span class='freq-set-count pill-count'>${count}</span></span>`;
+        }).join('');
+        // Render duo2 pills (initially all enabled)
+        function renderDuo2Pills(duo1Set) {
+            duo2PillsDiv.innerHTML = topPairs.map(([set, count]) => {
+                const pairNums = set.split('-').map(Number);
+                const disabled = duo1Set && pairNums.some(n => duo1Set.includes(n));
+                return `<span class="pill-group"><button class="pill-btn duo2-pill" data-set="${set}" style="margin:0 4px 8px 0;" ${disabled ? 'disabled' : ''}>${set.split('-').join(', ')}</button><span class='freq-set-count pill-count'>${count}</span></span>`;
+            }).join('');
+        }
+        renderDuo2Pills(null);
+        // Selection logic
+        duo1PillsDiv.onclick = function(e) {
+            const btn = e.target.closest('.duo1-pill');
+            if (!btn) return;
+            duo1PillsDiv.querySelectorAll('.duo1-pill').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+            selectedDuo1 = btn.getAttribute('data-set').split('-').map(Number);
+            selectedDuo2 = null;
+            renderDuo2Pills(selectedDuo1);
+            document.getElementById('build-duo-combo-btn').disabled = true;
+            // Attach duo2 pill click events after re-render
+            attachDuo2PillEvents();
+        };
+        function attachDuo2PillEvents() {
+            duo2PillsDiv.querySelectorAll('.duo2-pill').forEach(btn => {
+                btn.onclick = function() {
+                    if (btn.disabled) return;
+                    duo2PillsDiv.querySelectorAll('.duo2-pill').forEach(b => b.classList.remove('selected'));
+                    btn.classList.add('selected');
+                    selectedDuo2 = btn.getAttribute('data-set').split('-').map(Number);
+                    if (selectedDuo1 && selectedDuo2) {
+                        document.getElementById('build-duo-combo-btn').disabled = false;
+                    }
+                };
+            });
+        }
+        attachDuo2PillEvents();
+        document.getElementById('build-duo-combo-btn').onclick = function() {
+            if (!selectedDuo1 || !selectedDuo2) return;
+            let comboSet = Array.from(new Set([...selectedDuo1, ...selectedDuo2]));
+            if (comboSet.length < 4) {
+                const rest = generateUniqueNumbers(4-comboSet.length, 1, 69, comboSet);
+                comboSet = comboSet.concat(rest).sort((a,b)=>a-b);
+            } else {
+                comboSet = comboSet.slice(0,4).sort((a,b)=>a-b);
+            }
+            // Count how many times this 4-number set appeared in history
+            let count = 0;
+            for (const draw of allMainDraws) {
+                const drawSet = new Set(draw);
+                if (comboSet.every(n => drawSet.has(n))) count++;
+            }
+            let html = '<table style="width:100%; border-collapse:collapse; font-size:1.12em;">';
+            html += '<thead><tr><th>#</th><th>Combination</th><th>Results</th></tr></thead><tbody>';
+            html += `<tr><td style='font-weight:bold;'>1</td><td>` +
+                comboSet.map(num => `<span class='generated-ball'>${num}</span>`).join('') +
+                `</td><td style='color:#234; font-weight:600;'>${count > 0 ? count + ' time' + (count > 1 ? 's' : '') : 'Never'}` +
+                `<br><span style='color:#888; font-weight:400;'>Duos: ${selectedDuo1.join('-')} & ${selectedDuo2.join('-')}</span>` +
+                `</td></tr>`;
+            html += '</tbody></table>';
+            document.getElementById('built-duo-combo-result').innerHTML = html;
+        };
+    }
+    insertDuoSectionPills();
+    renderDuoBuilderPills();
     </script>
 </body>
 </html> 
