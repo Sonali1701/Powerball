@@ -146,11 +146,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         tooltip.className = 'tooltip';
                         tooltip.textContent = `${numberStats[n].count} times`;
                         ball.appendChild(tooltip);
-                        // Count badge
-                        const badge = document.createElement('span');
-                        badge.className = 'count-badge';
-                        badge.textContent = numberStats[n].count;
-                        ball.appendChild(badge);
+                        // Removed count badge
                         ball.onclick = function(e) {
                             // Multi-select: toggle selection
                             if (selectedBalls.has(n)) {
@@ -231,11 +227,11 @@ document.addEventListener('DOMContentLoaded', function() {
                             // Render numbers: selected as red balls, others as black text, with dash between
                             const numbersHtml = draw.numbers.map((num, idx) => {
                                 if (draw.selected[idx]) {
-                                    return `<span class='red-ball'>${num}</span>${idx < draw.numbers.length-1 ? '<span class="dash">-</span>' : ''}`;
+                                    return `<span class='red-ball'>${num}</span>`;
                                 } else {
-                                    return `<span class='plain-number'>${num}</span>${idx < draw.numbers.length-1 ? '<span class="dash">-</span>' : ''}`;
+                                    return `<span class='plain-number'>${num}</span>`;
                                 }
-                            }).join('');
+                            }).join('<br>'); // Show each number on a new line
                             tr.innerHTML = `<td>${draw.date}</td><td>${draw.type}</td><td><div class='draws-list aligned-numbers'>${numbersHtml}</div></td>`;
                             table.querySelector('tbody').appendChild(tr);
                         });
@@ -249,50 +245,30 @@ document.addEventListener('DOMContentLoaded', function() {
                         }, 100);
                     };
                     // --- Show info for a number ---
-                    function showNumberInfo(num, stat) {
-                        const info = document.getElementById('number-info');
-                        info.classList.add('active');
-                        info.style.animation = 'fadein 0.4s';
-                        setTimeout(() => { info.style.animation = ''; }, 400);
-                        // Hot/Cold logic: hot if appeared in last 5 draws, cold if not in last 20
-                        let hotStatus = '';
-                        if (stat.dates.length > 0) {
-                            const lastDraw = stat.dates[stat.dates.length - 1];
-                            const recent = stat.dates.slice(-5);
-                            if (recent.length > 0 && recent.some(d => d.indexOf('(Double Play)') === -1)) {
-                                hotStatus = '<span class="hot">Hot</span>';
-                            } else if (stat.dates.length > 0 && stat.dates.length < 3) {
-                                hotStatus = '<span class="cold">Cold</span>';
-                            }
-                        }
-                        // First/last appearance
-                        let first = stat.dates[0] || '-';
-                        let last = stat.dates[stat.dates.length - 1] || '-';
-                        // Collapsible date list
-                        let showAll = false;
-                        function renderDates() {
-                            let datesToShow = showAll ? stat.dates : stat.dates.slice(0, 10);
-                            let html = `<div class="date-list"><ul>${datesToShow.map(d => `<li>${d}</li>`).join('')}</ul></div>`;
-                            if (stat.dates.length > 10) {
-                                html += `<span class="toggle-dates" id="toggle-dates">${showAll ? 'Show less' : 'Show all (' + stat.dates.length + ')'} dates</span>`;
-                            }
-                            return html;
-                        }
-                        info.innerHTML = `
-                            <div class="big-count">${stat.count}</div>
-                            <div>Times appeared ${hotStatus}</div>
-                            <div style="margin:8px 0 4px 0;">
-                                <span style="font-size:1.1em;">First:</span> <b>${first}</b> &nbsp;|&nbsp; <span style="font-size:1.1em;">Last:</span> <b>${last}</b>
-                            </div>
-                            ${renderDates()}
-                        `;
-                        if (stat.dates.length > 10) {
-                            document.getElementById('toggle-dates').onclick = function() {
-                                showAll = !showAll;
-                                showNumberInfo(num, stat);
-                            };
-                        }
+                    // Remove old single-ball info panel logic
+                    // --- Add new always-visible number frequency panel ---
+                    let freqPanel = document.getElementById('number-freq-panel');
+                    if (!freqPanel) {
+                        freqPanel = document.createElement('div');
+                        freqPanel.id = 'number-freq-panel';
+                        freqPanel.style.position = 'fixed';
+                        freqPanel.style.top = '60px';
+                        freqPanel.style.right = '0';
+                        freqPanel.style.width = '180px';
+                        freqPanel.style.height = 'calc(100vh - 60px)';
+                        freqPanel.style.overflowY = 'auto';
+                        freqPanel.style.background = '#f9f9f9';
+                        freqPanel.style.borderLeft = '1px solid #ddd';
+                        freqPanel.style.padding = '12px 8px';
+                        freqPanel.style.zIndex = '10';
+                        freqPanel.innerHTML = `<div style='font-weight:bold; font-size:1.1em; margin-bottom:8px;'>Number Frequency</div><div id='freq-list'></div>`;
+                        document.body.appendChild(freqPanel);
                     }
+                    const freqList = freqPanel.querySelector('#freq-list');
+                    freqList.innerHTML = '<table style="width:100%; font-size:1em; border-collapse:collapse;">' +
+                        '<thead><tr><th style="text-align:left;">#</th><th style="text-align:right;">Count</th></tr></thead><tbody>' +
+                        Array.from({length: 69}, (_, i) => `<tr><td>${i+1}</td><td style="text-align:right;">${numberStats[i+1].count}</td></tr>`).join('') +
+                        '</tbody></table>';
                     // --- Highlight draws in table ---
                     // Remove any logic that renders the main results table or highlights draws in the table.
                     // --- Search/filter functionality ---
