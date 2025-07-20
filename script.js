@@ -282,6 +282,95 @@ document.addEventListener('DOMContentLoaded', function() {
                             resultsDiv.innerHTML = '<div style="color:#e74c3c; margin:12px 0;">No draws found matching your search.</div>';
                         }
                     });
+                    // --- Compute duos, trios, quads, fives ---
+                    function getCombos(arr, k) {
+                        const results = [];
+                        function helper(start, combo) {
+                            if (combo.length === k) {
+                                results.push(combo.slice().sort((a,b)=>a-b).join('-'));
+                                return;
+                            }
+                            for (let i = start; i < arr.length; i++) {
+                                combo.push(arr[i]);
+                                helper(i+1, combo);
+                                combo.pop();
+                            }
+                        }
+                        helper(0, []);
+                        return results;
+                    }
+                    const duoCounts = new Map();
+                    const trioCounts = new Map();
+                    const quadCounts = new Map();
+                    const fiveCounts = new Map();
+                    const allMainDraws = [];
+                    drawRows.forEach(draw => {
+                        const nums = draw.mainArr.map(Number).filter(n => n >= 1 && n <= 69);
+                        if (nums.length === 5) {
+                            allMainDraws.push(nums);
+                            // Duos
+                            getCombos(nums, 2).forEach(set => duoCounts.set(set, (duoCounts.get(set)||0)+1));
+                            // Trios
+                            getCombos(nums, 3).forEach(set => trioCounts.set(set, (trioCounts.get(set)||0)+1));
+                            // Quads
+                            getCombos(nums, 4).forEach(set => quadCounts.set(set, (quadCounts.get(set)||0)+1));
+                            // Fives
+                            const fiveSet = nums.slice().sort((a,b)=>a-b).join('-');
+                            fiveCounts.set(fiveSet, (fiveCounts.get(fiveSet)||0)+1);
+                        }
+                    });
+                    // --- Render 2x tab ---
+                    function render2xTab() {
+                        // Duos
+                        let duosHtml = '<h3>Top 20 Duos</h3><table class="freq-table"><thead><tr><th>Duo</th><th>Count</th></tr></thead><tbody>';
+                        Array.from(duoCounts.entries()).sort((a,b)=>b[1]-a[1]).slice(0,20).forEach(([set, count]) => {
+                            duosHtml += `<tr><td>${set}</td><td>${count}</td></tr>`;
+                        });
+                        duosHtml += '</tbody></table>';
+                        document.getElementById('duos-table').innerHTML = duosHtml;
+                        // Trios
+                        let triosHtml = '<h3>Top 20 Trios</h3><table class="freq-table"><thead><tr><th>Trio</th><th>Count</th></tr></thead><tbody>';
+                        Array.from(trioCounts.entries()).sort((a,b)=>b[1]-a[1]).slice(0,20).forEach(([set, count]) => {
+                            triosHtml += `<tr><td>${set}</td><td>${count}</td></tr>`;
+                        });
+                        triosHtml += '</tbody></table>';
+                        document.getElementById('trios-table').innerHTML = triosHtml;
+                        // Quads
+                        let quadsHtml = '<h3>Top 20 Quadruples</h3><table class="freq-table"><thead><tr><th>Quadruple</th><th>Count</th></tr></thead><tbody>';
+                        Array.from(quadCounts.entries()).sort((a,b)=>b[1]-a[1]).slice(0,20).forEach(([set, count]) => {
+                            quadsHtml += `<tr><td>${set}</td><td>${count}</td></tr>`;
+                        });
+                        quadsHtml += '</tbody></table>';
+                        document.getElementById('quads-table').innerHTML = quadsHtml;
+                        // Fives
+                        let fivesHtml = '<h3>Top 20 Sets of 5</h3><table class="freq-table"><thead><tr><th>Set of 5</th><th>Count</th></tr></thead><tbody>';
+                        Array.from(fiveCounts.entries()).sort((a,b)=>b[1]-a[1]).slice(0,20).forEach(([set, count]) => {
+                            fivesHtml += `<tr><td>${set}</td><td>${count}</td></tr>`;
+                        });
+                        fivesHtml += '</tbody></table>';
+                        document.getElementById('fives-table').innerHTML = fivesHtml;
+                    }
+                    // --- Render History tab ---
+                    function renderHistoryTab() {
+                        let html = '<table class="freq-table"><thead><tr><th>#</th><th>Date</th><th>Numbers</th></tr></thead><tbody>';
+                        allMainDraws.forEach((nums, idx) => {
+                            const draw = drawRows[idx];
+                            html += `<tr><td>${idx+1}</td><td>${draw.date}</td><td>${nums.join('-')}</td></tr>`;
+                        });
+                        html += '</tbody></table>';
+                        document.getElementById('history-table').innerHTML = html;
+                    }
+                    // --- Tab event listeners ---
+                    document.querySelectorAll('.tab-btn').forEach(btn => {
+                        btn.addEventListener('click', function() {
+                            const tab = btn.getAttribute('data-tab');
+                            if (tab === '2x') render2xTab();
+                            if (tab === 'history') renderHistoryTab();
+                        });
+                    });
+                    // Optionally, render 2x and history if user reloads on those tabs
+                    if (document.getElementById('tab-2x').style.display === 'block') render2xTab();
+                    if (document.getElementById('tab-history').style.display === 'block') renderHistoryTab();
                 }
             });
         });

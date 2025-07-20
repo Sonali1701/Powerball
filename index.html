@@ -11,21 +11,51 @@
         <h1>PowerBall Analyzer</h1>
         <p class="subtitle">Explore, analyze, and generate Powerball numbers with ease</p>
     </header>
-    <div class="container main-flex">
-        <div class="left-col">
-            <a href="generator.html" id="generator-link">
-                <button id="generate-combo-btn">Go to Random Generator</button>
-            </a>
-            <div class="ball-panel" id="ball-panel"></div>
-            <button id="check-combo-btn" style="margin: 18px 0 0 0; width: 100%; font-size: 1.1em; padding: 10px 0; border-radius: 8px; border: none; background: #3498db; color: #fff; cursor: pointer;">Check My Numbers</button>
+    <!-- Tab Navigation -->
+    <nav class="tab-nav" style="margin-bottom:18px;">
+        <button class="tab-btn active" data-tab="main">Home</button>
+        <button class="tab-btn" data-tab="2x">2x</button>
+        <button class="tab-btn" data-tab="history">History</button>
+    </nav>
+    <!-- Main Content -->
+    <div id="tab-main" class="tab-content" style="display:block;">
+        <div class="container main-flex">
+            <div class="left-col">
+                <a href="generator.html" id="generator-link">
+                    <button id="generate-combo-btn">Go to Random Generator</button>
+                </a>
+                <div class="ball-panel" id="ball-panel"></div>
+                <button id="check-combo-btn" style="margin: 18px 0 0 0; width: 100%; font-size: 1.1em; padding: 10px 0; border-radius: 8px; border: none; background: #3498db; color: #fff; cursor: pointer;">Check My Numbers</button>
+            </div>
+            <div class="center-col">
+                <input type="text" id="search-box" placeholder="Search by date or number..." autocomplete="off" />
+                <div id="combo-results"></div>
+            </div>
+            <div class="right-col">
+                <div id="number-freq-panel"></div>
+            </div>
         </div>
-        <div class="center-col">
-            <input type="text" id="search-box" placeholder="Search by date or number..." autocomplete="off" />
-            <div id="combo-results"></div>
-        </div>
-        <div class="right-col">
-            <div id="number-freq-panel"></div>
-        </div>
+    </div>
+    <!-- 2x Tab Content -->
+    <div id="tab-2x" class="tab-content" style="display:none;">
+        <section class="generator-section">
+            <div class="generator-panel">
+                <h2>Duos, Trios, Quadruples, Sets of 5</h2>
+                <div id="duos-table"></div>
+                <div id="trios-table" style="margin-top:24px;"></div>
+                <div id="quads-table" style="margin-top:24px;"></div>
+                <div id="fives-table" style="margin-top:24px;"></div>
+            </div>
+        </section>
+    </div>
+    <!-- History Tab Content -->
+    <div id="tab-history" class="tab-content" style="display:none;">
+        <section class="generator-section">
+            <div class="generator-panel">
+                <h2>All Historical Drawings</h2>
+                <div id="history-table"></div>
+            </div>
+        </section>
     </div>
     <footer>
         <b>How to use:</b> Click any ball to select your numbers. Use the generator for random picks. Search draws by date or number. Data updates automatically from CSV file.<br>
@@ -33,5 +63,20 @@
     </footer>
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
     <script src="script.js"></script>
+    <script>
+    // Tab switching logic
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.onclick = function() {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            document.querySelectorAll('.tab-content').forEach(tab => tab.style.display = 'none');
+            document.getElementById('tab-' + btn.getAttribute('data-tab')).style.display = 'block';
+        };
+    });
+    // --- 2x and History Tab Data Logic ---
+    // This assumes you have access to the same CSV and data as generator.html
+    // You may want to move or duplicate relevant JS logic from generator.html to here for duos/trios/quads/fives and history rendering
+    // Placeholder: You will need to implement the data loading and rendering logic for #duos-table, #trios-table, #quads-table, #fives-table, #history-table
+    </script>
 </body>
 </html> 

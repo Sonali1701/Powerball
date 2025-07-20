@@ -11,54 +11,98 @@
         <h1>PowerBall Random Generator</h1>
         <p class="subtitle">Generate, analyze, and build Powerball combinations with advanced tools</p>
     </header>
-    <div class="generator-flex-layout">
+    <!-- Tab Navigation -->
+    <nav class="tab-nav">
+        <button class="tab-btn active" data-tab="home">Home</button>
+        <button class="tab-btn" data-tab="2x">2x</button>
+        <button class="tab-btn" data-tab="history">History</button>
+    </nav>
+    <!-- Tab Content -->
+    <div id="tab-home" class="tab-content" style="display:block;">
+        <!-- Add New Numbers Section -->
         <section class="generator-section">
             <div class="generator-panel">
-                <h2>Quick Random Generator</h2>
-                <div style="margin-bottom: 18px;">
-                    <button class="multi-gen-btn" data-count="4">Generate 4</button>
-                    <button class="multi-gen-btn" data-count="8">Generate 8</button>
-                    <button class="multi-gen-btn" data-count="16">Generate 16</button>
-                </div>
-                <div id="generated-table" style="margin-top:18px;"></div>
-                <div id="csv-loading" style="margin-top:10px; color:#888; font-size:1.05em;"></div>
-                <div style="margin-top:18px; color:#888; font-size:1.05em;">Each combination: 5 unique white balls (1-69).</div>
+                <h2>Add New Numbers</h2>
+                <form id="add-numbers-form" style="display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
+                    <input type="number" min="1" max="69" required class="add-num-input" placeholder="1" />
+                    <input type="number" min="1" max="69" required class="add-num-input" placeholder="2" />
+                    <input type="number" min="1" max="69" required class="add-num-input" placeholder="3" />
+                    <input type="number" min="1" max="69" required class="add-num-input" placeholder="4" />
+                    <input type="number" min="1" max="69" required class="add-num-input" placeholder="5" />
+                    <button type="submit" class="freq-gen-btn">Add</button>
+                </form>
+                <div id="add-numbers-msg" style="margin-top:8px; color:#888; font-size:1.05em;"></div>
             </div>
         </section>
-        <section class="generator-section">
-            <div class="generator-panel" id="frequent-sets-panel">
-                <h2>Most Common Sets</h2>
-                <div id="frequent-sets-loading" style="color:#888; font-size:1.05em;">Analyzing historical data...</div>
-                <div id="frequent-sets-content" style="display:none;">
-                    <div style="margin-bottom:12px;">
-                        <span class="section-label">Top 5 Pairs:</span>
-                        <span id="top-pairs"></span>
-                        <button class="freq-gen-btn" data-type="pair">Generate from Pair</button>
+        <!-- Existing Home Content -->
+        <div class="generator-flex-layout">
+            <section class="generator-section">
+                <div class="generator-panel">
+                    <h2>Quick Random Generator</h2>
+                    <div style="margin-bottom: 18px;">
+                        <button class="multi-gen-btn" data-count="4">Generate 4</button>
+                        <button class="multi-gen-btn" data-count="8">Generate 8</button>
+                        <button class="multi-gen-btn" data-count="16">Generate 16</button>
                     </div>
-                    <div style="margin-bottom:12px;">
-                        <span class="section-label">Top 5 Triplets:</span>
-                        <span id="top-triplets"></span>
-                        <button class="freq-gen-btn" data-type="triplet">Generate from Triplet</button>
-                    </div>
-                    <div style="margin-bottom:12px;">
-                        <span class="section-label">Top 5 Quadruplets:</span>
-                        <span id="top-quads"></span>
-                        <button class="freq-gen-btn" data-type="quad">Generate from Quadruplet</button>
+                    <div id="generated-table" style="margin-top:18px;"></div>
+                    <div id="csv-loading" style="margin-top:10px; color:#888; font-size:1.05em;"></div>
+                    <div style="margin-top:18px; color:#888; font-size:1.05em;">Each combination: 5 unique white balls (1-69).</div>
+                </div>
+            </section>
+            <section class="generator-section">
+                <div class="generator-panel" id="frequent-sets-panel">
+                    <h2>Most Common Sets</h2>
+                    <div id="frequent-sets-loading" style="color:#888; font-size:1.05em;">Analyzing historical data...</div>
+                    <div id="frequent-sets-content" style="display:none;">
+                        <div style="margin-bottom:12px;">
+                            <span class="section-label">Top 5 Pairs:</span>
+                            <span id="top-pairs"></span>
+                            <button class="freq-gen-btn" data-type="pair">Generate from Pair</button>
+                        </div>
+                        <div style="margin-bottom:12px;">
+                            <span class="section-label">Top 5 Triplets:</span>
+                            <span id="top-triplets"></span>
+                            <button class="freq-gen-btn" data-type="triplet">Generate from Triplet</button>
+                        </div>
+                        <div style="margin-bottom:12px;">
+                            <span class="section-label">Top 5 Quadruplets:</span>
+                            <span id="top-quads"></span>
+                            <button class="freq-gen-btn" data-type="quad">Generate from Quadruplet</button>
+                        </div>
                     </div>
                 </div>
-            </div>
-        </section>
+            </section>
+            <section class="generator-section">
+                <div class="generator-panel" id="combo-builder-panel">
+                    <h2>Build Combination: Most-Drawn Triplet + Pair</h2>
+                    <div id="triplet-pills" style="margin-bottom:12px;"></div>
+                    <div id="pair-pills" style="margin-bottom:12px;"></div>
+                    <button id="build-combo-btn" class="freq-gen-btn" style="margin-top:8px;" disabled>Generate from Triplet + Pair</button>
+                    <div id="built-combo-result" style="margin-top:18px;"></div>
+                </div>
+            </section>
+        </div>
+        <a href="index.html" style="display:inline-block; margin:32px auto 0 auto; color:#3498db; font-weight:600; text-decoration:none; text-align:center; width:100%;">&larr; Back to Analyzer</a>
+    </div>
+    <div id="tab-2x" class="tab-content" style="display:none;">
         <section class="generator-section">
-            <div class="generator-panel" id="combo-builder-panel">
-                <h2>Build Combination: Most-Drawn Triplet + Pair</h2>
-                <div id="triplet-pills" style="margin-bottom:12px;"></div>
-                <div id="pair-pills" style="margin-bottom:12px;"></div>
-                <button id="build-combo-btn" class="freq-gen-btn" style="margin-top:8px;" disabled>Generate from Triplet + Pair</button>
-                <div id="built-combo-result" style="margin-top:18px;"></div>
+            <div class="generator-panel">
+                <h2>Duos, Trios, Quadruples, Sets of 5</h2>
+                <div id="duos-table"></div>
+                <div id="trios-table" style="margin-top:24px;"></div>
+                <div id="quads-table" style="margin-top:24px;"></div>
+                <div id="fives-table" style="margin-top:24px;"></div>
             </div>
         </section>
     </div>
-    <a href="index.html" style="display:inline-block; margin:32px auto 0 auto; color:#3498db; font-weight:600; text-decoration:none; text-align:center; width:100%;">&larr; Back to Analyzer</a>
+    <div id="tab-history" class="tab-content" style="display:none;">
+        <section class="generator-section">
+            <div class="generator-panel">
+                <h2>All Historical Drawings</h2>
+                <div id="history-table"></div>
+            </div>
+        </section>
+    </div>
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
     <script>
     let historicalCombos = [];
@@ -429,6 +473,90 @@
     }
     insertDuoSectionPills();
     renderDuoBuilderPills();
+    // Tab switching logic
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.onclick = function() {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            document.querySelectorAll('.tab-content').forEach(tab => tab.style.display = 'none');
+            document.getElementById('tab-' + btn.getAttribute('data-tab')).style.display = 'block';
+        };
+    });
+    // Add New Numbers logic
+    document.getElementById('add-numbers-form').onsubmit = function(e) {
+        e.preventDefault();
+        const inputs = Array.from(document.querySelectorAll('.add-num-input'));
+        const nums = inputs.map(input => parseInt(input.value, 10));
+        const msgDiv = document.getElementById('add-numbers-msg');
+        if (nums.some(isNaN) || new Set(nums).size !== 5 || nums.some(n => n < 1 || n > 69)) {
+            msgDiv.textContent = 'Please enter 5 unique numbers between 1 and 69.';
+            return;
+        }
+        // Add to historicalCombos and allMainDraws
+        const sorted = nums.slice().sort((a,b)=>a-b);
+        historicalCombos.push({ combo: sorted.join('-') });
+        allMainDraws.push(sorted);
+        msgDiv.textContent = 'Numbers added!';
+        inputs.forEach(input => input.value = '');
+        analyzeFrequentSets();
+        renderHistoryTable();
+    };
+    // 2x tab rendering
+    function render2xTab() {
+        // Duos
+        let duosHtml = '<h3>Top 20 Duos</h3><table class="freq-table"><thead><tr><th>Duo</th><th>Count</th></tr></thead><tbody>';
+        topPairs.slice(0,20).forEach(([set, count]) => {
+            duosHtml += `<tr><td>${set}</td><td>${count}</td></tr>`;
+        });
+        duosHtml += '</tbody></table>';
+        document.getElementById('duos-table').innerHTML = duosHtml;
+        // Trios
+        let triosHtml = '<h3>Top 20 Trios</h3><table class="freq-table"><thead><tr><th>Trio</th><th>Count</th></tr></thead><tbody>';
+        topTriplets.slice(0,20).forEach(([set, count]) => {
+            triosHtml += `<tr><td>${set}</td><td>${count}</td></tr>`;
+        });
+        triosHtml += '</tbody></table>';
+        document.getElementById('trios-table').innerHTML = triosHtml;
+        // Quads
+        let quadsHtml = '<h3>Top 20 Quadruples</h3><table class="freq-table"><thead><tr><th>Quadruple</th><th>Count</th></tr></thead><tbody>';
+        topQuads.slice(0,20).forEach(([set, count]) => {
+            quadsHtml += `<tr><td>${set}</td><td>${count}</td></tr>`;
+        });
+        quadsHtml += '</tbody></table>';
+        document.getElementById('quads-table').innerHTML = quadsHtml;
+        // Sets of 5 (top 20 most common full draws)
+        let fivesHtml = '<h3>Top 20 Sets of 5</h3><table class="freq-table"><thead><tr><th>Set of 5</th><th>Count</th></tr></thead><tbody>';
+        const comboCounts = new Map();
+        for (const h of historicalCombos) {
+            comboCounts.set(h.combo, (comboCounts.get(h.combo)||0)+1);
+        }
+        Array.from(comboCounts.entries()).sort((a,b)=>b[1]-a[1]).slice(0,20).forEach(([set, count]) => {
+            fivesHtml += `<tr><td>${set}</td><td>${count}</td></tr>`;
+        });
+        fivesHtml += '</tbody></table>';
+        document.getElementById('fives-table').innerHTML = fivesHtml;
+    }
+    // History tab rendering
+    function renderHistoryTable() {
+        let html = '<table class="freq-table"><thead><tr><th>#</th><th>Numbers</th></tr></thead><tbody>';
+        allMainDraws.forEach((nums, idx) => {
+            html += `<tr><td>${idx+1}</td><td>${nums.join('-')}</td></tr>`;
+        });
+        html += '</tbody></table>';
+        document.getElementById('history-table').innerHTML = html;
+    }
+    // After analyzing frequent sets, update 2x and history tabs
+    const oldAnalyzeFrequentSets = analyzeFrequentSets;
+    analyzeFrequentSets = function() {
+        oldAnalyzeFrequentSets();
+        render2xTab();
+        renderHistoryTable();
+    };
+    // Initial render for 2x and history tabs after CSV load
+    window.addEventListener('DOMContentLoaded', function() {
+        render2xTab();
+        renderHistoryTable();
+    });
     </script>
 </body>
 </html> 
