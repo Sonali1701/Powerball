@@ -350,12 +350,102 @@ document.addEventListener('DOMContentLoaded', function() {
                         fivesHtml += '</tbody></table>';
                         document.getElementById('fives-table').innerHTML = fivesHtml;
                     }
-                    // --- Render History tab ---
+                    // --- 2x Tab Interactive Ball Panel and Results ---
+                    function render2xBallPanel() {
+                        const panel = document.getElementById('twox-ball-panel');
+                        if (!panel) return;
+                        panel.innerHTML = '';
+                        const selectedBalls = new Set();
+                        for (let n = 1; n <= 69; n++) {
+                            const ball = document.createElement('span');
+                            ball.className = 'ball';
+                            ball.textContent = n;
+                            ball.style.background = '#fff';
+                            ball.style.color = '#222';
+                            ball.style.border = '2px solid #888';
+                            // Tooltip
+                            const tooltip = document.createElement('span');
+                            tooltip.className = 'tooltip';
+                            tooltip.textContent = `${numberStats[n].count} times`;
+                            ball.appendChild(tooltip);
+                            ball.onclick = function() {
+                                if (selectedBalls.has(n)) {
+                                    selectedBalls.delete(n);
+                                    ball.classList.remove('selected');
+                                } else {
+                                    selectedBalls.add(n);
+                                    ball.classList.add('selected');
+                                    ball.style.animation = 'popin 0.3s';
+                                    setTimeout(() => { ball.style.animation = ''; }, 300);
+                                }
+                                render2xResults(Array.from(selectedBalls));
+                            };
+                            panel.appendChild(ball);
+                        }
+                    }
+                    function render2xResults(selected) {
+                        const resultsDiv = document.getElementById('twox-results');
+                        if (!resultsDiv) return;
+                        if (!selected || selected.length === 0) {
+                            resultsDiv.innerHTML = '<div style="color:#888; margin:18px 0;">Select balls to see all historical duos, trios, quads, and fives containing them (main & double play).</div>';
+                            return;
+                        }
+                        // Helper to check if all selected are in arr
+                        function containsAll(arr, sel) {
+                            return sel.every(s => arr.includes(String(s)) || arr.includes(Number(s)));
+                        }
+                        // For each group size 2-5, show all draws where all selected balls of that size appeared together
+                        const groupSizes = [2,3,4,5];
+                        const matches = {2: [], 3: [], 4: [], 5: []};
+                        drawRows.forEach(draw => {
+                            groupSizes.forEach(k => {
+                                // Only consider if enough balls are selected
+                                if (selected.length >= k) {
+                                    // All possible k-sized subsets of selected balls
+                                    const selCombos = getCombos(selected, k);
+                                    selCombos.forEach(selCombo => {
+                                        // Main
+                                        if (draw.mainArr && draw.mainArr.length === 5 && containsAll(draw.mainArr, selCombo.split('-'))) {
+                                            matches[k].push({
+                                                date: draw.date,
+                                                type: 'Main',
+                                                combo: selCombo
+                                            });
+                                        }
+                                        // Double Play
+                                        if (draw.doublePlayArr && draw.doublePlayArr.length === 5 && containsAll(draw.doublePlayArr, selCombo.split('-'))) {
+                                            matches[k].push({
+                                                date: draw.date,
+                                                type: 'Double Play',
+                                                combo: selCombo
+                                            });
+                                        }
+                                    });
+                                }
+                            });
+                        });
+                        let html = '';
+                        groupSizes.forEach(k => {
+                            if (selected.length < k) return;
+                            html += `<h3>Combinations of ${k}</h3>`;
+                            if (matches[k].length === 0) {
+                                html += `<div style='color:#aaa; margin-bottom:12px;'>No matches found.</div>`;
+                            } else {
+                                html += `<table class='freq-table'><thead><tr><th>Date</th><th>Type</th><th>Combination</th></tr></thead><tbody>`;
+                                matches[k].forEach(m => {
+                                    html += `<tr><td>${m.date}</td><td>${m.type}</td><td>${m.combo}</td></tr>`;
+                                });
+                                html += '</tbody></table>';
+                            }
+                        });
+                        resultsDiv.innerHTML = html;
+                    }
+                    // --- Render History tab with both main and double play as columns ---
                     function renderHistoryTab() {
-                        let html = '<table class="freq-table"><thead><tr><th>#</th><th>Date</th><th>Numbers</th></tr></thead><tbody>';
-                        allMainDraws.forEach((nums, idx) => {
-                            const draw = drawRows[idx];
-                            html += `<tr><td>${idx+1}</td><td>${draw.date}</td><td>${nums.join('-')}</td></tr>`;
+                        let html = '<table class="freq-table"><thead><tr><th>#</th><th>Date</th><th>Main Numbers</th><th>Double Play Numbers</th></tr></thead><tbody>';
+                        let rowNum = 1;
+                        drawRows.forEach(draw => {
+                            html += `<tr><td>${rowNum++}</td><td>${draw.date}</td><td>${draw.mainArr.join('-')}</td><td>${draw.doublePlayArr && draw.doublePlayArr.length === 5 ? draw.doublePlayArr.join('-') : ''}</td></tr>`;
                         });
                         html += '</tbody></table>';
                         document.getElementById('history-table').innerHTML = html;
@@ -364,12 +454,18 @@ document.addEventListener('DOMContentLoaded', function() {
                     document.querySelectorAll('.tab-btn').forEach(btn => {
                         btn.addEventListener('click', function() {
                             const tab = btn.getAttribute('data-tab');
-                            if (tab === '2x') render2xTab();
+                            if (tab === '2x') {
+                                render2xBallPanel();
+                                render2xResults([]);
+                            }
                             if (tab === 'history') renderHistoryTab();
                         });
                     });
                     // Optionally, render 2x and history if user reloads on those tabs
-                    if (document.getElementById('tab-2x').style.display === 'block') render2xTab();
+                    if (document.getElementById('tab-2x').style.display === 'block') {
+                        render2xBallPanel();
+                        render2xResults([]);
+                    }
                     if (document.getElementById('tab-history').style.display === 'block') renderHistoryTab();
                 }
             });
