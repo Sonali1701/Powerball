@@ -7,10 +7,10 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <header class="main-header">
-        <h1>PowerBall Random Generator</h1>
-        <p class="subtitle">Generate, analyze, and build Powerball combinations with advanced tools</p>
-    </header>
+    <!-- Remove header and subtitle, add custom note -->
+    <div id="custom-note" style="margin: 24px 0 18px 0; min-height: 32px; text-align: center; font-size: 1.13em; color: #555;">
+      <textarea id='note-textarea' placeholder='Write your note here...' style='width: 90%; min-height: 32px; font-size: 1.13em; border-radius: 8px; border: 1.5px solid #e0e0e0; padding: 8px; resize: vertical;'></textarea>
+    </div>
     <!-- Tab Navigation -->
     <nav class="tab-nav">
         <button class="tab-btn active" data-tab="home">Home</button>
@@ -19,26 +19,12 @@
     </nav>
     <!-- Tab Content -->
     <div id="tab-home" class="tab-content" style="display:block;">
-        <!-- Add New Numbers Section -->
-        <section class="generator-section">
-            <div class="generator-panel">
-                <h2>Add New Numbers</h2>
-                <form id="add-numbers-form" style="display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
-                    <input type="number" min="1" max="69" required class="add-num-input" placeholder="1" />
-                    <input type="number" min="1" max="69" required class="add-num-input" placeholder="2" />
-                    <input type="number" min="1" max="69" required class="add-num-input" placeholder="3" />
-                    <input type="number" min="1" max="69" required class="add-num-input" placeholder="4" />
-                    <input type="number" min="1" max="69" required class="add-num-input" placeholder="5" />
-                    <button type="submit" class="freq-gen-btn">Add</button>
-                </form>
-                <div id="add-numbers-msg" style="margin-top:8px; color:#888; font-size:1.05em;"></div>
-            </div>
-        </section>
-        <!-- Existing Home Content -->
+        <!-- Remove Add New Numbers Section -->
         <div class="generator-flex-layout">
+            <!-- Section 1: Quick Random Generator -->
             <section class="generator-section">
                 <div class="generator-panel">
-                    <h2>Quick Random Generator</h2>
+                    <h2>1. Quick Random Generator</h2>
                     <div style="margin-bottom: 18px;">
                         <button class="multi-gen-btn" data-count="4">Generate 4</button>
                         <button class="multi-gen-btn" data-count="8">Generate 8</button>
@@ -46,42 +32,54 @@
                     </div>
                     <div id="generated-table" style="margin-top:18px;"></div>
                     <div id="csv-loading" style="margin-top:10px; color:#888; font-size:1.05em;"></div>
-                    <div style="margin-top:18px; color:#888; font-size:1.05em;">Each combination: 5 unique white balls (1-69).</div>
+                    <div style="margin-top:18px; color:#888; font-size:1.05em;">Each combination: 5 unique white balls (1-69) + 1 Powerball (1-26).</div>
                 </div>
             </section>
+            <!-- Section 2: Create Combination from 2 Duos (pill UI) -->
             <section class="generator-section">
-                <div class="generator-panel" id="frequent-sets-panel">
-                    <h2>Most Common Sets</h2>
-                    <div id="frequent-sets-loading" style="color:#888; font-size:1.05em;">Analyzing historical data...</div>
-                    <div id="frequent-sets-content" style="display:none;">
-                        <div style="margin-bottom:12px;">
-                            <span class="section-label">Top 5 Pairs:</span>
-                            <span id="top-pairs"></span>
-                            <button class="freq-gen-btn" data-type="pair">Generate from Pair</button>
-                        </div>
-                        <div style="margin-bottom:12px;">
-                            <span class="section-label">Top 5 Triplets:</span>
-                            <span id="top-triplets"></span>
-                            <button class="freq-gen-btn" data-type="triplet">Generate from Triplet</button>
-                        </div>
-                        <div style="margin-bottom:12px;">
-                            <span class="section-label">Top 5 Quadruplets:</span>
-                            <span id="top-quads"></span>
-                            <button class="freq-gen-btn" data-type="quad">Generate from Quadruplet</button>
-                        </div>
-                    </div>
+                <div class="generator-panel" id="duo-builder-panel">
+                    <h2>2. Create Combination from 2 Duos</h2>
+                    <div id="duo1-pills" style="margin-bottom:12px;"></div>
+                    <div id="duo2-pills" style="margin-bottom:12px;"></div>
+                    <button id="build-duo-combo-btn" class="freq-gen-btn" style="margin-top:8px;" disabled>Generate from Two Duos</button>
+                    <div id="built-duo-combo-result" style="margin-top:18px;"></div>
                 </div>
             </section>
+            <!-- Section 3: Create Combination from 1 Duo and 1 Trio -->
             <section class="generator-section">
                 <div class="generator-panel" id="combo-builder-panel">
-                    <h2>Build Combination: Most-Drawn Triplet + Pair</h2>
+                    <h2>3. Create Combination from 1 Duo and 1 Trio</h2>
                     <div id="triplet-pills" style="margin-bottom:12px;"></div>
                     <div id="pair-pills" style="margin-bottom:12px;"></div>
-                    <button id="build-combo-btn" class="freq-gen-btn" style="margin-top:8px;" disabled>Generate from Triplet + Pair</button>
+                    <button id="build-combo-btn" class="freq-gen-btn" style="margin-top:8px;" disabled>Generate from Duo + Trio</button>
                     <div id="built-combo-result" style="margin-top:18px;"></div>
                 </div>
             </section>
         </div>
+        <!-- Move Most Common Sets below or remove from main generator flow -->
+        <section class="generator-section">
+            <div class="generator-panel" id="frequent-sets-panel">
+                <h2>Most Common Sets</h2>
+                <div id="frequent-sets-loading" style="color:#888; font-size:1.05em;">Analyzing historical data...</div>
+                <div id="frequent-sets-content" style="display:none;">
+                    <div style="margin-bottom:12px;">
+                        <span class="section-label">Top 5 Pairs:</span>
+                        <span id="top-pairs"></span>
+                        <button class="freq-gen-btn" data-type="pair">Generate from Pair</button>
+                    </div>
+                    <div style="margin-bottom:12px;">
+                        <span class="section-label">Top 5 Triplets:</span>
+                        <span id="top-triplets"></span>
+                        <button class="freq-gen-btn" data-type="triplet">Generate from Triplet</button>
+                    </div>
+                    <div style="margin-bottom:12px;">
+                        <span class="section-label">Top 5 Quadruplets:</span>
+                        <span id="top-quads"></span>
+                        <button class="freq-gen-btn" data-type="quad">Generate from Quadruplet</button>
+                    </div>
+                </div>
+            </div>
+        </section>
         <a href="index.html" style="display:inline-block; margin:32px auto 0 auto; color:#3498db; font-weight:600; text-decoration:none; text-align:center; width:100%;">&larr; Back to Analyzer</a>
     </div>
     <div id="tab-2x" class="tab-content" style="display:none;">
@@ -133,8 +131,11 @@
                     for (let i = 0; i < data.length; i++) {
                         const row = data[i];
                         let winNumbers = (row['Winning Numbers'] || '').replace(/®/g, '').toLowerCase().trim();
-                        // Only include draws from 2016 onward
-                        if (row.Date && parseInt(row.Date.slice(0,4), 10) >= 2016 && (winNumbers.includes('powerball numbers') || winNumbers.match(/^(\d+\s*-\s*)+\d+$/))) {
+                        // Only include draws from 2016 onward (fix: extract year from MM/DD/YYYY)
+                        const dateStr = (row.Date || '').trim();
+                        const parts = dateStr.split('/');
+                        const year = parts.length === 3 ? parseInt(parts[2], 10) : 0;
+                        if (row.Date && year >= 2016 && (winNumbers.includes('powerball numbers') || winNumbers.match(/^(\d+\s*-\s*)+\d+$/))) {
                             let mainNumbers;
                             if (winNumbers.includes('powerball numbers')) {
                                 mainNumbers = (row['Winning Numbers'] || '').replace(/.*Numbers\s*/i, '').replace(/®/g, '').trim();
@@ -167,7 +168,8 @@
     }
     function generateCombination() {
         const whiteBalls = generateUniqueNumbers(5, 1, 69);
-        return { whiteBalls };
+        const powerball = getRandomInt(1, 26);
+        return { whiteBalls, powerball };
     }
     function countComboInHistory(whiteBalls) {
         const key = whiteBalls.slice().sort((a,b)=>a-b).join('-');
@@ -181,6 +183,7 @@
             const count = countComboInHistory(combo.whiteBalls);
             html += `<tr><td style='font-weight:bold;'>${i+1}</td><td>` +
                 combo.whiteBalls.map(num => `<span class='generated-ball'>${num}</span>`).join('') +
+                `<span class='generated-ball red'>${combo.powerball}</span>` +
                 `</td><td style='color:#234; font-weight:600;'>${count > 0 ? count + ' time' + (count > 1 ? 's' : '') : 'Never'}</td></tr>`;
         }
         html += '</tbody></table>';
@@ -328,11 +331,13 @@
             } else {
                 comboSet = comboSet.slice(0,5).sort((a,b)=>a-b);
             }
+            const powerball = getRandomInt(1, 26);
             const count = countComboInHistory(comboSet);
             let html = '<table style="width:100%; border-collapse:collapse; font-size:1.12em;">';
             html += '<thead><tr><th>#</th><th>Combination</th><th>Results</th></tr></thead><tbody>';
             html += `<tr><td style='font-weight:bold;'>1</td><td>` +
                 comboSet.map(num => `<span class='generated-ball'>${num}</span>`).join('') +
+                `<span class='generated-ball red'>${powerball}</span>` +
                 `</td><td style='color:#234; font-weight:600;'>${count > 0 ? count + ' time' + (count > 1 ? 's' : '') : 'Never'}` +
                 `<br><span style='color:#888; font-weight:400;'>Triplet: ${selectedTriplet.join('-')}, Pair: ${selectedPair.join('-')}</span>` +
                 `</td></tr>`;
@@ -366,11 +371,13 @@
             // Fill up to 5 unique numbers
             const rest = generateUniqueNumbers(5-baseSet.length, 1, 69, baseSet);
             const whiteBalls = baseSet.concat(rest).sort((a,b)=>a-b);
+            const powerball = getRandomInt(1, 26);
             const count = countComboInHistory(whiteBalls);
             let html = '<table style="width:100%; border-collapse:collapse; font-size:1.12em;">';
             html += '<thead><tr><th>#</th><th>Combination</th><th>Results</th></tr></thead><tbody>';
             html += `<tr><td style='font-weight:bold;'>1</td><td>` +
                 whiteBalls.map(num => `<span class='generated-ball'>${num}</span>`).join('') +
+                `<span class='generated-ball red'>${powerball}</span>` +
                 `</td><td style='color:#234; font-weight:600;'>` +
                 (count > 0 ? `${count} time${count > 1 ? 's' : ''}` : 'Never') +
                 `<br><span style='color:#888; font-weight:400;'>${baseSetType} ${baseSet.join('-')} appeared together ${baseSetCount} time${baseSetCount > 1 ? 's' : ''} in history.</span>` +
@@ -455,7 +462,12 @@
             } else {
                 comboSet = comboSet.slice(0,4).sort((a,b)=>a-b);
             }
-            // Count how many times this 4-number set appeared in history
+            // Always fill to 5 numbers for Powerball
+            if (comboSet.length < 5) {
+                const rest = generateUniqueNumbers(5-comboSet.length, 1, 69, comboSet);
+                comboSet = comboSet.concat(rest).sort((a,b)=>a-b);
+            }
+            // Count how many times this 4/5-number set appeared in history
             let count = 0;
             for (const draw of allMainDraws) {
                 const drawSet = new Set(draw);
@@ -465,6 +477,7 @@
             html += '<thead><tr><th>#</th><th>Combination</th><th>Results</th></tr></thead><tbody>';
             html += `<tr><td style='font-weight:bold;'>1</td><td>` +
                 comboSet.map(num => `<span class='generated-ball'>${num}</span>`).join('') +
+                `<span class='generated-ball red'>${getRandomInt(1, 26)}</span>` +
                 `</td><td style='color:#234; font-weight:600;'>${count > 0 ? count + ' time' + (count > 1 ? 's' : '') : 'Never'}` +
                 `<br><span style='color:#888; font-weight:400;'>Duos: ${selectedDuo1.join('-')} & ${selectedDuo2.join('-')}</span>` +
                 `</td></tr>`;
@@ -558,6 +571,19 @@
         render2xTab();
         renderHistoryTable();
     });
+    // --- JS: Add strong highlight for selected pills ---
+    const style = document.createElement('style');
+    style.innerHTML = `
+    .pill-btn.selected {
+        background: linear-gradient(90deg, #ffe066 0%, #e67e22 100%) !important;
+        color: #222 !important;
+        border: 2px solid #e67e22 !important;
+        box-shadow: 0 0 0 3px #ffe06699, 0 2px 8px rgba(230, 126, 34, 0.13);
+        font-weight: bold;
+        outline: none;
+    }
+    `;
+    document.head.appendChild(style);
     </script>
 </body>
 </html> 

@@ -239,7 +239,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                     return `<span class='plain-number'>${num}</span>`;
                                 }
                             }).join('<br>'); // Show each number on a new line
-                            tr.innerHTML = `<td>${draw.date}</td><td>${draw.type}</td><td><div class='draws-list aligned-numbers'>${numbersHtml}</div></td><td><span class='red-ball'>${draw.powerball || ''}</span></td>`;
+                            tr.innerHTML = `<td>${draw.date}</td><td>${draw.type}</td><td><div class='draws-list aligned-numbers'>${numbersHtml}</div></td><td><span class='yellow-ball'>${draw.powerball || ''}</span></td>`;
                             table.querySelector('tbody').appendChild(tr);
                         });
                         section.appendChild(table);
@@ -440,7 +440,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 matches[k].forEach(m => {
                                     // Render numbers as red balls, separated by dashes
                                     const balls = m.combo.split('-').map(num => `<span class='red-ball'>${num}</span>`).join("<span class='dash'>-</span>");
-                                    html += `<tr><td>${m.date}</td><td>${m.type}</td><td class='aligned-numbers'>${balls}</td><td><span class='red-ball'>${m.powerball || ''}</span></td></tr>`;
+                                    html += `<tr><td>${m.date}</td><td>${m.type}</td><td class='aligned-numbers'>${balls}</td><td><span class='yellow-ball'>${m.powerball || ''}</span></td></tr>`;
                                 });
                                 html += '</tbody></table>';
                             }
@@ -558,7 +558,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                         ? `<span class='red-ball'>${num}</span>`
                                         : `<span class='plain-number'>${num}</span>`
                                     ).join("");
-                                    html += `<tr><td>${m.date}</td><td>${m.type}</td><td><div class='aligned-numbers' style='display:flex;gap:8px;align-items:center;flex-wrap:wrap;'>${balls}</div></td><td><span class='red-ball'>${m.powerball || ''}</span></td></tr>`;
+                                    html += `<tr><td>${m.date}</td><td>${m.type}</td><td><div class='aligned-numbers' style='display:flex;gap:8px;align-items:center;flex-wrap:wrap;'>${balls}</div></td><td><span class='yellow-ball'>${m.powerball || ''}</span></td></tr>`;
                                 });
                                 html += '</tbody></table>';
                             }
