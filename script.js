@@ -390,18 +390,14 @@ document.addEventListener('DOMContentLoaded', function() {
                             resultsDiv.innerHTML = '<div style="color:#888; margin:18px 0;">Select balls to see all historical duos, trios, quads, and fives containing them (main & double play).</div>';
                             return;
                         }
-                        // Helper to check if all selected are in arr
                         function containsAll(arr, sel) {
                             return sel.every(s => arr.includes(String(s)) || arr.includes(Number(s)));
                         }
-                        // For each group size 2-5, show all draws where all selected balls of that size appeared together
                         const groupSizes = [2,3,4,5];
                         const matches = {2: [], 3: [], 4: [], 5: []};
                         drawRows.forEach(draw => {
                             groupSizes.forEach(k => {
-                                // Only consider if enough balls are selected
                                 if (selected.length >= k) {
-                                    // All possible k-sized subsets of selected balls
                                     const selCombos = getCombos(selected, k);
                                     selCombos.forEach(selCombo => {
                                         // Main
@@ -433,7 +429,125 @@ document.addEventListener('DOMContentLoaded', function() {
                             } else {
                                 html += `<table class='freq-table'><thead><tr><th>Date</th><th>Type</th><th>Combination</th></tr></thead><tbody>`;
                                 matches[k].forEach(m => {
-                                    html += `<tr><td>${m.date}</td><td>${m.type}</td><td>${m.combo}</td></tr>`;
+                                    // Render numbers as red balls, separated by dashes
+                                    const balls = m.combo.split('-').map(num => `<span class='red-ball'>${num}</span>`).join("<span class='dash'>-</span>");
+                                    html += `<tr><td>${m.date}</td><td>${m.type}</td><td class='aligned-numbers'>${balls}</td></tr>`;
+                                });
+                                html += '</tbody></table>';
+                            }
+                        });
+                        resultsDiv.innerHTML = html;
+                    }
+                    // --- Render Combo tab ---
+                    function renderComboBallPanel() {
+                        const panel = document.getElementById('combo-ball-panel');
+                        if (!panel) return;
+                        panel.innerHTML = '';
+                        const selectedBalls = new Set();
+                        for (let n = 1; n <= 69; n++) {
+                            const ball = document.createElement('span');
+                            ball.className = 'ball';
+                            ball.textContent = n;
+                            ball.style.background = '#e74c3c';
+                            ball.style.color = '#fff';
+                            ball.style.border = '2px solid #c0392b';
+                            // Tooltip
+                            const tooltip = document.createElement('span');
+                            tooltip.className = 'tooltip';
+                            tooltip.textContent = `${numberStats[n].count} times`;
+                            ball.appendChild(tooltip);
+                            ball.onclick = function() {
+                                if (selectedBalls.has(n)) {
+                                    selectedBalls.delete(n);
+                                    ball.classList.remove('selected');
+                                } else {
+                                    selectedBalls.add(n);
+                                    ball.classList.add('selected');
+                                    ball.style.animation = 'popin 0.3s';
+                                    setTimeout(() => { ball.style.animation = ''; }, 300);
+                                }
+                                renderComboResults(Array.from(selectedBalls));
+                            };
+                            panel.appendChild(ball);
+                        }
+                    }
+                    function renderComboResults(selected) {
+                        const resultsDiv = document.getElementById('combo-tab-results');
+                        if (!resultsDiv) return;
+                        if (!selected || selected.length === 0) {
+                            resultsDiv.innerHTML = '<div style="color:#888; margin:18px 0;">Select balls to see all historical duos, trios, quads, and fives containing them (main & double play).</div>';
+                            return;
+                        }
+                        const selectedSet = new Set(selected.map(Number));
+                        const groupSizes = [2,3,4,5];
+                        const matches = {2: [], 3: [], 4: [], 5: []};
+                        function getCombosFromDraw(arr, k) {
+                            const results = [];
+                            function helper(start, combo) {
+                                if (combo.length === k) {
+                                    results.push(combo.slice());
+                                    return;
+                                }
+                                for (let i = start; i < arr.length; i++) {
+                                    combo.push(arr[i]);
+                                    helper(i+1, combo);
+                                    combo.pop();
+                                }
+                            }
+                            helper(0, []);
+                            return results;
+                        }
+                        drawRows.forEach(draw => {
+                            groupSizes.forEach(k => {
+                                if (selected.length < k) return;
+                                // Main
+                                if (draw.mainArr && draw.mainArr.length === 5) {
+                                    const combos = getCombosFromDraw(draw.mainArr, k);
+                                    for (const comboArr of combos) {
+                                        if (comboArr.every(num => selectedSet.has(Number(num)))) {
+                                            matches[k].push({
+                                                date: draw.date,
+                                                type: 'Main',
+                                                combo: comboArr.join('-'),
+                                                numbers: draw.mainArr
+                                            });
+                                            break; // Only show each draw once per group size
+                                        }
+                                    }
+                                }
+                                // Double Play
+                                if (draw.doublePlayArr && draw.doublePlayArr.length === 5) {
+                                    const combos = getCombosFromDraw(draw.doublePlayArr, k);
+                                    for (const comboArr of combos) {
+                                        if (comboArr.every(num => selectedSet.has(Number(num)))) {
+                                            matches[k].push({
+                                                date: draw.date,
+                                                type: 'Double Play',
+                                                combo: comboArr.join('-'),
+                                                numbers: draw.doublePlayArr
+                                            });
+                                            break; // Only show each draw once per group size
+                                        }
+                                    }
+                                }
+                            });
+                        });
+                        let html = '';
+                        groupSizes.forEach(k => {
+                            if (selected.length < k) return;
+                            html += `<div class='combo-section-header' style='margin-top:28px; margin-bottom:8px; font-size:1.18em; font-weight:700; color:#e74c3c; letter-spacing:0.5px; background:#fffbe6; border-radius:8px; padding:7px 0 7px 12px; box-shadow:0 1px 4px rgba(231,76,60,0.07);'>Combinations of ${k}</div>`;
+                            if (matches[k].length === 0) {
+                                html += `<div style='color:#aaa; margin-bottom:18px;'>No matches found.</div>`;
+                            } else {
+                                html += `<table class='freq-table combo-results-table' style='margin-bottom:24px;'><thead><tr><th>Date</th><th>Type</th><th>Numbers</th></tr></thead><tbody>`;
+                                matches[k].forEach(m => {
+                                    // Highlight only the selected k numbers in the draw, no dashes, flex row
+                                    const highlightSet = new Set(m.combo.split('-').map(Number));
+                                    const balls = m.numbers.map(num => highlightSet.has(Number(num))
+                                        ? `<span class='red-ball'>${num}</span>`
+                                        : `<span class='plain-number'>${num}</span>`
+                                    ).join("");
+                                    html += `<tr><td>${m.date}</td><td>${m.type}</td><td><div class='aligned-numbers' style='display:flex;gap:8px;align-items:center;flex-wrap:wrap;'>${balls}</div></td></tr>`;
                                 });
                                 html += '</tbody></table>';
                             }
@@ -458,13 +572,21 @@ document.addEventListener('DOMContentLoaded', function() {
                                 render2xBallPanel();
                                 render2xResults([]);
                             }
+                            if (tab === 'combo') {
+                                renderComboBallPanel();
+                                renderComboResults([]);
+                            }
                             if (tab === 'history') renderHistoryTab();
                         });
                     });
-                    // Optionally, render 2x and history if user reloads on those tabs
+                    // Optionally, render 2x, combo, and history if user reloads on those tabs
                     if (document.getElementById('tab-2x').style.display === 'block') {
                         render2xBallPanel();
                         render2xResults([]);
+                    }
+                    if (document.getElementById('tab-combo').style.display === 'block') {
+                        renderComboBallPanel();
+                        renderComboResults([]);
                     }
                     if (document.getElementById('tab-history').style.display === 'block') renderHistoryTab();
                 }
