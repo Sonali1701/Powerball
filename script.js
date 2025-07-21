@@ -112,6 +112,13 @@ document.addEventListener('DOMContentLoaded', function() {
                             });
                         }
                     }
+                    // 1. Filter out draws before 2016 (fix: extract year from MM/DD/YYYY format)
+                    const filteredDrawRows = drawRows.filter(draw => {
+                        const dateStr = (draw.date || '').trim();
+                        const parts = dateStr.split('/');
+                        const year = parts.length === 3 ? parseInt(parts[2], 10) : 0;
+                        return year >= 2016;
+                    });
                     // --- Render balls with color, tooltip, and count badge ---
                     const panel = document.getElementById('ball-panel');
                     panel.innerHTML = '';
@@ -175,7 +182,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                         // Efficient: For each draw, count how many selected numbers appear
                         let allResults = [];
-                        drawRows.forEach(draw => {
+                        filteredDrawRows.forEach(draw => {
                             // Main draw
                             const matchCount = draw.mainArr.filter(num => selectedBalls.has(Number(num))).length;
                             if (matchCount >= 1) {
@@ -221,7 +228,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         const table = document.createElement('table');
                         table.style.marginTop = '8px';
                         table.style.width = '100%';
-                        table.innerHTML = `<thead><tr><th>Date</th><th>Type</th><th>Numbers</th></tr></thead><tbody></tbody>`;
+                        table.innerHTML = `<thead><tr><th>Date</th><th>Type</th><th>Numbers</th><th>Powerball</th></tr></thead><tbody></tbody>`;
                         allResults.forEach(draw => {
                             const tr = document.createElement('tr');
                             // Render numbers: selected as red balls, others as black text, with dash between
@@ -232,7 +239,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                     return `<span class='plain-number'>${num}</span>`;
                                 }
                             }).join('<br>'); // Show each number on a new line
-                            tr.innerHTML = `<td>${draw.date}</td><td>${draw.type}</td><td><div class='draws-list aligned-numbers'>${numbersHtml}</div></td>`;
+                            tr.innerHTML = `<td>${draw.date}</td><td>${draw.type}</td><td><div class='draws-list aligned-numbers'>${numbersHtml}</div></td><td><span class='red-ball'>${draw.powerball || ''}</span></td>`;
                             table.querySelector('tbody').appendChild(tr);
                         });
                         section.appendChild(table);
@@ -304,7 +311,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     const quadCounts = new Map();
                     const fiveCounts = new Map();
                     const allMainDraws = [];
-                    drawRows.forEach(draw => {
+                    filteredDrawRows.forEach(draw => {
                         const nums = draw.mainArr.map(Number).filter(n => n >= 1 && n <= 69);
                         if (nums.length === 5) {
                             allMainDraws.push(nums);
@@ -395,7 +402,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                         const groupSizes = [2,3,4,5];
                         const matches = {2: [], 3: [], 4: [], 5: []};
-                        drawRows.forEach(draw => {
+                        filteredDrawRows.forEach(draw => {
                             groupSizes.forEach(k => {
                                 if (selected.length >= k) {
                                     const selCombos = getCombos(selected, k);
@@ -405,7 +412,8 @@ document.addEventListener('DOMContentLoaded', function() {
                                             matches[k].push({
                                                 date: draw.date,
                                                 type: 'Main',
-                                                combo: selCombo
+                                                combo: selCombo,
+                                                powerball: draw.powerball
                                             });
                                         }
                                         // Double Play
@@ -413,7 +421,8 @@ document.addEventListener('DOMContentLoaded', function() {
                                             matches[k].push({
                                                 date: draw.date,
                                                 type: 'Double Play',
-                                                combo: selCombo
+                                                combo: selCombo,
+                                                powerball: draw.doublePlayPowerball
                                             });
                                         }
                                     });
@@ -427,11 +436,11 @@ document.addEventListener('DOMContentLoaded', function() {
                             if (matches[k].length === 0) {
                                 html += `<div style='color:#aaa; margin-bottom:12px;'>No matches found.</div>`;
                             } else {
-                                html += `<table class='freq-table'><thead><tr><th>Date</th><th>Type</th><th>Combination</th></tr></thead><tbody>`;
+                                html += `<table class='freq-table'><thead><tr><th>Date</th><th>Type</th><th>Combination</th><th>Powerball</th></tr></thead><tbody>`;
                                 matches[k].forEach(m => {
                                     // Render numbers as red balls, separated by dashes
                                     const balls = m.combo.split('-').map(num => `<span class='red-ball'>${num}</span>`).join("<span class='dash'>-</span>");
-                                    html += `<tr><td>${m.date}</td><td>${m.type}</td><td class='aligned-numbers'>${balls}</td></tr>`;
+                                    html += `<tr><td>${m.date}</td><td>${m.type}</td><td class='aligned-numbers'>${balls}</td><td><span class='red-ball'>${m.powerball || ''}</span></td></tr>`;
                                 });
                                 html += '</tbody></table>';
                             }
@@ -497,7 +506,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             helper(0, []);
                             return results;
                         }
-                        drawRows.forEach(draw => {
+                        filteredDrawRows.forEach(draw => {
                             groupSizes.forEach(k => {
                                 if (selected.length < k) return;
                                 // Main
@@ -509,7 +518,8 @@ document.addEventListener('DOMContentLoaded', function() {
                                                 date: draw.date,
                                                 type: 'Main',
                                                 combo: comboArr.join('-'),
-                                                numbers: draw.mainArr
+                                                numbers: draw.mainArr,
+                                                powerball: draw.powerball
                                             });
                                             break; // Only show each draw once per group size
                                         }
@@ -524,7 +534,8 @@ document.addEventListener('DOMContentLoaded', function() {
                                                 date: draw.date,
                                                 type: 'Double Play',
                                                 combo: comboArr.join('-'),
-                                                numbers: draw.doublePlayArr
+                                                numbers: draw.doublePlayArr,
+                                                powerball: draw.doublePlayPowerball
                                             });
                                             break; // Only show each draw once per group size
                                         }
@@ -539,7 +550,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             if (matches[k].length === 0) {
                                 html += `<div style='color:#aaa; margin-bottom:18px;'>No matches found.</div>`;
                             } else {
-                                html += `<table class='freq-table combo-results-table' style='margin-bottom:24px;'><thead><tr><th>Date</th><th>Type</th><th>Numbers</th></tr></thead><tbody>`;
+                                html += `<table class='freq-table combo-results-table' style='margin-bottom:24px;'><thead><tr><th>Date</th><th>Type</th><th>Numbers</th><th>Powerball</th></tr></thead><tbody>`;
                                 matches[k].forEach(m => {
                                     // Highlight only the selected k numbers in the draw, no dashes, flex row
                                     const highlightSet = new Set(m.combo.split('-').map(Number));
@@ -547,7 +558,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                         ? `<span class='red-ball'>${num}</span>`
                                         : `<span class='plain-number'>${num}</span>`
                                     ).join("");
-                                    html += `<tr><td>${m.date}</td><td>${m.type}</td><td><div class='aligned-numbers' style='display:flex;gap:8px;align-items:center;flex-wrap:wrap;'>${balls}</div></td></tr>`;
+                                    html += `<tr><td>${m.date}</td><td>${m.type}</td><td><div class='aligned-numbers' style='display:flex;gap:8px;align-items:center;flex-wrap:wrap;'>${balls}</div></td><td><span class='red-ball'>${m.powerball || ''}</span></td></tr>`;
                                 });
                                 html += '</tbody></table>';
                             }
@@ -558,7 +569,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     function renderHistoryTab() {
                         let html = '<table class="freq-table"><thead><tr><th>#</th><th>Date</th><th>Main Numbers</th><th>Double Play Numbers</th></tr></thead><tbody>';
                         let rowNum = 1;
-                        drawRows.forEach(draw => {
+                        filteredDrawRows.forEach(draw => {
                             html += `<tr><td>${rowNum++}</td><td>${draw.date}</td><td>${draw.mainArr.join('-')}</td><td>${draw.doublePlayArr && draw.doublePlayArr.length === 5 ? draw.doublePlayArr.join('-') : ''}</td></tr>`;
                         });
                         html += '</tbody></table>';

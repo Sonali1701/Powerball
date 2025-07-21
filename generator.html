@@ -133,7 +133,8 @@
                     for (let i = 0; i < data.length; i++) {
                         const row = data[i];
                         let winNumbers = (row['Winning Numbers'] || '').replace(/®/g, '').toLowerCase().trim();
-                        if (row.Date && (winNumbers.includes('powerball numbers') || winNumbers.match(/^(\d+\s*-\s*)+\d+$/))) {
+                        // Only include draws from 2016 onward
+                        if (row.Date && parseInt(row.Date.slice(0,4), 10) >= 2016 && (winNumbers.includes('powerball numbers') || winNumbers.match(/^(\d+\s*-\s*)+\d+$/))) {
                             let mainNumbers;
                             if (winNumbers.includes('powerball numbers')) {
                                 mainNumbers = (row['Winning Numbers'] || '').replace(/.*Numbers\s*/i, '').replace(/®/g, '').trim();
