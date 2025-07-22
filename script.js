@@ -483,86 +483,28 @@ document.addEventListener('DOMContentLoaded', function() {
                     function renderComboResults(selected) {
                         const resultsDiv = document.getElementById('combo-tab-results');
                         if (!resultsDiv) return;
-                        if (!selected || selected.length === 0) {
-                            resultsDiv.innerHTML = '<div style="color:#888; margin:18px 0;">Select balls to see all historical duos, trios, quads, and fives containing them (main & double play).</div>';
-                            return;
-                        }
-                        const selectedSet = new Set(selected.map(Number));
-                        const groupSizes = [2,3,4,5];
-                        const matches = {2: [], 3: [], 4: [], 5: []};
-                        function getCombosFromDraw(arr, k) {
-                            const results = [];
-                            function helper(start, combo) {
-                                if (combo.length === k) {
-                                    results.push(combo.slice());
-                                    return;
-                                }
-                                for (let i = start; i < arr.length; i++) {
-                                    combo.push(arr[i]);
-                                    helper(i+1, combo);
-                                    combo.pop();
-                                }
-                            }
-                            helper(0, []);
-                            return results;
-                        }
+                        // Always show all draws, highlight selected numbers
+                        const selectedSet = new Set((selected || []).map(Number));
+                        let html = `<table class='freq-table combo-results-table' style='margin-bottom:24px;'><thead><tr><th>Date</th><th>Type</th><th>Numbers</th><th>Powerball</th></tr></thead><tbody>`;
                         filteredDrawRows.forEach(draw => {
-                            groupSizes.forEach(k => {
-                                if (selected.length < k) return;
-                                // Main
-                                if (draw.mainArr && draw.mainArr.length === 5) {
-                                    const combos = getCombosFromDraw(draw.mainArr, k);
-                                    for (const comboArr of combos) {
-                                        if (comboArr.every(num => selectedSet.has(Number(num)))) {
-                                            matches[k].push({
-                                                date: draw.date,
-                                                type: 'Main',
-                                                combo: comboArr.join('-'),
-                                                numbers: draw.mainArr,
-                                                powerball: draw.powerball
-                                            });
-                                            break; // Only show each draw once per group size
-                                        }
-                                    }
-                                }
-                                // Double Play
-                                if (draw.doublePlayArr && draw.doublePlayArr.length === 5) {
-                                    const combos = getCombosFromDraw(draw.doublePlayArr, k);
-                                    for (const comboArr of combos) {
-                                        if (comboArr.every(num => selectedSet.has(Number(num)))) {
-                                            matches[k].push({
-                                                date: draw.date,
-                                                type: 'Double Play',
-                                                combo: comboArr.join('-'),
-                                                numbers: draw.doublePlayArr,
-                                                powerball: draw.doublePlayPowerball
-                                            });
-                                            break; // Only show each draw once per group size
-                                        }
-                                    }
-                                }
-                            });
-                        });
-                        let html = '';
-                        groupSizes.forEach(k => {
-                            if (selected.length < k) return;
-                            html += `<div class='combo-section-header' style='margin-top:28px; margin-bottom:8px; font-size:1.18em; font-weight:700; color:#e74c3c; letter-spacing:0.5px; background:#fffbe6; border-radius:8px; padding:7px 0 7px 12px; box-shadow:0 1px 4px rgba(231,76,60,0.07);'>Combinations of ${k}</div>`;
-                            if (matches[k].length === 0) {
-                                html += `<div style='color:#aaa; margin-bottom:18px;'>No matches found.</div>`;
-                            } else {
-                                html += `<table class='freq-table combo-results-table' style='margin-bottom:24px;'><thead><tr><th>Date</th><th>Type</th><th>Numbers</th><th>Powerball</th></tr></thead><tbody>`;
-                                matches[k].forEach(m => {
-                                    // Highlight only the selected k numbers in the draw, no dashes, flex row
-                                    const highlightSet = new Set(m.combo.split('-').map(Number));
-                                    const balls = m.numbers.map(num => highlightSet.has(Number(num))
-                                        ? `<span class='red-ball'>${num}</span>`
-                                        : `<span class='plain-number'>${num}</span>`
-                                    ).join("");
-                                    html += `<tr><td>${m.date}</td><td>${m.type}</td><td><div class='aligned-numbers' style='display:flex;gap:8px;align-items:center;flex-wrap:wrap;'>${balls}</div></td><td><span class='yellow-ball'>${m.powerball || ''}</span></td></tr>`;
-                                });
-                                html += '</tbody></table>';
+                            // Main draw
+                            if (draw.mainArr && draw.mainArr.length === 5) {
+                                const balls = draw.mainArr.map(num => selectedSet.has(Number(num))
+                                    ? `<span class='red-ball'>${num}</span>`
+                                    : `<span class='plain-number'>${num}</span>`
+                                ).join("");
+                                html += `<tr><td>${draw.date}</td><td>Main</td><td><div class='aligned-numbers' style='display:flex;gap:8px;align-items:center;flex-wrap:wrap;'>${balls}</div></td><td><span class='yellow-ball'>${draw.powerball || ''}</span></td></tr>`;
+                            }
+                            // Double Play draw
+                            if (draw.doublePlayArr && draw.doublePlayArr.length === 5) {
+                                const balls = draw.doublePlayArr.map(num => selectedSet.has(Number(num))
+                                    ? `<span class='red-ball'>${num}</span>`
+                                    : `<span class='plain-number'>${num}</span>`
+                                ).join("");
+                                html += `<tr><td>${draw.date}</td><td>Double Play</td><td><div class='aligned-numbers' style='display:flex;gap:8px;align-items:center;flex-wrap:wrap;'>${balls}</div></td><td><span class='yellow-ball'>${draw.doublePlayPowerball || ''}</span></td></tr>`;
                             }
                         });
+                        html += '</tbody></table>';
                         resultsDiv.innerHTML = html;
                     }
                     // --- Render History tab with both main and double play as columns ---
@@ -600,6 +542,27 @@ document.addEventListener('DOMContentLoaded', function() {
                         renderComboResults([]);
                     }
                     if (document.getElementById('tab-history').style.display === 'block') renderHistoryTab();
+
+                    // --- Download Notes ---
+                    const downloadBtn = document.getElementById('download-note-btn');
+                    if (downloadBtn) {
+                        downloadBtn.onclick = function() {
+                            const noteText = document.getElementById('note-textarea').value;
+                            if (noteText.trim() === '') {
+                                alert('Your note is empty!');
+                                return;
+                            }
+                            const blob = new Blob([noteText], { type: 'text/plain' });
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = 'powerball_notes.txt';
+                            document.body.appendChild(a);
+                            a.click();
+                            document.body.removeChild(a);
+                            URL.revokeObjectURL(url);
+                        };
+                    }
                 }
             });
         });
