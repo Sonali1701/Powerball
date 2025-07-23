@@ -615,4 +615,64 @@ if (genComboBtn && genSingleBtn && genResult) {
         const n = getRandomInt(1, 69);
         genResult.innerHTML = `<span class='generated-ball'>${n}</span>`;
     };
+}
+
+// After CSV and filteredDrawRows are ready, render the full combo table on the home page
+if (document.getElementById('combo-results')) {
+    renderComboResultsHome([]);
+}
+
+// Add a new function to render the combo table in the home tab (uses #combo-results)
+function renderComboResultsHome(selected) {
+    const resultsDiv = document.getElementById('combo-results');
+    if (!resultsDiv) return;
+    const selectedSet = new Set((selected || []).map(Number));
+    let html = `<table class='freq-table combo-results-table' style='margin-bottom:24px;'><thead><tr><th>Date</th><th>Type</th><th>Numbers</th><th>Powerball</th></tr></thead><tbody>`;
+    filteredDrawRows.forEach(draw => {
+        // Main draw
+        if (draw.mainArr && draw.mainArr.length === 5) {
+            const balls = draw.mainArr.map(num => selectedSet.has(Number(num))
+                ? `<span class='red-ball'>${num}</span>`
+                : `<span class='plain-number'>${num}</span>`
+            ).join("");
+            html += `<tr><td>${draw.date}</td><td>Main</td><td><div class='aligned-numbers' style='display:flex;gap:8px;align-items:center;flex-wrap:wrap;'>${balls}</div></td><td><span class='yellow-ball'>${draw.powerball || ''}</span></td></tr>`;
+        }
+        // Double Play draw
+        if (draw.doublePlayArr && draw.doublePlayArr.length === 5) {
+            const balls = draw.doublePlayArr.map(num => selectedSet.has(Number(num))
+                ? `<span class='red-ball'>${num}</span>`
+                : `<span class='plain-number'>${num}</span>`
+            ).join("");
+            html += `<tr><td>${draw.date}</td><td>Double Play</td><td><div class='aligned-numbers' style='display:flex;gap:8px;align-items:center;flex-wrap:wrap;'>${balls}</div></td><td><span class='yellow-ball'>${draw.doublePlayPowerball || ''}</span></td></tr>`;
+        }
+    });
+    html += '</tbody></table>';
+    resultsDiv.innerHTML = html;
+}
+
+// Update search box logic to work for home tab as well
+const searchBox = document.getElementById('search-box');
+if (searchBox) {
+    searchBox.addEventListener('input', function() {
+        const query = searchBox.value.trim().toLowerCase();
+        const resultsDiv = document.getElementById('combo-results');
+        if (!resultsDiv) return;
+        const tables = resultsDiv.querySelectorAll('table');
+        let anyVisible = false;
+        tables.forEach(table => {
+            const rows = table.querySelectorAll('tbody tr');
+            rows.forEach(row => {
+                const rowText = row.textContent.toLowerCase();
+                if (rowText.includes(query)) {
+                    row.style.display = '';
+                    anyVisible = true;
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        });
+        if (!anyVisible) {
+            resultsDiv.innerHTML = '<div style="color:#e74c3c; margin:12px 0;">No draws found matching your search.</div>';
+        }
+    });
 } 
