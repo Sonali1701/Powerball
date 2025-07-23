@@ -393,58 +393,28 @@ document.addEventListener('DOMContentLoaded', function() {
                     function render2xResults(selected) {
                         const resultsDiv = document.getElementById('twox-results');
                         if (!resultsDiv) return;
-                        if (!selected || selected.length === 0) {
-                            resultsDiv.innerHTML = '<div style="color:#888; margin:18px 0;">Select balls to see all historical duos, trios, quads, and fives containing them (main & double play).</div>';
-                            return;
-                        }
-                        function containsAll(arr, sel) {
-                            return sel.every(s => arr.includes(String(s)) || arr.includes(Number(s)));
-                        }
-                        const groupSizes = [2,3,4,5];
-                        const matches = {2: [], 3: [], 4: [], 5: []};
+                        // Always show all draws, highlight selected numbers
+                        const selectedSet = new Set((selected || []).map(Number));
+                        let html = `<table class='freq-table combo-results-table' style='margin-bottom:24px;'><thead><tr><th>Date</th><th>Type</th><th>Numbers</th><th>Powerball</th></tr></thead><tbody>`;
                         filteredDrawRows.forEach(draw => {
-                            groupSizes.forEach(k => {
-                                if (selected.length >= k) {
-                                    const selCombos = getCombos(selected, k);
-                                    selCombos.forEach(selCombo => {
-                                        // Main
-                                        if (draw.mainArr && draw.mainArr.length === 5 && containsAll(draw.mainArr, selCombo.split('-'))) {
-                                            matches[k].push({
-                                                date: draw.date,
-                                                type: 'Main',
-                                                combo: selCombo,
-                                                powerball: draw.powerball
-                                            });
-                                        }
-                                        // Double Play
-                                        if (draw.doublePlayArr && draw.doublePlayArr.length === 5 && containsAll(draw.doublePlayArr, selCombo.split('-'))) {
-                                            matches[k].push({
-                                                date: draw.date,
-                                                type: 'Double Play',
-                                                combo: selCombo,
-                                                powerball: draw.doublePlayPowerball
-                                            });
-                                        }
-                                    });
-                                }
-                            });
-                        });
-                        let html = '';
-                        groupSizes.forEach(k => {
-                            if (selected.length < k) return;
-                            html += `<h3>Combinations of ${k}</h3>`;
-                            if (matches[k].length === 0) {
-                                html += `<div style='color:#aaa; margin-bottom:12px;'>No matches found.</div>`;
-                            } else {
-                                html += `<table class='freq-table'><thead><tr><th>Date</th><th>Type</th><th>Combination</th><th>Powerball</th></tr></thead><tbody>`;
-                                matches[k].forEach(m => {
-                                    // Render numbers as red balls, separated by dashes
-                                    const balls = m.combo.split('-').map(num => `<span class='red-ball'>${num}</span>`).join("<span class='dash'>-</span>");
-                                    html += `<tr><td>${m.date}</td><td>${m.type}</td><td class='aligned-numbers'>${balls}</td><td><span class='yellow-ball'>${m.powerball || ''}</span></td></tr>`;
-                                });
-                                html += '</tbody></table>';
+                            // Main draw
+                            if (draw.mainArr && draw.mainArr.length === 5) {
+                                const balls = draw.mainArr.map(num => selectedSet.has(Number(num))
+                                    ? `<span class='red-ball'>${num}</span>`
+                                    : `<span class='plain-number'>${num}</span>`
+                                ).join("");
+                                html += `<tr><td>${draw.date}</td><td>Main</td><td><div class='aligned-numbers' style='display:flex;gap:8px;align-items:center;flex-wrap:wrap;'>${balls}</div></td><td><span class='yellow-ball'>${draw.powerball || ''}</span></td></tr>`;
+                            }
+                            // Double Play draw
+                            if (draw.doublePlayArr && draw.doublePlayArr.length === 5) {
+                                const balls = draw.doublePlayArr.map(num => selectedSet.has(Number(num))
+                                    ? `<span class='red-ball'>${num}</span>`
+                                    : `<span class='plain-number'>${num}</span>`
+                                ).join("");
+                                html += `<tr><td>${draw.date}</td><td>Double Play</td><td><div class='aligned-numbers' style='display:flex;gap:8px;align-items:center;flex-wrap:wrap;'>${balls}</div></td><td><span class='yellow-ball'>${draw.doublePlayPowerball || ''}</span></td></tr>`;
                             }
                         });
+                        html += '</tbody></table>';
                         resultsDiv.innerHTML = html;
                     }
                     // --- Render Combo tab ---
