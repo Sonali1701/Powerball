@@ -385,37 +385,86 @@ document.addEventListener('DOMContentLoaded', function() {
                                     ball.style.animation = 'popin 0.3s';
                                     setTimeout(() => { ball.style.animation = ''; }, 300);
                                 }
-                                render2xResults(Array.from(selectedBalls));
                             };
                             panel.appendChild(ball);
                         }
+                        // Attach event to Check My Numbers button (now in left-col)
+                        setTimeout(() => {
+                            const checkBtn = document.getElementById('twox-check-btn');
+                            const groupSizeSelect = document.getElementById('group-size-select');
+                            if (checkBtn && groupSizeSelect) {
+                                checkBtn.onclick = function() {
+                                    const selected = Array.from(selectedBalls);
+                                    const groupSize = parseInt(groupSizeSelect.value, 10);
+                                    render2xResultsFast(selected, groupSize);
+                                };
+                            }
+                        }, 0);
                     }
-                    function render2xResults(selected) {
+                    function render2xResultsFast(selected, groupSize) {
                         const resultsDiv = document.getElementById('twox-results');
                         if (!resultsDiv) return;
-                        // Always show all draws, highlight selected numbers
-                        const selectedSet = new Set((selected || []).map(Number));
-                        let html = `<table class='freq-table combo-results-table' style='margin-bottom:24px;'><thead><tr><th>Date</th><th>Type</th><th>Numbers</th><th>Powerball</th></tr></thead><tbody>`;
+                        if (!selected || selected.length === 0) {
+                            resultsDiv.innerHTML = '<div style="color:#888; margin:18px 0;">Select balls and click "Check My Numbers" to see draws containing your numbers.</div>';
+                            return;
+                        }
+                        const k = groupSize;
+                        const selectedSet = new Set(selected.map(Number));
+                        let matches = [];
                         filteredDrawRows.forEach(draw => {
-                            // Main draw
+                            // Main
                             if (draw.mainArr && draw.mainArr.length === 5) {
-                                const balls = draw.mainArr.map(num => selectedSet.has(Number(num))
-                                    ? `<span class='red-ball'>${num}</span>`
-                                    : `<span class='plain-number'>${num}</span>`
-                                ).join("");
-                                html += `<tr><td>${draw.date}</td><td>Main</td><td><div class='aligned-numbers' style='display:flex;gap:8px;align-items:center;flex-wrap:wrap;'>${balls}</div></td><td><span class='yellow-ball'>${draw.powerball || ''}</span></td></tr>`;
+                                const matchArr = draw.mainArr.filter(num => selectedSet.has(Number(num)));
+                                if (matchArr.length >= k) {
+                                    matches.push({
+                                        date: draw.date,
+                                        type: 'Main',
+                                        numbers: draw.mainArr,
+                                        powerball: draw.powerball,
+                                        matchArr,
+                                        matchCount: matchArr.length
+                                    });
+                                }
                             }
-                            // Double Play draw
+                            // Double Play
                             if (draw.doublePlayArr && draw.doublePlayArr.length === 5) {
-                                const balls = draw.doublePlayArr.map(num => selectedSet.has(Number(num))
-                                    ? `<span class='red-ball'>${num}</span>`
-                                    : `<span class='plain-number'>${num}</span>`
-                                ).join("");
-                                html += `<tr><td>${draw.date}</td><td>Double Play</td><td><div class='aligned-numbers' style='display:flex;gap:8px;align-items:center;flex-wrap:wrap;'>${balls}</div></td><td><span class='yellow-ball'>${draw.doublePlayPowerball || ''}</span></td></tr>`;
+                                const matchArr = draw.doublePlayArr.filter(num => selectedSet.has(Number(num)));
+                                if (matchArr.length >= k) {
+                                    matches.push({
+                                        date: draw.date,
+                                        type: 'Double Play',
+                                        numbers: draw.doublePlayArr,
+                                        powerball: draw.doublePlayPowerball,
+                                        matchArr,
+                                        matchCount: matchArr.length
+                                    });
+                                }
                             }
                         });
-                        html += '</tbody></table>';
+                        let html = `<div><h3>Draws with at least ${k} of your numbers</h3>`;
+                        if (matches.length === 0) {
+                            html += `<div style='color:#aaa; margin-bottom:12px;'>No draws found with at least ${k} of your selected numbers.</div>`;
+                        } else {
+                            html += `<table class='freq-table'><thead><tr><th>Date</th><th>Type</th><th>Numbers</th><th>Powerball</th><th>Match Count</th></tr></thead><tbody>`;
+                            matches.slice(0, 50).forEach(m => {
+                                const balls = m.numbers.map(num => m.matchArr.includes(num)
+                                    ? `<span class='red-ball'>${num}</span>`
+                                    : `<span class='plain-number'>${num}</span>`
+                                ).join("");
+                                html += `<tr><td>${m.date}</td><td>${m.type}</td><td><div class='aligned-numbers' style='display:flex;gap:8px;align-items:center;flex-wrap:wrap;'>${balls}</div></td><td><span class='yellow-ball'>${m.powerball || ''}</span></td><td>${m.matchCount}</td></tr>`;
+                            });
+                            html += '</tbody></table>';
+                        }
+                        html += '</div>';
                         resultsDiv.innerHTML = html;
+                    }
+                    // Listen for group size selector changes
+                    const groupSizeSelect = document.getElementById('group-size-select');
+                    if (groupSizeSelect) {
+                        groupSizeSelect.value = '2';
+                        groupSizeSelect.onchange = function() {
+                            // No need to re-render results here, as they are rendered on button click
+                        };
                     }
                     // --- Render Combo tab ---
                     function renderComboBallPanel() {
@@ -493,7 +542,8 @@ document.addEventListener('DOMContentLoaded', function() {
                             const tab = btn.getAttribute('data-tab');
                             if (tab === '2x') {
                                 render2xBallPanel();
-                                render2xResults([]);
+                                // Clear results on tab switch
+                                document.getElementById('twox-results').innerHTML = '';
                             }
                             if (tab === 'combo') {
                                 renderComboBallPanel();
@@ -505,7 +555,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Optionally, render 2x, combo, and history if user reloads on those tabs
                     if (document.getElementById('tab-2x').style.display === 'block') {
                         render2xBallPanel();
-                        render2xResults([]);
+                        // Clear results on tab switch
+                        document.getElementById('twox-results').innerHTML = '';
                     }
                     if (document.getElementById('tab-combo').style.display === 'block') {
                         renderComboBallPanel();

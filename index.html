@@ -54,8 +54,18 @@
         <div class="container main-flex">
             <div class="left-col">
                 <div class="ball-panel" id="twox-ball-panel"></div>
+                <button id="twox-check-btn" style="margin: 18px 0 0 0; width: 100%; font-size: 1.1em; padding: 10px 0; border-radius: 8px; border: none; background: #3498db; color: #fff; cursor: pointer;">Check My Numbers</button>
             </div>
             <div class="center-col">
+                <div style="margin-bottom: 12px;">
+                  <label for="group-size-select" style="font-weight: 500; margin-right: 8px;">Group size:</label>
+                  <select id="group-size-select" style="font-size: 1em; padding: 4px 8px; border-radius: 5px; border: 1.5px solid #3498db;">
+                    <option value="2">Duos (2)</option>
+                    <option value="3">Trios (3)</option>
+                    <option value="4">Quads (4)</option>
+                    <option value="5">Fives (5)</option>
+                  </select>
+                </div>
                 <div id="twox-results"></div>
             </div>
         </div>
