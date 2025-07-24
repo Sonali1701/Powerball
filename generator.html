@@ -119,6 +119,19 @@
         background: #eaf3fb;
         color: #3498db;
       }
+      /* Make all balls bold throughout the page */
+      .generated-ball, .red-ball, .ball, .yellow-ball {
+        font-weight: bold !important;
+      }
+      /* Make selection pills more visually clear */
+      .pill-btn.selected {
+        background: linear-gradient(90deg, #ffe066 0%, #e67e22 100%) !important;
+        color: #222 !important;
+        border: 2px solid #e67e22 !important;
+        box-shadow: 0 0 0 3px #ffe06699, 0 2px 8px rgba(230, 126, 34, 0.13);
+        font-weight: bold;
+        outline: none;
+      }
     </style>
 </head>
 <body>
@@ -370,26 +383,96 @@
         freqSetsLoading.style.display = 'none';
         freqSetsContent.style.display = '';
     }
-    // Replace combo builder section with clickable pills
-    const comboBuilderPanel = document.getElementById('combo-builder-panel');
-    comboBuilderPanel.innerHTML = `
-        <h2>Build Combination: Most-Drawn Triplet + Pair</h2>
-        <div id="triplet-pills" style="margin-bottom:12px;"></div>
-        <div id="pair-pills" style="margin-bottom:12px;"></div>
-        <button id="build-combo-btn" class="freq-gen-btn" style="margin-top:8px;" disabled>Generate from Triplet + Pair</button>
-        <div id="built-combo-result" style="margin-top:18px;"></div>
-    `;
-    // Robust stateful selection for triplet+pair
-    let selectedTriplet = null;
-    let selectedPair = null;
+    // --- IMPROVED: DUO BUILDER SECTION ---
+    // Section 2: Create Combination from 2 Duos (pairs)
+    // This is now robust and visually clear, matching Section 3 style
+    let selectedDuo1 = null;
+    let selectedDuo2 = null;
+    function renderDuoBuilderPills() {
+        const duo1PillsDiv = document.getElementById('duo1-pills');
+        const duo2PillsDiv = document.getElementById('duo2-pills');
+        // Render duo1 pills
+        duo1PillsDiv.innerHTML = topPairs.map(([set, count], idx) => {
+            return `<span class="pill-group"><button class="pill-btn duo1-pill" data-set="${set}" style="margin:0 4px 8px 0;">${set.split('-').join(', ')}</button><span class='freq-set-count pill-count'>${count}</span></span>`;
+        }).join('');
+        // Render duo2 pills (disable overlap)
+        function renderDuo2Pills(duo1Set) {
+            duo2PillsDiv.innerHTML = topPairs.map(([set, count]) => {
+                const pairNums = set.split('-').map(Number);
+                const disabled = duo1Set && pairNums.some(n => duo1Set.includes(n));
+                return `<span class="pill-group"><button class="pill-btn duo2-pill" data-set="${set}" style="margin:0 4px 8px 0;" ${disabled ? 'disabled' : ''}>${set.split('-').join(', ')}</button><span class='freq-set-count pill-count'>${count}</span></span>`;
+            }).join('');
+        }
+        renderDuo2Pills(null);
+        // Selection logic
+        duo1PillsDiv.onclick = function(e) {
+            const btn = e.target.closest('.duo1-pill');
+            if (!btn) return;
+            duo1PillsDiv.querySelectorAll('.duo1-pill').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+            selectedDuo1 = btn.getAttribute('data-set').split('-').map(Number);
+            selectedDuo2 = null;
+            renderDuo2Pills(selectedDuo1);
+            document.getElementById('build-duo-combo-btn').disabled = true;
+            attachDuo2PillEvents();
+        };
+        function attachDuo2PillEvents() {
+            duo2PillsDiv.querySelectorAll('.duo2-pill').forEach(btn => {
+                btn.onclick = function() {
+                    if (btn.disabled) return;
+                    duo2PillsDiv.querySelectorAll('.duo2-pill').forEach(b => b.classList.remove('selected'));
+                    btn.classList.add('selected');
+                    selectedDuo2 = btn.getAttribute('data-set').split('-').map(Number);
+                    if (selectedDuo1 && selectedDuo2) {
+                        document.getElementById('build-duo-combo-btn').disabled = false;
+                    }
+                };
+            });
+        }
+        attachDuo2PillEvents();
+        document.getElementById('build-duo-combo-btn').onclick = function() {
+            if (!selectedDuo1 || !selectedDuo2) return;
+            let comboSet = Array.from(new Set([...selectedDuo1, ...selectedDuo2]));
+            if (comboSet.length < 4) {
+                const rest = generateUniqueNumbers(4-comboSet.length, 1, 69, comboSet);
+                comboSet = comboSet.concat(rest).sort((a,b)=>a-b);
+            } else {
+                comboSet = comboSet.slice(0,4).sort((a,b)=>a-b);
+            }
+            // Always fill to 5 numbers for Powerball
+            if (comboSet.length < 5) {
+                const rest = generateUniqueNumbers(5-comboSet.length, 1, 69, comboSet);
+                comboSet = comboSet.concat(rest).sort((a,b)=>a-b);
+            }
+            // Count how many times this 4/5-number set appeared in history
+            let count = 0;
+            for (const draw of allMainDraws) {
+                const drawSet = new Set(draw);
+                if (comboSet.every(n => drawSet.has(n))) count++;
+            }
+            let html = '<table style="width:100%; border-collapse:collapse; font-size:1.12em;">';
+            html += '<thead><tr><th>#</th><th>Combination</th><th>Results</th></tr></thead><tbody>';
+            html += `<tr><td style='font-weight:bold;'>1</td><td>` +
+                comboSet.map(num => `<span class='generated-ball'>${num}</span>`).join('') +
+                `<span class='generated-ball red'>${getRandomInt(1, 26)}</span>` +
+                `</td><td style='color:#234; font-weight:600;'>${count > 0 ? count + ' time' + (count > 1 ? 's' : '') : 'Never'}` +
+                `<br><span style='color:#888; font-weight:400;'>Duos: ${selectedDuo1.join('-')} & ${selectedDuo2.join('-')}</span>` +
+                `</td></tr>`;
+            html += '</tbody></table>';
+            document.getElementById('built-duo-combo-result').innerHTML = html;
+        };
+    }
+    renderDuoBuilderPills();
+    // --- IMPROVED: TRIO+PAIR BUILDER SECTION ---
+    // Section 3: Create Combination from 1 Duo and 1 Trio
     function renderComboBuilderPills() {
         const tripletPillsDiv = document.getElementById('triplet-pills');
         const pairPillsDiv = document.getElementById('pair-pills');
-        // Render triplet pills once
+        // Render triplet pills
         tripletPillsDiv.innerHTML = topTriplets.map(([set, count], idx) => {
             return `<span class="pill-group"><button class="pill-btn triplet-pill" data-set="${set}" style="margin:0 4px 8px 0;">${set.split('-').join(', ')}</button><span class='freq-set-count pill-count'>${count}</span></span>`;
         }).join('');
-        // Render pair pills (initially all enabled)
+        // Render pair pills (disable overlap)
         function renderPairPills(tripletSet) {
             pairPillsDiv.innerHTML = topPairs.map(([set, count]) => {
                 const pairNums = set.split('-').map(Number);
@@ -408,7 +491,6 @@
             selectedPair = null;
             renderPairPills(selectedTriplet);
             document.getElementById('build-combo-btn').disabled = true;
-            // Attach pair pill click events after re-render
             attachPairPillEvents();
         };
         function attachPairPillEvents() {
@@ -494,102 +576,6 @@
             generateFromFrequentSet(btn.getAttribute('data-type'));
         };
     });
-    // Replace duo builder section with clickable pills
-    function insertDuoSectionPills() {
-        if (document.getElementById('duo1-pills')) return; // Prevent duplicate
-        const comboBuilderPanel = document.getElementById('combo-builder-panel');
-        const duoSection = document.createElement('div');
-        duoSection.className = 'generator-panel';
-        duoSection.style.marginTop = '36px';
-        duoSection.innerHTML = `
-            <h2>Build Combination: Two Most-Drawn Duos</h2>
-            <div id="duo1-pills" style="margin-bottom:12px;"></div>
-            <div id="duo2-pills" style="margin-bottom:12px;"></div>
-            <button id="build-duo-combo-btn" class="freq-gen-btn" style="margin-top:8px;" disabled>Generate from Two Duos</button>
-            <div id="built-duo-combo-result" style="margin-top:18px;"></div>
-        `;
-        comboBuilderPanel.parentNode.insertBefore(duoSection, comboBuilderPanel.nextSibling);
-    }
-    // Robust stateful selection for duo1/duo2
-    let selectedDuo1 = null;
-    let selectedDuo2 = null;
-    function renderDuoBuilderPills() {
-        const duo1PillsDiv = document.getElementById('duo1-pills');
-        const duo2PillsDiv = document.getElementById('duo2-pills');
-        // Render duo1 pills once
-        duo1PillsDiv.innerHTML = topPairs.map(([set, count], idx) => {
-            return `<span class="pill-group"><button class="pill-btn duo1-pill" data-set="${set}" style="margin:0 4px 8px 0;">${set.split('-').join(', ')}</button><span class='freq-set-count pill-count'>${count}</span></span>`;
-        }).join('');
-        // Render duo2 pills (initially all enabled)
-        function renderDuo2Pills(duo1Set) {
-            duo2PillsDiv.innerHTML = topPairs.map(([set, count]) => {
-                const pairNums = set.split('-').map(Number);
-                const disabled = duo1Set && pairNums.some(n => duo1Set.includes(n));
-                return `<span class="pill-group"><button class="pill-btn duo2-pill" data-set="${set}" style="margin:0 4px 8px 0;" ${disabled ? 'disabled' : ''}>${set.split('-').join(', ')}</button><span class='freq-set-count pill-count'>${count}</span></span>`;
-            }).join('');
-        }
-        renderDuo2Pills(null);
-        // Selection logic
-        duo1PillsDiv.onclick = function(e) {
-            const btn = e.target.closest('.duo1-pill');
-            if (!btn) return;
-            duo1PillsDiv.querySelectorAll('.duo1-pill').forEach(b => b.classList.remove('selected'));
-            btn.classList.add('selected');
-            selectedDuo1 = btn.getAttribute('data-set').split('-').map(Number);
-            selectedDuo2 = null;
-            renderDuo2Pills(selectedDuo1);
-            document.getElementById('build-duo-combo-btn').disabled = true;
-            // Attach duo2 pill click events after re-render
-            attachDuo2PillEvents();
-        };
-        function attachDuo2PillEvents() {
-            duo2PillsDiv.querySelectorAll('.duo2-pill').forEach(btn => {
-                btn.onclick = function() {
-                    if (btn.disabled) return;
-                    duo2PillsDiv.querySelectorAll('.duo2-pill').forEach(b => b.classList.remove('selected'));
-                    btn.classList.add('selected');
-                    selectedDuo2 = btn.getAttribute('data-set').split('-').map(Number);
-                    if (selectedDuo1 && selectedDuo2) {
-                        document.getElementById('build-duo-combo-btn').disabled = false;
-                    }
-                };
-            });
-        }
-        attachDuo2PillEvents();
-        document.getElementById('build-duo-combo-btn').onclick = function() {
-            if (!selectedDuo1 || !selectedDuo2) return;
-            let comboSet = Array.from(new Set([...selectedDuo1, ...selectedDuo2]));
-            if (comboSet.length < 4) {
-                const rest = generateUniqueNumbers(4-comboSet.length, 1, 69, comboSet);
-                comboSet = comboSet.concat(rest).sort((a,b)=>a-b);
-            } else {
-                comboSet = comboSet.slice(0,4).sort((a,b)=>a-b);
-            }
-            // Always fill to 5 numbers for Powerball
-            if (comboSet.length < 5) {
-                const rest = generateUniqueNumbers(5-comboSet.length, 1, 69, comboSet);
-                comboSet = comboSet.concat(rest).sort((a,b)=>a-b);
-            }
-            // Count how many times this 4/5-number set appeared in history
-            let count = 0;
-            for (const draw of allMainDraws) {
-                const drawSet = new Set(draw);
-                if (comboSet.every(n => drawSet.has(n))) count++;
-            }
-            let html = '<table style="width:100%; border-collapse:collapse; font-size:1.12em;">';
-            html += '<thead><tr><th>#</th><th>Combination</th><th>Results</th></tr></thead><tbody>';
-            html += `<tr><td style='font-weight:bold;'>1</td><td>` +
-                comboSet.map(num => `<span class='generated-ball'>${num}</span>`).join('') +
-                `<span class='generated-ball red'>${getRandomInt(1, 26)}</span>` +
-                `</td><td style='color:#234; font-weight:600;'>${count > 0 ? count + ' time' + (count > 1 ? 's' : '') : 'Never'}` +
-                `<br><span style='color:#888; font-weight:400;'>Duos: ${selectedDuo1.join('-')} & ${selectedDuo2.join('-')}</span>` +
-                `</td></tr>`;
-            html += '</tbody></table>';
-            document.getElementById('built-duo-combo-result').innerHTML = html;
-        };
-    }
-    insertDuoSectionPills();
-    renderDuoBuilderPills();
     // Tab switching logic
     document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.onclick = function() {
@@ -676,19 +662,6 @@
         render2xTab();
         renderHistoryTable();
     });
-    // --- JS: Add strong highlight for selected pills ---
-    const style = document.createElement('style');
-    style.innerHTML = `
-    .pill-btn.selected {
-        background: linear-gradient(90deg, #ffe066 0%, #e67e22 100%) !important;
-        color: #222 !important;
-        border: 2px solid #e67e22 !important;
-        box-shadow: 0 0 0 3px #ffe06699, 0 2px 8px rgba(230, 126, 34, 0.13);
-        font-weight: bold;
-        outline: none;
-    }
-    `;
-    document.head.appendChild(style);
     </script>
 </body>
 </html> 
