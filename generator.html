@@ -132,6 +132,187 @@
         font-weight: bold;
         outline: none;
       }
+      /* Enhanced Section 2: Create Combination from 2 Duos */
+      #duo-builder-panel {
+        background: #f4faff;
+        border-radius: 16px;
+        box-shadow: 0 2px 12px rgba(52,152,219,0.08);
+        padding: 28px 22px 22px 22px;
+        margin-bottom: 0;
+        max-width: 420px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+      #duo-builder-panel h2 {
+        color: #217dbb;
+        font-size: 1.22em;
+        font-weight: 700;
+        margin-bottom: 18px;
+        letter-spacing: 0.5px;
+      }
+      .duo-select-label {
+        font-size: 1.07em;
+        font-weight: 600;
+        color: #234;
+        margin-bottom: 6px;
+        display: block;
+      }
+      .duo-select {
+        width: 100%;
+        padding: 10px 12px;
+        border-radius: 8px;
+        border: 1.5px solid #b3d6f2;
+        font-size: 1.08em;
+        margin-bottom: 16px;
+        background: #fff;
+        transition: border 0.15s;
+      }
+      .duo-select:focus {
+        border: 1.5px solid #3498db;
+        outline: none;
+      }
+      #build-duo-combo-btn {
+        width: 100%;
+        font-size: 1.13em;
+        padding: 12px 0;
+        border-radius: 10px;
+        margin-top: 10px;
+        margin-bottom: 0;
+      }
+      #built-duo-combo-result {
+        margin-top: 22px !important;
+        background: #eaf6fb;
+        border-radius: 10px;
+        padding: 18px 12px;
+        min-height: 36px;
+        font-size: 1.09em;
+        color: #234;
+        box-shadow: 0 1px 4px rgba(52,152,219,0.07);
+      }
+      /* 2x Results Modern Style */
+      .twox-combo-results-list {
+        margin-top: 18px;
+        background: #f8faff;
+        border-radius: 14px;
+        box-shadow: 0 2px 8px rgba(44,62,80,0.06);
+        padding: 18px 14px 10px 14px;
+        max-width: 480px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+      .twox-combo-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 1.13em;
+        margin-bottom: 10px;
+        padding-bottom: 6px;
+        border-bottom: 1px solid #e3eaf2;
+      }
+      .twox-combo-row:last-child {
+        border-bottom: none;
+      }
+      .twox-combo-label {
+        font-weight: 600;
+        color: #217dbb;
+        min-width: 140px;
+        display: inline-block;
+      }
+      .twox-red-ball {
+        display: inline-block;
+        background: linear-gradient(120deg, #e74c3c 60%, #ffb3b3 100%);
+        color: #fff;
+        border-radius: 50%;
+        width: 32px;
+        height: 32px;
+        line-height: 32px;
+        text-align: center;
+        font-size: 1.08em;
+        font-weight: bold;
+        margin-right: 4px;
+        box-shadow: 0 2px 8px rgba(231,76,60,0.10);
+        border: 2px solid #e74c3c;
+      }
+      /* 2x Sets Interactive Panel and Results */
+      #twox-interactive-panel {
+        background: #f8faff;
+        border-radius: 16px;
+        box-shadow: 0 2px 12px rgba(52,152,219,0.08);
+        padding: 24px 18px 18px 18px;
+        margin-bottom: 24px;
+        max-width: 480px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+      #twox-ball-select {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 18px;
+        justify-content: center;
+      }
+      .twox-ball {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: #fff;
+        border: 2px solid #e74c3c;
+        color: #e74c3c;
+        font-weight: bold;
+        font-size: 1.08em;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: background 0.15s, color 0.15s, border 0.15s;
+      }
+      .twox-ball.selected {
+        background: #e74c3c;
+        color: #fff;
+        border: 2px solid #c0392b;
+        box-shadow: 0 2px 8px rgba(231,76,60,0.13);
+      }
+      #twox-results-panel {
+        background: #f4faff;
+        border-radius: 14px;
+        box-shadow: 0 2px 8px rgba(52,152,219,0.07);
+        padding: 18px 14px;
+        margin-top: 18px;
+        min-height: 60px;
+      }
+      .twox-combo-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 1.13em;
+        margin-bottom: 10px;
+        padding-bottom: 6px;
+        border-bottom: 1px solid #e3eaf2;
+      }
+      .twox-combo-row:last-child {
+        border-bottom: none;
+      }
+      .twox-combo-label {
+        font-weight: 600;
+        color: #217dbb;
+        min-width: 170px;
+        display: inline-block;
+      }
+      .twox-red-ball {
+        display: inline-block;
+        background: linear-gradient(120deg, #e74c3c 60%, #ffb3b3 100%);
+        color: #fff;
+        border-radius: 50%;
+        width: 32px;
+        height: 32px;
+        line-height: 32px;
+        text-align: center;
+        font-size: 1.08em;
+        font-weight: bold;
+        margin-right: 4px;
+        box-shadow: 0 2px 8px rgba(231,76,60,0.10);
+        border: 2px solid #e74c3c;
+      }
     </style>
 </head>
 <body>
@@ -139,7 +320,7 @@
       <div class="generator-title">PowerBall Random Generator</div>
       <nav class="tab-nav">
         <button class="tab-btn active" data-tab="home">Quick Generator</button>
-        <button class="tab-btn" data-tab="2x">2x Sets</button>
+        <button class="tab-btn" id="combo-redirect-btn">Combo</button>
       </nav>
       <div id="tab-home" class="tab-content" style="display:block;">
         <div class="generator-flex-layout">
@@ -157,14 +338,16 @@
               <div style="margin-top:18px; color:#888; font-size:1.05em;">Each combination: 5 unique white balls (1-69) + 1 Powerball (1-26).</div>
             </div>
           </section>
-          <!-- Section 2: Create Combination from 2 Duos (pill UI) -->
+          <!-- Section 2: Create Combination from 2 Duos (dropdown UI) -->
           <section class="generator-section">
             <div class="generator-panel" id="duo-builder-panel">
               <h2>2. Create Combination from 2 Duos</h2>
-              <div id="duo1-pills" style="margin-bottom:12px;"></div>
-              <div id="duo2-pills" style="margin-bottom:12px;"></div>
-              <button id="build-duo-combo-btn" class="freq-gen-btn" style="margin-top:8px;" disabled>Generate from Two Duos</button>
-              <div id="built-duo-combo-result" style="margin-top:18px;"></div>
+              <label for="duo1-select" class="duo-select-label">Select Duo 1:</label>
+              <select id="duo1-select" class="duo-select"></select>
+              <label for="duo2-select" class="duo-select-label">Select Duo 2:</label>
+              <select id="duo2-select" class="duo-select"></select>
+              <button id="build-duo-combo-btn" class="freq-gen-btn" disabled>Generate from Two Duos</button>
+              <div id="built-duo-combo-result"></div>
             </div>
           </section>
           <!-- Section 3: Create Combination from 1 Duo and 1 Trio -->
@@ -203,18 +386,6 @@
           </div>
         </section>
         <a href="index.html" class="back-link">&larr; Back to Analyzer</a>
-      </div>
-      <div id="tab-2x" class="tab-content" style="display:none;">
-        <section class="generator-section">
-          <div class="generator-panel">
-            <h2>Duos, Trios, Quadruples, Sets of 5</h2>
-            <div id="duos-table"></div>
-            <div id="trios-table" style="margin-top:24px;"></div>
-            <div id="quads-table" style="margin-top:24px;"></div>
-            <div id="fives-table" style="margin-top:24px;"></div>
-            <div id="all-combos-table" style="margin-top:32px;"></div>
-          </div>
-        </section>
       </div>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
@@ -356,6 +527,7 @@
         // Render
         renderFrequentSets();
         renderComboBuilderPills();
+        renderDuoBuilderDropdowns(); // <-- Moved here so dropdowns are populated after data is ready
     }
     function renderFrequentSets() {
         // Helper to render a set as a pill
@@ -384,52 +556,41 @@
         freqSetsContent.style.display = '';
     }
     // --- IMPROVED: DUO BUILDER SECTION ---
-    // Section 2: Create Combination from 2 Duos (pairs)
-    // This is now robust and visually clear, matching Section 3 style
+    // Section 2: Create Combination from 2 Duos (dropdowns)
     let selectedDuo1 = null;
     let selectedDuo2 = null;
-    function renderDuoBuilderPills() {
-        const duo1PillsDiv = document.getElementById('duo1-pills');
-        const duo2PillsDiv = document.getElementById('duo2-pills');
-        // Render duo1 pills
-        duo1PillsDiv.innerHTML = topPairs.map(([set, count], idx) => {
-            return `<span class="pill-group"><button class="pill-btn duo1-pill" data-set="${set}" style="margin:0 4px 8px 0;">${set.split('-').join(', ')}</button><span class='freq-set-count pill-count'>${count}</span></span>`;
-        }).join('');
-        // Render duo2 pills (disable overlap)
-        function renderDuo2Pills(duo1Set) {
-            duo2PillsDiv.innerHTML = topPairs.map(([set, count]) => {
-                const pairNums = set.split('-').map(Number);
-                const disabled = duo1Set && pairNums.some(n => duo1Set.includes(n));
-                return `<span class="pill-group"><button class="pill-btn duo2-pill" data-set="${set}" style="margin:0 4px 8px 0;" ${disabled ? 'disabled' : ''}>${set.split('-').join(', ')}</button><span class='freq-set-count pill-count'>${count}</span></span>`;
-            }).join('');
+    function renderDuoBuilderDropdowns() {
+        const duo1Select = document.getElementById('duo1-select');
+        const duo2Select = document.getElementById('duo2-select');
+        // Helper to create option HTML
+        function duoOptionHtml(set, count) {
+            return `<option value="${set}">${set.split('-').join(', ')} (count: ${count})</option>`;
         }
-        renderDuo2Pills(null);
+        // Populate duo1 dropdown
+        duo1Select.innerHTML = '<option value="">-- Select Duo 1 --</option>' +
+            topPairs.map(([set, count]) => duoOptionHtml(set, count)).join('');
+        // Populate duo2 dropdown (initially all enabled)
+        duo2Select.innerHTML = '<option value="">-- Select Duo 2 --</option>' +
+            topPairs.map(([set, count]) => duoOptionHtml(set, count)).join('');
         // Selection logic
-        duo1PillsDiv.onclick = function(e) {
-            const btn = e.target.closest('.duo1-pill');
-            if (!btn) return;
-            duo1PillsDiv.querySelectorAll('.duo1-pill').forEach(b => b.classList.remove('selected'));
-            btn.classList.add('selected');
-            selectedDuo1 = btn.getAttribute('data-set').split('-').map(Number);
+        duo1Select.onchange = function() {
+            selectedDuo1 = duo1Select.value ? duo1Select.value.split('-').map(Number) : null;
+            // Update duo2 dropdown: disable/hide overlapping duos
+            duo2Select.innerHTML = '<option value="">-- Select Duo 2 --</option>' +
+                topPairs.map(([set, count]) => {
+                    const pairNums = set.split('-').map(Number);
+                    const disabled = selectedDuo1 && pairNums.some(n => selectedDuo1.includes(n));
+                    return `<option value="${set}"${disabled ? ' disabled' : ''}>${set.split('-').join(', ')} (count: ${count})</option>`;
+                }).join('');
             selectedDuo2 = null;
-            renderDuo2Pills(selectedDuo1);
+            duo2Select.value = '';
             document.getElementById('build-duo-combo-btn').disabled = true;
-            attachDuo2PillEvents();
         };
-        function attachDuo2PillEvents() {
-            duo2PillsDiv.querySelectorAll('.duo2-pill').forEach(btn => {
-                btn.onclick = function() {
-                    if (btn.disabled) return;
-                    duo2PillsDiv.querySelectorAll('.duo2-pill').forEach(b => b.classList.remove('selected'));
-                    btn.classList.add('selected');
-                    selectedDuo2 = btn.getAttribute('data-set').split('-').map(Number);
-                    if (selectedDuo1 && selectedDuo2) {
-                        document.getElementById('build-duo-combo-btn').disabled = false;
-                    }
-                };
-            });
-        }
-        attachDuo2PillEvents();
+        duo2Select.onchange = function() {
+            selectedDuo2 = duo2Select.value ? duo2Select.value.split('-').map(Number) : null;
+            const btn = document.getElementById('build-duo-combo-btn');
+            btn.disabled = !(selectedDuo1 && selectedDuo2 && !selectedDuo1.some(n => selectedDuo2.includes(n)));
+        };
         document.getElementById('build-duo-combo-btn').onclick = function() {
             if (!selectedDuo1 || !selectedDuo2) return;
             let comboSet = Array.from(new Set([...selectedDuo1, ...selectedDuo2]));
@@ -462,7 +623,6 @@
             document.getElementById('built-duo-combo-result').innerHTML = html;
         };
     }
-    renderDuoBuilderPills();
     // --- IMPROVED: TRIO+PAIR BUILDER SECTION ---
     // Section 3: Create Combination from 1 Duo and 1 Trio
     function renderComboBuilderPills() {
@@ -582,7 +742,11 @@
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             document.querySelectorAll('.tab-content').forEach(tab => tab.style.display = 'none');
-            document.getElementById('tab-' + btn.getAttribute('data-tab')).style.display = 'block';
+            if (btn.id === 'combo-redirect-btn') {
+                window.location.href = 'index.html';
+            } else {
+                document.getElementById('tab-' + btn.getAttribute('data-tab')).style.display = 'block';
+            }
         };
     });
     // Add New Numbers logic
@@ -604,43 +768,6 @@
         analyzeFrequentSets();
         renderHistoryTable();
     };
-    // 2x tab rendering
-    function render2xTab() {
-        // Duos
-        let duosHtml = '<h3>Top 20 Duos</h3><table class="freq-table"><thead><tr><th>Duo</th><th>Count</th></tr></thead><tbody>';
-        topPairs.slice(0,20).forEach(([set, count]) => {
-            duosHtml += `<tr><td>${set}</td><td>${count}</td></tr>`;
-        });
-        duosHtml += '</tbody></table>';
-        document.getElementById('duos-table').innerHTML = duosHtml;
-        // Trios
-        let triosHtml = '<h3>Top 20 Trios</h3><table class="freq-table"><thead><tr><th>Trio</th><th>Count</th></tr></thead><tbody>';
-        topTriplets.slice(0,20).forEach(([set, count]) => {
-            triosHtml += `<tr><td>${set}</td><td>${count}</td></tr>`;
-        });
-        triosHtml += '</tbody></table>';
-        document.getElementById('trios-table').innerHTML = triosHtml;
-        // Quads
-        let quadsHtml = '<h3>Top 20 Quadruples</h3><table class="freq-table"><thead><tr><th>Quadruple</th><th>Count</th></tr></thead><tbody>';
-        topQuads.slice(0,20).forEach(([set, count]) => {
-            quadsHtml += `<tr><td>${set}</td><td>${count}</td></tr>`;
-        });
-        quadsHtml += '</tbody></table>';
-        document.getElementById('quads-table').innerHTML = quadsHtml;
-        // Sets of 5 (top 20 most common full draws)
-        let fivesHtml = '<h3>Top 20 Sets of 5</h3><table class="freq-table"><thead><tr><th>Set of 5</th><th>Count</th></tr></thead><tbody>';
-        const comboCounts = new Map();
-        for (const h of historicalCombos) {
-            comboCounts.set(h.combo, (comboCounts.get(h.combo)||0)+1);
-        }
-        Array.from(comboCounts.entries()).sort((a,b)=>b[1]-a[1]).slice(0,20).forEach(([set, count]) => {
-            fivesHtml += `<tr><td>${set}</td><td>${count}</td></tr>`;
-        });
-        fivesHtml += '</tbody></table>';
-        document.getElementById('fives-table').innerHTML = fivesHtml;
-        // Render all combos table
-        renderAllCombosTable();
-    }
     // History tab rendering
     function renderHistoryTable() {
         let html = '<table class="freq-table"><thead><tr><th>#</th><th>Numbers</th></tr></thead><tbody>';
@@ -654,12 +781,10 @@
     const oldAnalyzeFrequentSets = analyzeFrequentSets;
     analyzeFrequentSets = function() {
         oldAnalyzeFrequentSets();
-        render2xTab();
         renderHistoryTable();
     };
     // Initial render for 2x and history tabs after CSV load
     window.addEventListener('DOMContentLoaded', function() {
-        render2xTab();
         renderHistoryTable();
     });
     </script>
