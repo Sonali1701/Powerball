@@ -401,6 +401,59 @@ document.addEventListener('DOMContentLoaded', function() {
                             }
                         }, 0);
                     }
+                    function renderAll2xCombinations() {
+                        const resultsDiv = document.getElementById('twox-results');
+                        if (!resultsDiv) return;
+                        let html = '';
+                        // Helper to render a table
+                        function renderComboTable(title, combos) {
+                            let table = `<h3 style='margin-top:18px;'>${title}</h3>`;
+                            table += `<table class='freq-table' style='margin-bottom:24px;'><thead><tr><th>Combination</th><th>Count</th></tr></thead><tbody>`;
+                            combos.forEach(([set, count]) => {
+                                table += `<tr><td>${set}</td><td>${count}</td></tr>`;
+                            });
+                            table += '</tbody></table>';
+                            return table;
+                        }
+                        // Get and sort all duos, trios, quads, fives
+                        const duos = Array.from(duoCounts.entries()).sort((a, b) => {
+                            const aNums = a[0].split('-').map(Number);
+                            const bNums = b[0].split('-').map(Number);
+                            for (let i = 0; i < aNums.length; i++) {
+                                if (aNums[i] !== bNums[i]) return aNums[i] - bNums[i];
+                            }
+                            return 0;
+                        });
+                        const trios = Array.from(trioCounts.entries()).sort((a, b) => {
+                            const aNums = a[0].split('-').map(Number);
+                            const bNums = b[0].split('-').map(Number);
+                            for (let i = 0; i < aNums.length; i++) {
+                                if (aNums[i] !== bNums[i]) return aNums[i] - bNums[i];
+                            }
+                            return 0;
+                        });
+                        const quads = Array.from(quadCounts.entries()).sort((a, b) => {
+                            const aNums = a[0].split('-').map(Number);
+                            const bNums = b[0].split('-').map(Number);
+                            for (let i = 0; i < aNums.length; i++) {
+                                if (aNums[i] !== bNums[i]) return aNums[i] - bNums[i];
+                            }
+                            return 0;
+                        });
+                        const fives = Array.from(fiveCounts.entries()).sort((a, b) => {
+                            const aNums = a[0].split('-').map(Number);
+                            const bNums = b[0].split('-').map(Number);
+                            for (let i = 0; i < aNums.length; i++) {
+                                if (aNums[i] !== bNums[i]) return aNums[i] - bNums[i];
+                            }
+                            return 0;
+                        });
+                        html += renderComboTable('Combinations of 2', duos);
+                        html += renderComboTable('Combinations of 3', trios);
+                        html += renderComboTable('Combinations of 4', quads);
+                        html += renderComboTable('Combinations of 5', fives);
+                        resultsDiv.innerHTML = html;
+                    }
                     function render2xResultsFast(selected, groupSize) {
                         const resultsDiv = document.getElementById('twox-results');
                         if (!resultsDiv) return;
@@ -542,8 +595,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             const tab = btn.getAttribute('data-tab');
                             if (tab === '2x') {
                                 render2xBallPanel();
-                                // Clear results on tab switch
-                                document.getElementById('twox-results').innerHTML = '';
+                                renderAll2xCombinations();
                             }
                             if (tab === 'combo') {
                                 renderComboBallPanel();
@@ -555,8 +607,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Optionally, render 2x, combo, and history if user reloads on those tabs
                     if (document.getElementById('tab-2x').style.display === 'block') {
                         render2xBallPanel();
-                        // Clear results on tab switch
-                        document.getElementById('twox-results').innerHTML = '';
+                        renderAll2xCombinations();
                     }
                     if (document.getElementById('tab-combo').style.display === 'block') {
                         renderComboBallPanel();
@@ -676,3 +727,82 @@ if (searchBox) {
         }
     });
 } 
+
+// Update 2x Check My Numbers logic: show all draws (main and double play) where any selected ball appears, with date and type. Remove group size logic.
+function render2xResultsForSelectedBalls(selected) {
+    const resultsDiv = document.getElementById('twox-results');
+    if (!resultsDiv) return;
+    if (!selected || selected.length === 0) {
+        resultsDiv.innerHTML = '<div style="color:#888; margin:18px 0;">Select balls and click "Check My Numbers" to see draws containing your numbers.</div>';
+        return;
+    }
+    const selectedSet = new Set(selected.map(Number));
+    let matches = [];
+    filteredDrawRows.forEach(draw => {
+        // Main
+        if (draw.mainArr && draw.mainArr.length === 5) {
+            const matchArr = draw.mainArr.filter(num => selectedSet.has(Number(num)));
+            if (matchArr.length > 0) {
+                matches.push({
+                    date: draw.date,
+                    type: 'Main',
+                    numbers: draw.mainArr,
+                    powerball: draw.powerball,
+                    matchArr,
+                    matchCount: matchArr.length
+                });
+            }
+        }
+        // Double Play
+        if (draw.doublePlayArr && draw.doublePlayArr.length === 5) {
+            const matchArr = draw.doublePlayArr.filter(num => selectedSet.has(Number(num)));
+            if (matchArr.length > 0) {
+                matches.push({
+                    date: draw.date,
+                    type: 'Double Play',
+                    numbers: draw.doublePlayArr,
+                    powerball: draw.doublePlayPowerball,
+                    matchArr,
+                    matchCount: matchArr.length
+                });
+            }
+        }
+    });
+    // Sort by date descending
+    matches.sort((a, b) => {
+        function parseDate(str) {
+            let d = str.replace(' (Double Play)', '');
+            return new Date(d);
+        }
+        return parseDate(b.date) - parseDate(a.date);
+    });
+    let html = `<div><h3>Draws with your selected numbers</h3>`;
+    if (matches.length === 0) {
+        html += `<div style='color:#aaa; margin-bottom:12px;'>No draws found with your selected numbers.</div>`;
+    } else {
+        html += `<table class='freq-table'><thead><tr><th>Date</th><th>Type</th><th>Numbers</th><th>Powerball</th><th>Match Count</th></tr></thead><tbody>`;
+        matches.forEach(m => {
+            const balls = m.numbers.map(num => m.matchArr.includes(num)
+                ? `<span class='red-ball'>${num}</span>`
+                : `<span class='plain-number'>${num}</span>`
+            ).join("");
+            html += `<tr><td>${m.date}</td><td>${m.type}</td><td><div class='aligned-numbers' style='display:flex;gap:8px;align-items:center;flex-wrap:wrap;'>${balls}</div></td><td><span class='yellow-ball'>${m.powerball || ''}</span></td><td>${m.matchCount}</td></tr>`;
+        });
+        html += '</tbody></table>';
+    }
+    html += '</div>';
+    resultsDiv.innerHTML = html;
+}
+// Update 2x Check My Numbers button logic to use the new function and remove group size
+setTimeout(() => {
+    const checkBtn = document.getElementById('twox-check-btn');
+    if (checkBtn) {
+        checkBtn.onclick = function() {
+            const selectedBalls = [];
+            document.querySelectorAll('#twox-ball-panel .ball.selected').forEach(ball => {
+                selectedBalls.push(Number(ball.textContent));
+            });
+            render2xResultsForSelectedBalls(selectedBalls);
+        };
+    }
+}, 0); 

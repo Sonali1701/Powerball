@@ -199,6 +199,7 @@
             <div id="trios-table" style="margin-top:24px;"></div>
             <div id="quads-table" style="margin-top:24px;"></div>
             <div id="fives-table" style="margin-top:24px;"></div>
+            <div id="all-combos-table" style="margin-top:32px;"></div>
           </div>
         </section>
       </div>
@@ -651,6 +652,8 @@
         });
         fivesHtml += '</tbody></table>';
         document.getElementById('fives-table').innerHTML = fivesHtml;
+        // Render all combos table
+        renderAllCombosTable();
     }
     // History tab rendering
     function renderHistoryTable() {
