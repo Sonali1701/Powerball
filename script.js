@@ -149,11 +149,6 @@ document.addEventListener('DOMContentLoaded', function() {
                         ball.style.color = '#222';
                         ball.style.border = '2px solid #888';
                         // Tooltip
-                        const tooltip = document.createElement('span');
-                        tooltip.className = 'tooltip';
-                        tooltip.textContent = `${numberStats[n].count} times`;
-                        ball.appendChild(tooltip);
-                        // Removed count badge
                         ball.onclick = function(e) {
                             // Multi-select: toggle selection
                             if (selectedBalls.has(n)) {
@@ -371,10 +366,6 @@ document.addEventListener('DOMContentLoaded', function() {
                             ball.style.color = '#222';
                             ball.style.border = '2px solid #888';
                             // Tooltip
-                            const tooltip = document.createElement('span');
-                            tooltip.className = 'tooltip';
-                            tooltip.textContent = `${numberStats[n].count} times`;
-                            ball.appendChild(tooltip);
                             ball.onclick = function() {
                                 if (selectedBalls.has(n)) {
                                     selectedBalls.delete(n);
@@ -586,32 +577,35 @@ document.addEventListener('DOMContentLoaded', function() {
                             const ball = document.createElement('span');
                             ball.className = 'ball';
                             ball.textContent = n;
-                            ball.style.background = '#e74c3c';
-                            ball.style.color = '#fff';
-                            ball.style.border = '2px solid #c0392b';
+                            ball.style.background = selectedBalls.has(n) ? '#e74c3c' : '#fff';
+                            ball.style.color = selectedBalls.has(n) ? '#fff' : '#222';
+                            ball.style.border = selectedBalls.has(n) ? '2px solid #c0392b' : '2px solid #888';
                             // Tooltip
-                            const tooltip = document.createElement('span');
-                            tooltip.className = 'tooltip';
-                            tooltip.textContent = `${numberStats[n].count} times`;
-                            ball.appendChild(tooltip);
                             ball.onclick = function() {
                                 if (selectedBalls.has(n)) {
                                     selectedBalls.delete(n);
                                     ball.classList.remove('selected');
+                                    ball.style.background = '#fff';
+                                    ball.style.color = '#222';
+                                    ball.style.border = '2px solid #888';
                                 } else {
                                     selectedBalls.add(n);
                                     ball.classList.add('selected');
+                                    ball.style.background = '#e74c3c';
+                                    ball.style.color = '#fff';
+                                    ball.style.border = '2px solid #c0392b';
                                     ball.style.animation = 'popin 0.3s';
                                     setTimeout(() => { ball.style.animation = ''; }, 300);
                                 }
-                                renderComboResults(Array.from(selectedBalls));
+                                renderComboResults(Array.from(selectedBalls), 'combo-tab-results');
                             };
                             panel.appendChild(ball);
                         }
                     }
+                    
                     // --- Combo tab: update result rendering for dash-separated bold balls ---
-                    function renderComboResults(selected) {
-                        const resultsDiv = document.getElementById('combo-tab-results');
+                    function renderComboResults(selected, targetId = 'combo-tab-results') {
+                        const resultsDiv = document.getElementById(targetId);
                         if (!resultsDiv) return;
                         // Always show all draws, highlight selected numbers
                         const selectedSet = new Set((selected || []).map(Number));
@@ -650,16 +644,26 @@ document.addEventListener('DOMContentLoaded', function() {
                     // --- Tab event listeners ---
                     document.querySelectorAll('.tab-btn').forEach(btn => {
                         btn.addEventListener('click', function() {
-                            const tab = btn.getAttribute('data-tab');
-                            if (tab === '2x') {
-                                render2xBallPanel();
-                                renderAll2xCombinations();
+                            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                            btn.classList.add('active');
+                            document.querySelectorAll('.tab-content').forEach(tab => tab.style.display = 'none');
+                            const tabId = btn.getAttribute('data-tab');
+                            document.getElementById('tab-' + tabId).style.display = 'block';
+                            if (tabId === 'main') {
+                                if (typeof renderMainBallPanel === 'function') {
+                                    renderMainBallPanel();
+                                }
+                            } else if (tabId === 'combo') {
+                                if (typeof renderComboBallPanel === 'function') {
+                                    renderComboBallPanel();
+                                    renderComboResults([], 'combo-tab-results');
+                                }
+                            } else if (tabId === '2x') {
+                                if (typeof render2xBallPanel === 'function') {
+                                    render2xBallPanel();
+                                    renderAll2xCombinations();
+                                }
                             }
-                            if (tab === 'combo') {
-                                renderComboBallPanel();
-                                renderComboResults([]);
-                            }
-                            if (tab === 'history') renderHistoryTab();
                         });
                     });
                     // Optionally, render 2x, combo, and history if user reloads on those tabs
