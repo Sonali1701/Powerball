@@ -112,12 +112,12 @@ document.addEventListener('DOMContentLoaded', function() {
                             });
                         }
                     }
-                    // 1. Filter out draws before 2016 (fix: extract year from MM/DD/YYYY format)
+                    // 1. Filter out draws before 2024 (fix: extract year from MM/DD/YYYY format)
                     const filteredDrawRows = drawRows.filter(draw => {
                         const dateStr = (draw.date || '').trim();
                         const parts = dateStr.split('/');
                         const year = parts.length === 3 ? parseInt(parts[2], 10) : 0;
-                        return year >= 2016;
+                        return year === 2024 || year === 2025;
                     });
                     // --- Render balls with color, tooltip, and count badge ---
                     const panel = document.getElementById('ball-panel');
@@ -171,86 +171,86 @@ document.addEventListener('DOMContentLoaded', function() {
                         panel.appendChild(ball);
                     }
                     // Add event for the new button
-                    const checkBtn = document.getElementById('check-combo-btn');
-                    checkBtn.onclick = function() {
-                        const resultsDiv = document.getElementById('combo-results');
-                        resultsDiv.innerHTML = '';
+                    // const checkBtn = document.getElementById('check-combo-btn');
+                    // checkBtn.onclick = function() {
+                    //     const resultsDiv = document.getElementById('combo-results');
+                    //     resultsDiv.innerHTML = '';
 
-                        if (selectedBalls.size < 1) {
-                            resultsDiv.innerHTML = '<div style="color:#e74c3c; margin:12px 0;">Select at least 1 number to check combinations.</div>';
-                            return;
-                        }
-                        // Efficient: For each draw, count how many selected numbers appear
-                        let allResults = [];
-                        filteredDrawRows.forEach(draw => {
-                            // Main draw
-                            const matchCount = draw.mainArr.filter(num => selectedBalls.has(Number(num))).length;
-                            if (matchCount >= 1) {
-                                allResults.push({
-                                    date: draw.date,
-                                    numbers: draw.mainArr,
-                                    selected: draw.mainArr.map(num => selectedBalls.has(Number(num))),
-                                    type: 'Main',
-                                    powerball: draw.powerball
-                                });
-                            }
-                            // Double Play draw
-                            if (draw.doublePlayArr && draw.doublePlayArr.length > 0) {
-                                const matchCountDP = draw.doublePlayArr.filter(num => selectedBalls.has(Number(num))).length;
-                                if (matchCountDP >= 1) {
-                                    allResults.push({
-                                        date: draw.date, // Only the date, no (Double Play)
-                                        numbers: draw.doublePlayArr,
-                                        selected: draw.doublePlayArr.map(num => selectedBalls.has(Number(num))),
-                                        type: 'Double Play',
-                                        powerball: draw.doublePlayPowerball
-                                    });
-                                }
-                            }
-                        });
-                        // Sort allResults by date descending (parse date, ignore (Double Play) for sorting)
-                        allResults.sort((a, b) => {
-                            // Extract date part for sorting
-                            function parseDate(str) {
-                                let d = str.replace(' (Double Play)', '');
-                                return new Date(d);
-                            }
-                            return parseDate(b.date) - parseDate(a.date);
-                        });
-                        if (allResults.length === 0) {
-                            resultsDiv.innerHTML = '<div style="color:#e74c3c; margin:12px 0;">No draws found with your selected number(s) in either draw.</div>';
-                            return;
-                        }
-                        // Render all results in a single table
-                        const section = document.createElement('div');
-                        section.style.margin = '18px 0';
-                        section.innerHTML = `<b style='font-size:1.15em;'>Draws with your number${selectedBalls.size > 1 ? 's' : ''}</b> <span style='color:#888'>(Total: ${allResults.length})</span>`;
-                        const table = document.createElement('table');
-                        table.style.marginTop = '8px';
-                        table.style.width = '100%';
-                        table.innerHTML = `<thead><tr><th>Date</th><th>Type</th><th>Numbers</th><th>Powerball</th></tr></thead><tbody></tbody>`;
-                        allResults.forEach(draw => {
-                            const tr = document.createElement('tr');
-                            // Render numbers: selected as red balls, others as black text, with dash between
-                            const numbersHtml = draw.numbers.map((num, idx) => {
-                                if (draw.selected[idx]) {
-                                    return `<span class='red-ball'>${num}</span>`;
-                                } else {
-                                    return `<span class='plain-number'>${num}</span>`;
-                                }
-                            }).join('<br>'); // Show each number on a new line
-                            tr.innerHTML = `<td>${draw.date}</td><td>${draw.type}</td><td><div class='draws-list aligned-numbers'>${numbersHtml}</div></td><td><span class='yellow-ball'>${draw.powerball || ''}</span></td>`;
-                            table.querySelector('tbody').appendChild(tr);
-                        });
-                        section.appendChild(table);
-                        resultsDiv.appendChild(section);
-                        // After rendering results, scroll to them for user focus
-                        setTimeout(() => {
-                            if (resultsDiv && resultsDiv.children.length > 0) {
-                                resultsDiv.scrollIntoView({behavior: 'smooth', block: 'start'});
-                            }
-                        }, 100);
-                    };
+                    //     if (selectedBalls.size < 1) {
+                    //         resultsDiv.innerHTML = '<div style="color:#e74c3c; margin:12px 0;">Select at least 1 number to check combinations.</div>';
+                    //         return;
+                    //     }
+                    //     // Efficient: For each draw, count how many selected numbers appear
+                    //     let allResults = [];
+                    //     filteredDrawRows.forEach(draw => {
+                    //         // Main draw
+                    //         const matchCount = draw.mainArr.filter(num => selectedBalls.has(Number(num))).length;
+                    //         if (matchCount >= 1) {
+                    //             allResults.push({
+                    //                 date: draw.date,
+                    //                 numbers: draw.mainArr,
+                    //                 selected: draw.mainArr.map(num => selectedBalls.has(Number(num))),
+                    //                 type: 'Main',
+                    //                 powerball: draw.powerball
+                    //             });
+                    //         }
+                    //         // Double Play draw
+                    //         if (draw.doublePlayArr && draw.doublePlayArr.length > 0) {
+                    //             const matchCountDP = draw.doublePlayArr.filter(num => selectedBalls.has(Number(num))).length;
+                    //             if (matchCountDP >= 1) {
+                    //                 allResults.push({
+                    //                     date: draw.date, // Only the date, no (Double Play)
+                    //                     numbers: draw.doublePlayArr,
+                    //                     selected: draw.doublePlayArr.map(num => selectedBalls.has(Number(num))),
+                    //                     type: 'Double Play',
+                    //                     powerball: draw.doublePlayPowerball
+                    //                 });
+                    //             }
+                    //         }
+                    //     });
+                    //     // Sort allResults by date descending (parse date, ignore (Double Play) for sorting)
+                    //     allResults.sort((a, b) => {
+                    //         // Extract date part for sorting
+                    //         function parseDate(str) {
+                    //             let d = str.replace(' (Double Play)', '');
+                    //             return new Date(d);
+                    //         }
+                    //         return parseDate(b.date) - parseDate(a.date);
+                    //     });
+                    //     if (allResults.length === 0) {
+                    //         resultsDiv.innerHTML = '<div style="color:#e74c3c; margin:12px 0;">No draws found with your selected number(s) in either draw.</div>';
+                    //         return;
+                    //     }
+                    //     // Render all results in a single table
+                    //     const section = document.createElement('div');
+                    //     section.style.margin = '18px 0';
+                    //     section.innerHTML = `<b style='font-size:1.15em;'>Draws with your number${selectedBalls.size > 1 ? 's' : ''}</b> <span style='color:#888'>(Total: ${allResults.length})</span>`;
+                    //     const table = document.createElement('table');
+                    //     table.style.marginTop = '8px';
+                    //     table.style.width = '100%';
+                    //     table.innerHTML = `<thead><tr><th>Date</th><th>Type</th><th>Numbers</th><th>Powerball</th></tr></thead><tbody></tbody>`;
+                    //     allResults.forEach(draw => {
+                    //         const tr = document.createElement('tr');
+                    //         // Render numbers: selected as red balls, others as black text, with dash between
+                    //         const numbersHtml = draw.numbers.map((num, idx) => {
+                    //             if (draw.selected[idx]) {
+                    //                 return `<span class='red-ball'>${num}</span>`;
+                    //             } else {
+                    //                 return `<span class='plain-number'>${num}</span>`;
+                    //             }
+                    //         }).join('<br>'); // Show each number on a new line
+                    //         tr.innerHTML = `<td>${draw.date}</td><td>${draw.type}</td><td><div class='draws-list aligned-numbers'>${numbersHtml}</div></td><td><span class='yellow-ball'>${draw.powerball || ''}</span></td>`;
+                    //         table.querySelector('tbody').appendChild(tr);
+                    //     });
+                    //     section.appendChild(table);
+                    //     resultsDiv.appendChild(section);
+                    //     // After rendering results, scroll to them for user focus
+                    //     setTimeout(() => {
+                    //         if (resultsDiv && resultsDiv.children.length > 0) {
+                    //             resultsDiv.scrollIntoView({behavior: 'smooth', block: 'start'});
+                    //         }
+                    //     }, 100);
+                    // };
                     // --- Show info for a number ---
                     // Remove old single-ball info panel logic
                     // --- Add new always-visible number frequency panel ---
@@ -390,14 +390,14 @@ document.addEventListener('DOMContentLoaded', function() {
                             panel.appendChild(ball);
                         }
                         // Attach event to Check My Numbers button (now in left-col)
-                        setTimeout(() => {
-                            const checkBtn = document.getElementById('twox-check-btn');
-                            if (checkBtn) {
-                                checkBtn.onclick = function() {
-                                    render2xCombinations(Array.from(selectedBalls).sort((a,b)=>a-b));
-                                };
-                            }
-                        }, 0);
+                        // setTimeout(() => {
+                        //     const checkBtn = document.getElementById('twox-check-btn');
+                        //     if (checkBtn) {
+                        //         checkBtn.onclick = function() {
+                        //             render2xCombinations(Array.from(selectedBalls).sort((a,b)=>a-b));
+                        //         };
+                        //     }
+                        // }, 0);
                     }
                     // --- Render all combinations of 2, 3, 4, 5 from selected balls ---
                     function render2xCombinations(selected) {
@@ -620,16 +620,16 @@ document.addEventListener('DOMContentLoaded', function() {
                             // Main draw
                             if (draw.mainArr && draw.mainArr.length === 5) {
                                 const balls = draw.mainArr.map((num, idx) => selectedSet.has(Number(num))
-                                    ? `<span style='display:inline-block;background:linear-gradient(120deg,#e74c3c 60%,#ffb3b3 100%);color:#fff;border-radius:50%;width:32px;height:32px;line-height:32px;text-align:center;font-size:1.08em;font-weight:bold;margin:0 2px;'>${num}</span>${idx < draw.mainArr.length-1 ? '<b style="color:#e74c3c;font-size:1.2em;">-</b>' : ''}`
-                                    : `<span class='plain-number'>${num}</span>${idx < draw.mainArr.length-1 ? '<b style="color:#e74c3c;font-size:1.2em;">-</b>' : ''}`
+                                    ? `<span style='display:inline-block;background:linear-gradient(120deg,#e74c3c 60%,#ffb3b3 100%);color:#fff;border-radius:50%;width:32px;height:32px;line-height:32px;text-align:center;font-size:1.08em;font-weight:bold;margin:0 2px;'>${num}</span>${idx < draw.mainArr.length-1 ? '<b style="color:#000;font-size:1.2em;">-</b>' : ''}`
+                                    : `<span class='plain-number'>${num}</span>${idx < draw.mainArr.length-1 ? '<b style="color:#000;font-size:1.2em;">-</b>' : ''}`
                                 ).join("");
                                 html += `<tr><td>${draw.date}</td><td>Main</td><td><div class='aligned-numbers' style='display:flex;gap:8px;align-items:center;flex-wrap:wrap;'>${balls}</div></td><td><span class='yellow-ball'>${draw.powerball || ''}</span></td></tr>`;
                             }
                             // Double Play draw
                             if (draw.doublePlayArr && draw.doublePlayArr.length === 5) {
                                 const balls = draw.doublePlayArr.map((num, idx) => selectedSet.has(Number(num))
-                                    ? `<span style='display:inline-block;background:linear-gradient(120deg,#e74c3c 60%,#ffb3b3 100%);color:#fff;border-radius:50%;width:32px;height:32px;line-height:32px;text-align:center;font-size:1.08em;font-weight:bold;margin:0 2px;'>${num}</span>${idx < draw.doublePlayArr.length-1 ? '<b style="color:#e74c3c;font-size:1.2em;">-</b>' : ''}`
-                                    : `<span class='plain-number'>${num}</span>${idx < draw.doublePlayArr.length-1 ? '<b style="color:#e74c3c;font-size:1.2em;">-</b>' : ''}`
+                                    ? `<span style='display:inline-block;background:linear-gradient(120deg,#e74c3c 60%,#ffb3b3 100%);color:#fff;border-radius:50%;width:32px;height:32px;line-height:32px;text-align:center;font-size:1.08em;font-weight:bold;margin:0 2px;'>${num}</span>${idx < draw.doublePlayArr.length-1 ? '<b style="color:#000;font-size:1.2em;">-</b>' : ''}`
+                                    : `<span class='plain-number'>${num}</span>${idx < draw.doublePlayArr.length-1 ? '<b style="color:#000;font-size:1.2em;">-</b>' : ''}`
                                 ).join("");
                                 html += `<tr><td>${draw.date}</td><td>Double Play</td><td><div class='aligned-numbers' style='display:flex;gap:8px;align-items:center;flex-wrap:wrap;'>${balls}</div></td><td><span class='yellow-ball'>${draw.doublePlayPowerball || ''}</span></td></tr>`;
                             }
@@ -839,15 +839,15 @@ function render2xResultsForSelectedBalls(selected) {
     resultsDiv.innerHTML = html;
 }
 // Update 2x Check My Numbers button logic to use the new function and remove group size
-setTimeout(() => {
-    const checkBtn = document.getElementById('twox-check-btn');
-    if (checkBtn) {
-        checkBtn.onclick = function() {
-            const selectedBalls = [];
-            document.querySelectorAll('#twox-ball-panel .ball.selected').forEach(ball => {
-                selectedBalls.push(Number(ball.textContent));
-            });
-            render2xResultsForSelectedBalls(selectedBalls);
-        };
-    }
-}, 0); 
+// setTimeout(() => {
+//     const checkBtn = document.getElementById('twox-check-btn');
+//     if (checkBtn) {
+//         checkBtn.onclick = function() {
+//             const selectedBalls = [];
+//             document.querySelectorAll('#twox-ball-panel .ball.selected').forEach(ball => {
+//                 selectedBalls.push(Number(ball.textContent));
+//             });
+//             render2xResultsForSelectedBalls(selectedBalls);
+//         };
+//     }
+// }, 0); 
