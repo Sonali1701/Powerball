@@ -759,6 +759,24 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                     
                     function renderNewResults(selected) {
+    // Attach click handler to numbers in results after rendering
+    function newNumberClickHandler(e) {
+        if (e.target && e.target.classList.contains('plain-number')) {
+            const num = parseInt(e.target.textContent, 10);
+            if (!isNaN(num)) {
+                // Find the top panel and select the ball
+                const panel = document.getElementById('new-ball-panel');
+                if (panel) {
+                    const ballEls = panel.querySelectorAll('.ball');
+                    ballEls.forEach(ballEl => {
+                        if (parseInt(ballEl.textContent, 10) === num) {
+                            ballEl.click();
+                        }
+                    });
+                }
+            }
+        }
+    }
                         const resultsDiv = document.getElementById('new-tab-results');
                         if (!resultsDiv) return;
                         if (!selected || selected.length === 0) {
@@ -801,6 +819,11 @@ document.addEventListener('DOMContentLoaded', function() {
                         
                         html += '</tbody></table>';
                         resultsDiv.innerHTML = html;
+                        // Attach click handler to numbers in the results
+                        resultsDiv.querySelectorAll('.plain-number').forEach(el => {
+                            el.style.cursor = 'pointer';
+                            el.addEventListener('click', newNumberClickHandler);
+                        });
                     }
                     
                     // --- Tab event listeners ---
