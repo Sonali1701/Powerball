@@ -1,4 +1,57 @@
 document.addEventListener('DOMContentLoaded', function() {
+    // --- Auto-save notes logic ---
+    const noteConfigs = [
+        { textarea: 'note-textarea', key: 'notes_main' },
+        { textarea: 'note-textarea-combo', key: 'notes_combo' },
+        { textarea: 'note-textarea-new', key: 'notes_new' },
+        { textarea: 'note-textarea-2x', key: 'notes_2x' },
+    ];
+    // Restore notes from localStorage on load
+    noteConfigs.forEach(cfg => {
+        const ta = document.getElementById(cfg.textarea);
+        if (ta && localStorage.getItem(cfg.key)) {
+            ta.value = localStorage.getItem(cfg.key);
+        }
+        if (ta) {
+            ta.addEventListener('input', () => {
+                localStorage.setItem(cfg.key, ta.value);
+            });
+        }
+    });
+    // Save all notes to localStorage
+    function saveAllNotes() {
+        noteConfigs.forEach(cfg => {
+            const ta = document.getElementById(cfg.textarea);
+            if (ta) {
+                localStorage.setItem(cfg.key, ta.value);
+            }
+        });
+    }
+    // On tab switch, auto-save notes
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', saveAllNotes);
+    });
+
+    // Tab switching logic for new tab
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            document.querySelectorAll('.tab-content').forEach(tab => tab.style.display = 'none');
+            const tabId = btn.getAttribute('data-tab');
+            const tabContent = document.getElementById('tab-' + tabId);
+            if (tabContent) {
+                tabContent.style.display = 'block';
+                if (tabId === 'combo') renderComboBallPanel();
+                if (tabId === 'new') {
+                    renderNewBallPanel();
+                    // Clear results
+                    const resultsDiv = document.getElementById('new-tab-results');
+                    if (resultsDiv) resultsDiv.innerHTML = '';
+                }
+            }
+        });
+    });
     fetch('powerball.csv')
         .then(response => response.text())
         .then(rawCsv => {
@@ -605,6 +658,15 @@ document.addEventListener('DOMContentLoaded', function() {
                     
                     // --- Combo tab: update result rendering for dash-separated bold balls ---
                     function renderComboResults(selected, targetId = 'combo-tab-results') {
+    // Attach click handler for numbers in results
+    setTimeout(() => {
+        const resultsDiv = document.getElementById(targetId);
+        if (resultsDiv) {
+            resultsDiv.removeEventListener('click', comboNumberClickHandler);
+            resultsDiv.addEventListener('click', comboNumberClickHandler);
+        }
+    }, 0);
+
                         const resultsDiv = document.getElementById(targetId);
                         if (!resultsDiv) return;
                         // Always show all draws, highlight selected numbers
@@ -631,6 +693,25 @@ document.addEventListener('DOMContentLoaded', function() {
                         html += '</tbody></table>';
                         resultsDiv.innerHTML = html;
                     }
+
+                    // Handler: clicking a number in combo results selects the ball and updates panel/results
+                    function comboNumberClickHandler(e) {
+                        if (e.target && e.target.classList.contains('plain-number')) {
+                            const num = parseInt(e.target.textContent, 10);
+                            if (!isNaN(num)) {
+                                // Find the top panel and select the ball
+                                const panel = document.getElementById('combo-ball-panel');
+                                if (panel) {
+                                    const ballEls = panel.querySelectorAll('.ball');
+                                    ballEls.forEach(ball => {
+                                        if (parseInt(ball.textContent, 10) === num) {
+                                            if (!ball.classList.contains('selected')) ball.click();
+                                        }
+                                    });
+                                }
+                            }
+                        }
+                    }
                     // --- Render History tab with both main and double play as columns ---
                     function renderHistoryTab() {
                         let html = '<table class="freq-table"><thead><tr><th>#</th><th>Date</th><th>Main Numbers</th><th>Double Play Numbers</th></tr></thead><tbody>';
@@ -641,6 +722,87 @@ document.addEventListener('DOMContentLoaded', function() {
                         html += '</tbody></table>';
                         document.getElementById('history-table').innerHTML = html;
                     }
+                    // --- New tab functions ---
+                    function renderNewBallPanel() {
+                        const panel = document.getElementById('new-ball-panel');
+                        if (!panel) return;
+                        panel.innerHTML = '';
+                        const selectedBalls = new Set();
+                        for (let n = 1; n <= 69; n++) {
+                            const ball = document.createElement('span');
+                            ball.className = 'ball';
+                            ball.textContent = n;
+                            ball.style.background = '#fff';
+                            ball.style.color = '#222';
+                            ball.style.border = '2px solid #888';
+                            // Tooltip
+                            ball.onclick = function() {
+                                if (selectedBalls.has(n)) {
+                                    selectedBalls.delete(n);
+                                    ball.classList.remove('selected');
+                                    ball.style.background = '#fff';
+                                    ball.style.color = '#222';
+                                    ball.style.border = '2px solid #888';
+                                } else {
+                                    selectedBalls.add(n);
+                                    ball.classList.add('selected');
+                                    ball.style.background = '#e74c3c';
+                                    ball.style.color = '#fff';
+                                    ball.style.border = '2px solid #c0392b';
+                                    ball.style.animation = 'popin 0.3s';
+                                    setTimeout(() => { ball.style.animation = ''; }, 300);
+                                }
+                                renderNewResults(Array.from(selectedBalls));
+                            };
+                            panel.appendChild(ball);
+                        }
+                    }
+                    
+                    function renderNewResults(selected) {
+                        const resultsDiv = document.getElementById('new-tab-results');
+                        if (!resultsDiv) return;
+                        if (!selected || selected.length === 0) {
+                            resultsDiv.innerHTML = '<div style="color:#888; margin:18px 0;">Select white balls above to see both main and double play draws containing your numbers.</div>';
+                            return;
+                        }
+                        
+                        const selectedSet = new Set(selected.map(Number));
+                        let html = '<h3>Draws with your selected numbers</h3>';
+                        
+                        // Create a table to display both main and double play draws
+                        html += `<table class='freq-table' style='margin-bottom:24px;'><thead><tr><th>Date</th><th>Type</th><th>Numbers</th><th>Powerball</th></tr></thead><tbody>`;
+                        
+                        // Filter and display draws that contain at least one of the selected numbers
+                        filteredDrawRows.forEach(draw => {
+                            // Main draw
+                            if (draw.mainArr && draw.mainArr.length === 5) {
+                                const matchArr = draw.mainArr.filter(num => selectedSet.has(Number(num)));
+                                if (matchArr.length > 0) {
+                                    const balls = draw.mainArr.map((num, idx) => selectedSet.has(Number(num))
+                                        ? `<span style='display:inline-block;background:linear-gradient(120deg,#e74c3c 60%,#ffb3b3 100%);color:#fff;border-radius:50%;width:32px;height:32px;line-height:32px;text-align:center;font-size:1.08em;font-weight:bold;margin:0 2px;'>${num}</span>${idx < draw.mainArr.length-1 ? '<b style="color:#000;font-size:1.2em;">-</b>' : ''}`
+                                        : `<span class='plain-number'>${num}</span>${idx < draw.mainArr.length-1 ? '<b style="color:#000;font-size:1.2em;">-</b>' : ''}`
+                                    ).join("");
+                                    html += `<tr><td>${draw.date}</td><td>Main</td><td><div class='aligned-numbers' style='display:flex;gap:8px;align-items:center;flex-wrap:wrap;'>${balls}</div></td><td><span class='yellow-ball'>${draw.powerball || ''}</span></td></tr>`;
+                                }
+                            }
+                            
+                            // Double Play draw
+                            if (draw.doublePlayArr && draw.doublePlayArr.length === 5) {
+                                const matchArr = draw.doublePlayArr.filter(num => selectedSet.has(Number(num)));
+                                if (matchArr.length > 0) {
+                                    const balls = draw.doublePlayArr.map((num, idx) => selectedSet.has(Number(num))
+                                        ? `<span style='display:inline-block;background:linear-gradient(120deg,#e74c3c 60%,#ffb3b3 100%);color:#fff;border-radius:50%;width:32px;height:32px;line-height:32px;text-align:center;font-size:1.08em;font-weight:bold;margin:0 2px;'>${num}</span>${idx < draw.doublePlayArr.length-1 ? '<b style="color:#000;font-size:1.2em;">-</b>' : ''}`
+                                        : `<span class='plain-number'>${num}</span>${idx < draw.doublePlayArr.length-1 ? '<b style="color:#000;font-size:1.2em;">-</b>' : ''}`
+                                    ).join("");
+                                    html += `<tr><td>${draw.date}</td><td>Double Play</td><td><div class='aligned-numbers' style='display:flex;gap:8px;align-items:center;flex-wrap:wrap;'>${balls}</div></td><td><span class='yellow-ball'>${draw.doublePlayPowerball || ''}</span></td></tr>`;
+                                }
+                            }
+                        });
+                        
+                        html += '</tbody></table>';
+                        resultsDiv.innerHTML = html;
+                    }
+                    
                     // --- Tab event listeners ---
                     document.querySelectorAll('.tab-btn').forEach(btn => {
                         btn.addEventListener('click', function() {
@@ -663,6 +825,11 @@ document.addEventListener('DOMContentLoaded', function() {
                                     render2xBallPanel();
                                     renderAll2xCombinations();
                                 }
+                            } else if (tabId === 'new') {
+                                if (typeof renderNewBallPanel === 'function') {
+                                    renderNewBallPanel();
+                                    renderNewResults([]);
+                                }
                             }
                         });
                     });
@@ -678,6 +845,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (document.getElementById('tab-history').style.display === 'block') renderHistoryTab();
 
                     // --- Download Notes ---
+                    // Main tab notes
                     const downloadBtn = document.getElementById('download-note-btn');
                     if (downloadBtn) {
                         downloadBtn.onclick = function() {
@@ -691,6 +859,69 @@ document.addEventListener('DOMContentLoaded', function() {
                             const a = document.createElement('a');
                             a.href = url;
                             a.download = 'powerball_notes.txt';
+                            document.body.appendChild(a);
+                            a.click();
+                            document.body.removeChild(a);
+                            URL.revokeObjectURL(url);
+                        };
+                    }
+                    
+                    // Combo tab notes
+                    const downloadBtnCombo = document.getElementById('download-note-btn-combo');
+                    if (downloadBtnCombo) {
+                        downloadBtnCombo.onclick = function() {
+                            const noteText = document.getElementById('note-textarea-combo').value;
+                            if (noteText.trim() === '') {
+                                alert('Your note is empty!');
+                                return;
+                            }
+                            const blob = new Blob([noteText], { type: 'text/plain' });
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = 'powerball_combo_notes.txt';
+                            document.body.appendChild(a);
+                            a.click();
+                            document.body.removeChild(a);
+                            URL.revokeObjectURL(url);
+                        };
+                    }
+                    
+                    // 2x tab notes
+                    const downloadBtn2x = document.getElementById('download-note-btn-2x');
+                    if (downloadBtn2x) {
+                        downloadBtn2x.onclick = function() {
+                            const noteText = document.getElementById('note-textarea-2x').value;
+                            if (noteText.trim() === '') {
+                                alert('Your note is empty!');
+                                return;
+                            }
+                            const blob = new Blob([noteText], { type: 'text/plain' });
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = 'powerball_2x_notes.txt';
+                            document.body.appendChild(a);
+                            a.click();
+                            document.body.removeChild(a);
+                            URL.revokeObjectURL(url);
+                        };
+                    }
+                    
+                    // New tab notes
+                    const downloadBtnNew = document.getElementById('download-note-btn-new');
+                    if (downloadBtnNew) {
+                        downloadBtnNew.onclick = function() {
+                            const noteText = document.getElementById('note-textarea-new').value;
+                            if (noteText.trim() === '') {
+                                alert('Your note is empty!');
+                                return;
+                            }
+                            const blob = new Blob([noteText], { type: 'text/plain' });
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = 'powerball_new_notes.txt';
                             document.body.appendChild(a);
                             a.click();
                             document.body.removeChild(a);
@@ -729,6 +960,34 @@ if (genComboBtn && genSingleBtn && genResult) {
         genResult.innerHTML = `<span class='generated-ball'>${n}</span>`;
     };
 }
+
+// --- Download Notes for All Tabs ---
+[
+    { btn: 'download-note-btn', textarea: 'note-textarea', filename: 'powerball_notes.txt' },
+    { btn: 'download-note-btn-combo', textarea: 'note-textarea-combo', filename: 'powerball_combo_notes.txt' },
+    { btn: 'download-note-btn-2x', textarea: 'note-textarea-2x', filename: 'powerball_2x_notes.txt' },
+    { btn: 'download-note-btn-new', textarea: 'note-textarea-new', filename: 'powerball_new_notes.txt' }
+].forEach(cfg => {
+    const btn = document.getElementById(cfg.btn);
+    if (btn) {
+        btn.onclick = function() {
+            const noteText = document.getElementById(cfg.textarea).value;
+            if (noteText.trim() === '') {
+                alert('Your note is empty!');
+                return;
+            }
+            const blob = new Blob([noteText], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = cfg.filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        };
+    }
+});
 
 // After CSV and filteredDrawRows are ready, render the full combo table on the home page
 if (document.getElementById('combo-results')) {
@@ -854,4 +1113,4 @@ function render2xResultsForSelectedBalls(selected) {
 //             render2xResultsForSelectedBalls(selectedBalls);
 //         };
 //     }
-// }, 0); 
+// }, 0);

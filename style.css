@@ -1177,7 +1177,8 @@ tr:hover {
 }
 #tab-combo .ball-panel,
 #tab-main .ball-panel,
-#tab-2x .ball-panel {
+#tab-2x .ball-panel,
+#tab-new .ball-panel {
     display: flex !important;
     flex-direction: row !important;
     flex-wrap: wrap !important;
@@ -1193,7 +1194,7 @@ tr:hover {
     border: none !important;
     box-shadow: none !important;
 }
-#tab-combo .ball {
+.ball {
     width: 32px;
     height: 32px;
     font-size: 1em;
@@ -1210,6 +1211,7 @@ tr:hover {
     transition: box-shadow 0.18s, background 0.18s, border 0.18s, color 0.18s, transform 0.13s;
     position: relative;
 }
+
 #tab-combo .ball.selected {
     border: 2.5px solid #ffe066 !important;
     box-shadow: 0 0 0 4px #ffe06699, 0 2px 12px rgba(231,76,60,0.18);
@@ -1355,23 +1357,18 @@ tr:hover {
     background: #f8faff;
     border-radius: 18px;
     box-shadow: 0 4px 24px rgba(44,62,80,0.10);
-    padding: 32px 18px 32px 18px;
-    margin-top: 12px;
-    margin-bottom: 24px;
-    min-height: 400px;
 }
-#tab-combo .ball-panel, #tab-2x .ball-panel {
-    background: #fffbe6;
-    border-radius: 16px;
-    box-shadow: 0 2px 12px rgba(230, 198, 0, 0.08);
-    padding: 18px 8px 18px 8px !important;
-    margin-bottom: 24px !important;
-    margin-top: 8px !important;
+table {
+background: #fff;
+border-radius: 12px;
+box-shadow: 0 1px 6px rgba(44,62,80,0.07);
+margin-bottom: 24px;
+padding: 0 8px;
+font-size: 1.08em;
 }
-#tab-combo .center-col h2, #tab-2x .center-col h2 {
-    font-size: 1.35em;
-    font-weight: 700;
-    color: #217dbb;
+th, td {
+padding: 14px 10px;
+font-size: 1.08em;
     margin-bottom: 18px;
     margin-top: 0;
     letter-spacing: 0.5px;
