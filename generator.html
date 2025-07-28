@@ -385,6 +385,18 @@
             </div>
           </div>
         </section>
+        <!-- Interactive Frequent Pairs/Trios Panel -->
+        <section class="generator-section">
+          <div class="generator-panel" id="freq-pairtrio-panel">
+            <h2>Frequent Pairs & Trios (2x+)</h2>
+            <div style="margin-bottom:12px;">
+              <button id="freq-toggle-pairs" class="freq-gen-btn active">Pairs</button>
+              <button id="freq-toggle-trios" class="freq-gen-btn">Trios</button>
+            </div>
+            <div id="freq-pairtrio-table" style="min-height:60px;"></div>
+            <div id="freq-pairtrio-dates" style="margin-top:18px;display:none;"></div>
+          </div>
+        </section>
         <a href="index.html" class="back-link">&larr; Back to Analyzer</a>
       </div>
     </div>
@@ -750,24 +762,27 @@
         };
     });
     // Add New Numbers logic
-    document.getElementById('add-numbers-form').onsubmit = function(e) {
-        e.preventDefault();
-        const inputs = Array.from(document.querySelectorAll('.add-num-input'));
-        const nums = inputs.map(input => parseInt(input.value, 10));
-        const msgDiv = document.getElementById('add-numbers-msg');
-        if (nums.some(isNaN) || new Set(nums).size !== 5 || nums.some(n => n < 1 || n > 69)) {
-            msgDiv.textContent = 'Please enter 5 unique numbers between 1 and 69.';
-            return;
-        }
-        // Add to historicalCombos and allMainDraws
-        const sorted = nums.slice().sort((a,b)=>a-b);
-        historicalCombos.push({ combo: sorted.join('-') });
-        allMainDraws.push(sorted);
-        msgDiv.textContent = 'Numbers added!';
-        inputs.forEach(input => input.value = '');
-        analyzeFrequentSets();
-        renderHistoryTable();
-    };
+    var addForm = document.getElementById('add-numbers-form');
+    if (addForm) {
+        addForm.onsubmit = function(e) {
+            e.preventDefault();
+            const inputs = Array.from(document.querySelectorAll('.add-num-input'));
+            const nums = inputs.map(input => parseInt(input.value, 10));
+            const msgDiv = document.getElementById('add-numbers-msg');
+            if (nums.some(isNaN) || new Set(nums).size !== 5 || nums.some(n => n < 1 || n > 69)) {
+                msgDiv.textContent = 'Please enter 5 unique numbers between 1 and 69.';
+                return;
+            }
+            // Add to historicalCombos and allMainDraws
+            const sorted = nums.slice().sort((a,b)=>a-b);
+            historicalCombos.push({ combo: sorted.join('-') });
+            allMainDraws.push(sorted);
+            msgDiv.textContent = 'Numbers added!';
+            inputs.forEach(input => input.value = '');
+            analyzeFrequentSets();
+            renderHistoryTable();
+        };
+    }
     // History tab rendering
     function renderHistoryTable() {
         let html = '<table class="freq-table"><thead><tr><th>#</th><th>Numbers</th></tr></thead><tbody>';
@@ -775,7 +790,8 @@
             html += `<tr><td>${idx+1}</td><td>${nums.join('-')}</td></tr>`;
         });
         html += '</tbody></table>';
-        document.getElementById('history-table').innerHTML = html;
+        var histTbl = document.getElementById('history-table');
+        if (histTbl) histTbl.innerHTML = html;
     }
     // After analyzing frequent sets, update 2x and history tabs
     const oldAnalyzeFrequentSets = analyzeFrequentSets;
@@ -788,5 +804,6 @@
         renderHistoryTable();
     });
     </script>
+<script src="script.js"></script>
 </body>
 </html> 

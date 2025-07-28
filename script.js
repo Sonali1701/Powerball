@@ -172,6 +172,9 @@ document.addEventListener('DOMContentLoaded', function() {
                         const year = parts.length === 3 ? parseInt(parts[2], 10) : 0;
                         return year === 2024 || year === 2025;
                     });
+                    window.filteredDrawRows = filteredDrawRows; // Attach globally for all UI
+                    console.log('[DEBUG] filteredDrawRows length:', filteredDrawRows.length);
+                    if (filteredDrawRows.length > 0) console.log('[DEBUG] Sample filteredDrawRows:', filteredDrawRows.slice(0, 2));
                     // --- Render balls with color, tooltip, and count badge ---
                     const panel = document.getElementById('ball-panel');
                     panel.innerHTML = '';
@@ -1016,6 +1019,127 @@ if (genComboBtn && genSingleBtn && genResult) {
 if (document.getElementById('combo-results')) {
     renderComboResultsHome([]);
 }
+
+// --- FREQUENT PAIRS & TRIOS (ALWAYS VISIBLE TABLES) ---
+function getAllCombos(arr, k) {
+    const results = [];
+    function helper(start, combo) {
+        if (combo.length === k) {
+            results.push(combo.slice().sort((a,b)=>a-b).join('-'));
+            return;
+        }
+        for (let i = start; i < arr.length; i++) {
+            helper(i+1, combo.concat(arr[i]));
+        }
+    }
+    helper(0, []);
+    return results;
+}
+function renderFrequentPairsTriosTables() {
+    // Analyze all pairs/trios for main and double play
+    if (!window.filteredDrawRows) return;
+    const pairCounts = new Map();
+    const trioCounts = new Map();
+    const pairDraws = new Map();
+    const trioDraws = new Map();
+    // Helper to add to map
+    function addToMap(map, combo, date, type) {
+        if (!map.has(combo)) map.set(combo, []);
+        map.get(combo).push({date, type});
+    }
+    window.filteredDrawRows.forEach(draw => {
+        if (draw.mainArr && draw.mainArr.length === 5) {
+            getAllCombos(draw.mainArr, 2).forEach(pair => {
+                pairCounts.set(pair, (pairCounts.get(pair)||0)+1);
+                addToMap(pairDraws, pair, draw.date, 'Main');
+            });
+            getAllCombos(draw.mainArr, 3).forEach(trio => {
+                trioCounts.set(trio, (trioCounts.get(trio)||0)+1);
+                addToMap(trioDraws, trio, draw.date, 'Main');
+            });
+        }
+        if (draw.doublePlayArr && draw.doublePlayArr.length === 5) {
+            getAllCombos(draw.doublePlayArr, 2).forEach(pair => {
+                pairCounts.set(pair, (pairCounts.get(pair)||0)+1);
+                addToMap(pairDraws, pair, draw.date, 'Double');
+            });
+            getAllCombos(draw.doublePlayArr, 3).forEach(trio => {
+                trioCounts.set(trio, (trioCounts.get(trio)||0)+1);
+                addToMap(trioDraws, trio, draw.date, 'Double');
+            });
+        }
+    });
+    const pairs = Array.from(pairCounts.entries()).filter(([_,c])=>c>=2).sort((a,b)=>b[1]-a[1]);
+    const trios = Array.from(trioCounts.entries()).filter(([_,c])=>c>=2).sort((a,b)=>b[1]-a[1]);
+    // UI state
+    let mode = 'pair';
+    let selectedCombo = null;
+    const panel = document.getElementById('freq-pairtrio-panel');
+    const tableDiv = document.getElementById('freq-pairtrio-table');
+    const datesDiv = document.getElementById('freq-pairtrio-dates');
+    const togglePairs = document.getElementById('freq-toggle-pairs');
+    const toggleTrios = document.getElementById('freq-toggle-trios');
+    function renderTable() {
+        let data = mode==='pair'?pairs:trios;
+        let html = `<table class='freq-table'><thead><tr><th>${mode==='pair'?'Pair':'Trio'}</th><th>Count</th></tr></thead><tbody>`;
+        data.forEach(([combo, count])=>{
+            const nums = combo.split('-').map(num => `<span class='freq-number-pill' style='margin:0 3px;cursor:pointer;'>${num}</span>`).join(' ');
+            html += `<tr class='combo-row' data-combo='${combo}'><td class='combo-cell'>${nums}</td><td>${count}</td></tr>`;
+        });
+        html += '</tbody></table>';
+        tableDiv.innerHTML = html;
+        datesDiv.style.display = 'none';
+        // Add click handler
+        tableDiv.querySelectorAll('.combo-row').forEach(row => {
+            row.onclick = function() {
+                selectedCombo = row.getAttribute('data-combo');
+                renderDrawsTable();
+            };
+        });
+    }
+    function renderDrawsTable() {
+        if (!selectedCombo) return;
+        let draws = mode==='pair'?pairDraws.get(selectedCombo):trioDraws.get(selectedCombo);
+        if (!draws) return;
+        let html = `<div style='margin-bottom:8px;'><b>${selectedCombo}</b> appeared in these draws:</div>`;
+        html += `<table class='freq-table'><thead><tr><th>Date</th><th>Type</th></tr></thead><tbody>`;
+        draws.forEach(d=>{
+            html += `<tr><td>${d.date}</td><td>${d.type}</td></tr>`;
+        });
+        html += '</tbody></table>';
+        html += `<button id='freq-hide-dates-btn' style='margin-top:8px;'>Hide</button>`;
+        datesDiv.innerHTML = html;
+        datesDiv.style.display = 'block';
+        document.getElementById('freq-hide-dates-btn').onclick = ()=>{datesDiv.style.display='none';};
+    }
+    togglePairs.onclick = ()=>{
+        mode='pair';
+        togglePairs.classList.add('active');
+        toggleTrios.classList.remove('active');
+        selectedCombo = null;
+        renderTable();
+    };
+    toggleTrios.onclick = ()=>{
+        mode='trio';
+        toggleTrios.classList.add('active');
+        togglePairs.classList.remove('active');
+        selectedCombo = null;
+        renderTable();
+    };
+    renderTable();
+}
+// Ensure this runs after filteredDrawRows is ready
+window.addEventListener('DOMContentLoaded', () => {
+    setTimeout(renderFrequentPairsTriosTables, 1200);
+});
+
+
+
+
+// Ensure this runs after filteredDrawRows is ready
+window.addEventListener('DOMContentLoaded', () => {
+    setTimeout(renderFrequentPairsTriosTables, 1200);
+});
 
 // Add a new function to render the combo table in the home tab (uses #combo-results)
 function renderComboResultsHome(selected) {
