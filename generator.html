@@ -189,6 +189,127 @@
         color: #234;
         box-shadow: 0 1px 4px rgba(52,152,219,0.07);
       }
+      /* Pills container styling */
+      /* Enhanced Pills Container */
+      .pills-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 10px;
+        margin: 12px 0 20px 0;
+      }
+      
+      /* Pill Buttons */
+      .pill-btn {
+        background: #f0f7ff;
+        border: 1px solid #d0e3ff;
+        border-radius: 8px;
+        padding: 8px 12px;
+        font-size: 0.95em;
+        color: #2c5282;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        text-align: center;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      
+      .pill-btn:hover {
+        background: #e1f0ff;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+      }
+      
+      .pill-btn.selected {
+        background: #3182ce;
+        color: white;
+        border-color: #2c5282;
+        font-weight: 600;
+      }
+      
+      /* Section Headers */
+      .section-header {
+        font-size: 1.1em;
+        font-weight: 600;
+        color: #2d3748;
+        margin: 20px 0 12px 0;
+        padding-bottom: 8px;
+        border-bottom: 2px solid #e2e8f0;
+      }
+      
+      /* Frequency Badge */
+      .frequency-badge {
+        display: inline-block;
+        background: #ebf8ff;
+        color: #2b6cb0;
+        font-size: 0.8em;
+        padding: 2px 6px;
+        border-radius: 10px;
+        margin-left: 6px;
+        font-weight: 600;
+      }
+      
+      /* Responsive adjustments */
+      @media (max-width: 768px) {
+        .pills-container {
+          grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+        }
+      }
+      
+      @media (max-width: 480px) {
+        .pills-container {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+      
+      /* Pill button styling */
+      .pill-btn {
+        background: #f0f7ff;
+        border: 1.5px solid #cce0f7;
+        border-radius: 16px;
+        padding: 8px 14px;
+        font-size: 0.95em;
+        font-weight: 500;
+        color: #2c3e50;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      }
+      
+      .pill-btn:hover {
+        background: #e1f0ff;
+        transform: translateY(-1px);
+        box-shadow: 0 3px 8px rgba(0,0,0,0.08);
+      }
+      
+      .pill-btn.selected {
+        background: linear-gradient(135deg, #4a90e2 0%, #5ab0f4 100%);
+        color: white;
+        border-color: #3a7bc8;
+        font-weight: 600;
+        box-shadow: 0 2px 6px rgba(74, 144, 226, 0.25);
+      }
+      
+      /* Section 3: Create Combination from 1 Duo and 1 Trio */
+      #combo-builder-panel {
+        background: #f9fcff;
+        border-radius: 16px;
+        box-shadow: 0 2px 12px rgba(74, 144, 226, 0.08);
+        padding: 28px 22px 22px 22px;
+        margin-top: 24px;
+      }
+      
+      #combo-builder-panel h2 {
+        color: #2c6aa0;
+        font-size: 1.22em;
+        font-weight: 700;
+        margin-bottom: 18px;
+        letter-spacing: 0.5px;
+      }
+      
       /* 2x Results Modern Style */
       .twox-combo-results-list {
         margin-top: 18px;
@@ -317,12 +438,12 @@
 </head>
 <body>
     <div class="generator-container">
-      <div class="generator-title">PowerBall Random Generator</div>
+      <div class="generator-title">Random Number Generator</div>
       <nav class="tab-nav">
         <button class="tab-btn active" data-tab="home">Quick Generator</button>
-        <button class="tab-btn" id="combo-redirect-btn">Combo</button>
+        <button class="tab-btn" data-tab="combo" onclick="window.location.href='index.html'">Combo</button>
       </nav>
-      <div id="tab-home" class="tab-content" style="display:block;">
+      <div id="home-tab" class="tab-content" style="display:block;">
         <div class="generator-flex-layout">
           <!-- Section 1: Quick Random Generator -->
           <section class="generator-section">
@@ -335,7 +456,7 @@
               </div>
               <div id="generated-table" style="margin-top:18px;"></div>
               <div id="csv-loading" style="margin-top:10px; color:#888; font-size:1.05em;"></div>
-              <div style="margin-top:18px; color:#888; font-size:1.05em;">Each combination: 5 unique white balls (1-69) + 1 Powerball (1-26).</div>
+              <div style="margin-top:18px; color:#888; font-size:1.05em;">Each combination: 5 unique numbers (1-69).</div>
             </div>
           </section>
           <!-- Section 2: Create Combination from 2 Duos (dropdown UI) -->
@@ -347,57 +468,25 @@
               <label for="duo2-select" class="duo-select-label">Select Duo 2:</label>
               <select id="duo2-select" class="duo-select"></select>
               <button id="build-duo-combo-btn" class="freq-gen-btn" disabled>Generate from Two Duos</button>
-              <div id="built-duo-combo-result"></div>
+<button id="clear-duo-selection-btn" class="multi-gen-btn" style="margin-top:8px; background: #eee; color: #217dbb; border: 1.5px solid #b3d6f2;">Clear Selection</button>
+<div id="built-duo-combo-result"></div>
             </div>
           </section>
           <!-- Section 3: Create Combination from 1 Duo and 1 Trio -->
           <section class="generator-section">
             <div class="generator-panel" id="combo-builder-panel">
-              <h2>3. Create Combination from 1 Duo and 1 Trio</h2>
-              <div id="triplet-pills" style="margin-bottom:12px;"></div>
-              <div id="pair-pills" style="margin-bottom:12px;"></div>
-              <button id="build-combo-btn" class="freq-gen-btn" style="margin-top:8px;" disabled>Generate from Duo + Trio</button>
-              <div id="built-combo-result" style="margin-top:18px;"></div>
-            </div>
+  <h2>3. Create Combination from 1 Duo and 1 Trio</h2>
+  <label for="combo-duo-select" class="duo-select-label">Select Duo:</label>
+  <select id="combo-duo-select" class="duo-select"></select>
+  <label for="combo-trio-select" class="duo-select-label">Select Trio:</label>
+  <select id="combo-trio-select" class="duo-select"></select>
+  <button id="build-combo-btn" class="freq-gen-btn" style="margin-top:8px;" disabled>Generate from Duo + Trio</button>
+  <button id="clear-combo-selection-btn" class="multi-gen-btn" style="margin-top:8px; background: #eee; color: #217dbb; border: 1.5px solid #b3d6f2;">Clear Selection</button>
+  <div id="built-combo-result" style="margin-top:18px;"></div>
+</div>
           </section>
         </div>
-        <!-- Move Most Common Sets below or remove from main generator flow -->
-        <section class="generator-section">
-          <div class="generator-panel" id="frequent-sets-panel">
-            <h2>Most Common Sets</h2>
-            <div id="frequent-sets-loading" style="color:#888; font-size:1.05em;">Analyzing historical data...</div>
-            <div id="frequent-sets-content" style="display:none;">
-              <div style="margin-bottom:12px;">
-                <span class="section-label">Top 5 Pairs:</span>
-                <span id="top-pairs"></span>
-                <button class="freq-gen-btn" data-type="pair">Generate from Pair</button>
-              </div>
-              <div style="margin-bottom:12px;">
-                <span class="section-label">Top 5 Triplets:</span>
-                <span id="top-triplets"></span>
-                <button class="freq-gen-btn" data-type="triplet">Generate from Triplet</button>
-              </div>
-              <div style="margin-bottom:12px;">
-                <span class="section-label">Top 5 Quadruplets:</span>
-                <span id="top-quads"></span>
-                <button class="freq-gen-btn" data-type="quad">Generate from Quadruplet</button>
-              </div>
-            </div>
-          </div>
-        </section>
-        <!-- Interactive Frequent Pairs/Trios Panel -->
-        <section class="generator-section">
-          <div class="generator-panel" id="freq-pairtrio-panel">
-            <h2>Frequent Pairs & Trios (2x+)</h2>
-            <div style="margin-bottom:12px;">
-              <button id="freq-toggle-pairs" class="freq-gen-btn active">Pairs</button>
-              <button id="freq-toggle-trios" class="freq-gen-btn">Trios</button>
-            </div>
-            <div id="freq-pairtrio-table" style="min-height:60px;"></div>
-            <div id="freq-pairtrio-dates" style="margin-top:18px;display:none;"></div>
-          </div>
-        </section>
-        <a href="index.html" class="back-link">&larr; Back to Analyzer</a>
+        <a href="index.html" class="back-link">&larr; Back to Main</a>
       </div>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
@@ -405,8 +494,6 @@
     let historicalCombos = [];
     let allMainDraws = [];
     const csvLoading = document.getElementById('csv-loading');
-    const freqSetsLoading = document.getElementById('frequent-sets-loading');
-    const freqSetsContent = document.getElementById('frequent-sets-content');
     // Load and parse the CSV file
     csvLoading.textContent = 'Loading historical Powerball data...';
     fetch('powerball.csv')
@@ -451,7 +538,11 @@
                         }
                     }
                     csvLoading.textContent = '';
-                    analyzeFrequentSets();
+                    
+                    // Now that we have the data, analyze frequent sets
+                    if (allMainDraws.length > 0) {
+                        analyzeFrequentSets();
+                    }
                 }
             });
         });
@@ -459,351 +550,300 @@
         return Math.floor(Math.random() * (max - min + 1)) + min;
     }
     function generateUniqueNumbers(count, min, max, exclude=[]) {
-        const nums = new Set(exclude);
-        while (nums.size < count + exclude.length) {
-            nums.add(Math.floor(Math.random() * (max - min + 1)) + min);
+        const nums = [];
+        while (nums.length < count) {
+            const num = Math.floor(Math.random() * (max - min + 1)) + min;
+            if (!nums.includes(num) && !exclude.includes(num)) {
+                nums.push(num);
+            }
         }
-        return Array.from(nums).filter(n => !exclude.includes(n)).sort((a, b) => a - b);
+        return nums.sort((a, b) => a - b);
     }
+
     function generateCombination() {
-        const whiteBalls = generateUniqueNumbers(5, 1, 69);
-        const powerball = getRandomInt(1, 26);
-        return { whiteBalls, powerball };
+        const mainNumbers = generateUniqueNumbers(5, 1, 69);
+        return { mainNumbers };
     }
     function countComboInHistory(whiteBalls) {
         const key = whiteBalls.slice().sort((a,b)=>a-b).join('-');
         return historicalCombos.filter(h => h.combo === key).length;
     }
     function renderCombinations(n) {
-        let html = '<table style="width:100%; border-collapse:collapse; font-size:1.12em;">';
-        html += '<thead><tr><th>#</th><th>Combination</th><th>Results</th></tr></thead><tbody>';
+        const table = document.createElement('table');
+        table.style.width = '100%';
+        table.style.borderCollapse = 'collapse';
+        table.style.marginTop = '12px';
+        table.innerHTML = `
+            <tr>
+                <th style="text-align:left; padding:8px 0; border-bottom:1px solid #eee;">#</th>
+                <th style="text-align:left; padding:8px 0; border-bottom:1px solid #eee;">Numbers</th>
+            </tr>
+        `;
+
         for (let i = 0; i < n; i++) {
-            const combo = generateCombination();
-            const count = countComboInHistory(combo.whiteBalls);
-            html += `<tr><td style='font-weight:bold;'>${i+1}</td><td>` +
-                combo.whiteBalls.map(num => `<span class='generated-ball'>${num}</span>`).join('') +
-                `<span class='generated-ball red'>${combo.powerball}</span>` +
-                `</td><td style='color:#234; font-weight:600;'>${count > 0 ? count + ' time' + (count > 1 ? 's' : '') : 'Never'}</td></tr>`;
+            const { mainNumbers } = generateCombination();
+            const tr = document.createElement('tr');
+            tr.style.borderBottom = '1px solid #f5f5f5';
+            tr.innerHTML = `
+                <td style="padding:10px 0; color:#666;">${i + 1}.</td>
+                <td style="padding:10px 0; font-weight:bold; color:#2c3e50;">${mainNumbers.join(' - ')}</td>
+            `;
+            table.appendChild(tr);
         }
-        html += '</tbody></table>';
-        document.getElementById('generated-table').innerHTML = html;
+
+        const container = document.getElementById('generated-table');
+        container.innerHTML = '';
+        container.appendChild(table);
     }
     document.querySelectorAll('.multi-gen-btn').forEach(btn => {
         btn.onclick = function() {
             renderCombinations(parseInt(btn.getAttribute('data-count')));
         };
     });
-
-    // --- FREQUENT SETS ANALYSIS ---
-    let topPairs = [], topTriplets = [], topQuads = [];
-    function analyzeFrequentSets() {
-        // Count pairs, triplets, quads
-        const pairCounts = new Map();
-        const tripletCounts = new Map();
-        const quadCounts = new Map();
-        for (const draw of allMainDraws) {
-            // Only use numbers 1-69
-            const cleanDraw = draw.filter(n => n >= 1 && n <= 69);
-            // Pairs
-            for (let i = 0; i < cleanDraw.length; i++) {
-                for (let j = i+1; j < cleanDraw.length; j++) {
-                    const pair = [cleanDraw[i], cleanDraw[j]].sort((a,b)=>a-b).join('-');
-                    if (!pair.includes('0')) pairCounts.set(pair, (pairCounts.get(pair)||0)+1);
-                }
-            }
-            // Triplets
-            for (let i = 0; i < cleanDraw.length; i++) {
-                for (let j = i+1; j < cleanDraw.length; j++) {
-                    for (let k = j+1; k < cleanDraw.length; k++) {
-                        const triplet = [cleanDraw[i], cleanDraw[j], cleanDraw[k]].sort((a,b)=>a-b).join('-');
-                        if (!triplet.includes('0')) tripletCounts.set(triplet, (tripletCounts.get(triplet)||0)+1);
-                    }
-                }
-            }
-            // Quads
-            for (let i = 0; i < cleanDraw.length; i++) {
-                for (let j = i+1; j < cleanDraw.length; j++) {
-                    for (let k = j+1; k < cleanDraw.length; k++) {
-                        for (let l = k+1; l < cleanDraw.length; l++) {
-                            const quad = [cleanDraw[i], cleanDraw[j], cleanDraw[k], cleanDraw[l]].sort((a,b)=>a-b).join('-');
-                            if (!quad.includes('0')) quadCounts.set(quad, (quadCounts.get(quad)||0)+1);
-                        }
-                    }
-                }
-            }
-        }
-        // Get top 5 for each, filter out any with 0
-        topPairs = Array.from(pairCounts.entries()).filter(([set]) => !set.split('-').includes('0')).sort((a,b)=>b[1]-a[1]).slice(0,5);
-        topTriplets = Array.from(tripletCounts.entries()).filter(([set]) => !set.split('-').includes('0')).sort((a,b)=>b[1]-a[1]).slice(0,5);
-        topQuads = Array.from(quadCounts.entries()).filter(([set]) => !set.split('-').includes('0')).sort((a,b)=>b[1]-a[1]).slice(0,5);
-        // Render
-        renderFrequentSets();
-        renderComboBuilderPills();
-        renderDuoBuilderDropdowns(); // <-- Moved here so dropdowns are populated after data is ready
-    }
-    function renderFrequentSets() {
-        // Helper to render a set as a pill
-        function setPillHtml(nums, count) {
-            return `<span class='freq-set-pill'>${nums.map(n => `<span class='generated-ball'>${n}</span>`).join('')}</span><span class='freq-set-count'>${count}</span>`;
-        }
-        // Pairs
-        const pairsHtml = topPairs.map(([set, count]) => {
-            const nums = set.split('-').map(Number);
-            return setPillHtml(nums, count);
-        }).join('');
-        document.getElementById('top-pairs').innerHTML = pairsHtml;
-        // Triplets
-        const tripletsHtml = topTriplets.map(([set, count]) => {
-            const nums = set.split('-').map(Number);
-            return setPillHtml(nums, count);
-        }).join('');
-        document.getElementById('top-triplets').innerHTML = tripletsHtml;
-        // Quads
-        const quadsHtml = topQuads.map(([set, count]) => {
-            const nums = set.split('-').map(Number);
-            return setPillHtml(nums, count);
-        }).join('');
-        document.getElementById('top-quads').innerHTML = quadsHtml;
-        freqSetsLoading.style.display = 'none';
-        freqSetsContent.style.display = '';
-    }
-    // --- IMPROVED: DUO BUILDER SECTION ---
-    // Section 2: Create Combination from 2 Duos (dropdowns)
-    let selectedDuo1 = null;
-    let selectedDuo2 = null;
-    function renderDuoBuilderDropdowns() {
-        const duo1Select = document.getElementById('duo1-select');
-        const duo2Select = document.getElementById('duo2-select');
-        // Helper to create option HTML
-        function duoOptionHtml(set, count) {
-            return `<option value="${set}">${set.split('-').join(', ')} (count: ${count})</option>`;
-        }
-        // Populate duo1 dropdown
-        duo1Select.innerHTML = '<option value="">-- Select Duo 1 --</option>' +
-            topPairs.map(([set, count]) => duoOptionHtml(set, count)).join('');
-        // Populate duo2 dropdown (initially all enabled)
-        duo2Select.innerHTML = '<option value="">-- Select Duo 2 --</option>' +
-            topPairs.map(([set, count]) => duoOptionHtml(set, count)).join('');
-        // Selection logic
-        duo1Select.onchange = function() {
-            selectedDuo1 = duo1Select.value ? duo1Select.value.split('-').map(Number) : null;
-            // Update duo2 dropdown: disable/hide overlapping duos
-            duo2Select.innerHTML = '<option value="">-- Select Duo 2 --</option>' +
-                topPairs.map(([set, count]) => {
-                    const pairNums = set.split('-').map(Number);
-                    const disabled = selectedDuo1 && pairNums.some(n => selectedDuo1.includes(n));
-                    return `<option value="${set}"${disabled ? ' disabled' : ''}>${set.split('-').join(', ')} (count: ${count})</option>`;
-                }).join('');
-            selectedDuo2 = null;
-            duo2Select.value = '';
-            document.getElementById('build-duo-combo-btn').disabled = true;
-        };
-        duo2Select.onchange = function() {
-            selectedDuo2 = duo2Select.value ? duo2Select.value.split('-').map(Number) : null;
-            const btn = document.getElementById('build-duo-combo-btn');
-            btn.disabled = !(selectedDuo1 && selectedDuo2 && !selectedDuo1.some(n => selectedDuo2.includes(n)));
-        };
-        document.getElementById('build-duo-combo-btn').onclick = function() {
-            if (!selectedDuo1 || !selectedDuo2) return;
-            let comboSet = Array.from(new Set([...selectedDuo1, ...selectedDuo2]));
-            if (comboSet.length < 4) {
-                const rest = generateUniqueNumbers(4-comboSet.length, 1, 69, comboSet);
-                comboSet = comboSet.concat(rest).sort((a,b)=>a-b);
-            } else {
-                comboSet = comboSet.slice(0,4).sort((a,b)=>a-b);
-            }
-            // Always fill to 5 numbers for Powerball
-            if (comboSet.length < 5) {
-                const rest = generateUniqueNumbers(5-comboSet.length, 1, 69, comboSet);
-                comboSet = comboSet.concat(rest).sort((a,b)=>a-b);
-            }
-            // Count how many times this 4/5-number set appeared in history
-            let count = 0;
-            for (const draw of allMainDraws) {
-                const drawSet = new Set(draw);
-                if (comboSet.every(n => drawSet.has(n))) count++;
-            }
-            let html = '<table style="width:100%; border-collapse:collapse; font-size:1.12em;">';
-            html += '<thead><tr><th>#</th><th>Combination</th><th>Results</th></tr></thead><tbody>';
-            html += `<tr><td style='font-weight:bold;'>1</td><td>` +
-                comboSet.map(num => `<span class='generated-ball'>${num}</span>`).join('') +
-                `<span class='generated-ball red'>${getRandomInt(1, 26)}</span>` +
-                `</td><td style='color:#234; font-weight:600;'>${count > 0 ? count + ' time' + (count > 1 ? 's' : '') : 'Never'}` +
-                `<br><span style='color:#888; font-weight:400;'>Duos: ${selectedDuo1.join('-')} & ${selectedDuo2.join('-')}</span>` +
-                `</td></tr>`;
-            html += '</tbody></table>';
-            document.getElementById('built-duo-combo-result').innerHTML = html;
-        };
-    }
-    // --- IMPROVED: TRIO+PAIR BUILDER SECTION ---
-    // Section 3: Create Combination from 1 Duo and 1 Trio
-    function renderComboBuilderPills() {
-        const tripletPillsDiv = document.getElementById('triplet-pills');
-        const pairPillsDiv = document.getElementById('pair-pills');
-        // Render triplet pills
-        tripletPillsDiv.innerHTML = topTriplets.map(([set, count], idx) => {
-            return `<span class="pill-group"><button class="pill-btn triplet-pill" data-set="${set}" style="margin:0 4px 8px 0;">${set.split('-').join(', ')}</button><span class='freq-set-count pill-count'>${count}</span></span>`;
-        }).join('');
-        // Render pair pills (disable overlap)
-        function renderPairPills(tripletSet) {
-            pairPillsDiv.innerHTML = topPairs.map(([set, count]) => {
-                const pairNums = set.split('-').map(Number);
-                const disabled = tripletSet && pairNums.some(n => tripletSet.includes(n));
-                return `<span class="pill-group"><button class="pill-btn pair-pill" data-set="${set}" style="margin:0 4px 8px 0;" ${disabled ? 'disabled' : ''}>${set.split('-').join(', ')}</button><span class='freq-set-count pill-count'>${count}</span></span>`;
-            }).join('');
-        }
-        renderPairPills(null);
-        // Selection logic
-        tripletPillsDiv.onclick = function(e) {
-            const btn = e.target.closest('.triplet-pill');
-            if (!btn) return;
-            tripletPillsDiv.querySelectorAll('.triplet-pill').forEach(b => b.classList.remove('selected'));
-            btn.classList.add('selected');
-            selectedTriplet = btn.getAttribute('data-set').split('-').map(Number);
-            selectedPair = null;
-            renderPairPills(selectedTriplet);
-            document.getElementById('build-combo-btn').disabled = true;
-            attachPairPillEvents();
-        };
-        function attachPairPillEvents() {
-            pairPillsDiv.querySelectorAll('.pair-pill').forEach(btn => {
-                btn.onclick = function() {
-                    if (btn.disabled) return;
-                    pairPillsDiv.querySelectorAll('.pair-pill').forEach(b => b.classList.remove('selected'));
-                    btn.classList.add('selected');
-                    selectedPair = btn.getAttribute('data-set').split('-').map(Number);
-                    if (selectedTriplet && selectedPair) {
-                        document.getElementById('build-combo-btn').disabled = false;
-                    }
-                };
+    // Initialize the page
+    document.addEventListener('DOMContentLoaded', function() {
+        // Show home tab by default (guard for missing elements)
+        const homeTab = document.getElementById('home-tab');
+        if (homeTab) homeTab.style.display = 'block';
+        const historyTab = document.getElementById('history-tab');
+        if (historyTab) historyTab.style.display = 'none';
+        // Do NOT call analyzeFrequentSets here. It is called after CSV loads.
+        
+        // Add click handlers for generate buttons
+        document.querySelectorAll('.multi-gen-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const count = parseInt(this.getAttribute('data-count'), 10);
+                renderCombinations(count);
             });
+        });
+        // Add clear/deselect handlers for Section 2 and 3
+        const clearDuoBtn = document.getElementById('clear-duo-selection-btn');
+        if (clearDuoBtn) {
+            clearDuoBtn.onclick = function() {
+                const duo1Select = document.getElementById('duo1-select');
+                const duo2Select = document.getElementById('duo2-select');
+                duo1Select.selectedIndex = -1;
+                duo2Select.selectedIndex = -1;
+                document.getElementById('built-duo-combo-result').innerHTML = '';
+                document.getElementById('build-duo-combo-btn').disabled = true;
+            };
         }
-        attachPairPillEvents();
-        document.getElementById('build-combo-btn').onclick = function() {
-            if (!selectedTriplet || !selectedPair) return;
-            let comboSet = Array.from(new Set([...selectedTriplet, ...selectedPair]));
-            if (comboSet.length < 5) {
-                const rest = generateUniqueNumbers(5-comboSet.length, 1, 69, comboSet);
-                comboSet = comboSet.concat(rest).sort((a,b)=>a-b);
-            } else {
-                comboSet = comboSet.slice(0,5).sort((a,b)=>a-b);
-            }
-            const powerball = getRandomInt(1, 26);
-            const count = countComboInHistory(comboSet);
-            let html = '<table style="width:100%; border-collapse:collapse; font-size:1.12em;">';
-            html += '<thead><tr><th>#</th><th>Combination</th><th>Results</th></tr></thead><tbody>';
-            html += `<tr><td style='font-weight:bold;'>1</td><td>` +
-                comboSet.map(num => `<span class='generated-ball'>${num}</span>`).join('') +
-                `<span class='generated-ball red'>${powerball}</span>` +
-                `</td><td style='color:#234; font-weight:600;'>${count > 0 ? count + ' time' + (count > 1 ? 's' : '') : 'Never'}` +
-                `<br><span style='color:#888; font-weight:400;'>Triplet: ${selectedTriplet.join('-')}, Pair: ${selectedPair.join('-')}</span>` +
-                `</td></tr>`;
-            html += '</tbody></table>';
-            document.getElementById('built-combo-result').innerHTML = html;
-        };
-    }
-    renderComboBuilderPills();
-    // --- GENERATE FROM FREQUENT SETS ---
-    function generateFromFrequentSet(type) {
-        let baseSet = [];
-        let baseSetType = '';
-        let baseSetCount = 0;
-        if (type === 'pair' && topPairs.length > 0) {
-            const entry = topPairs[Math.floor(Math.random()*topPairs.length)];
-            baseSet = entry[0].split('-').map(Number);
-            baseSetType = 'Pair';
-            baseSetCount = entry[1];
-        } else if (type === 'triplet' && topTriplets.length > 0) {
-            const entry = topTriplets[Math.floor(Math.random()*topTriplets.length)];
-            baseSet = entry[0].split('-').map(Number);
-            baseSetType = 'Triplet';
-            baseSetCount = entry[1];
-        } else if (type === 'quad' && topQuads.length > 0) {
-            const entry = topQuads[Math.floor(Math.random()*topQuads.length)];
-            baseSet = entry[0].split('-').map(Number);
-            baseSetType = 'Quadruplet';
-            baseSetCount = entry[1];
+        const clearComboBtn = document.getElementById('clear-combo-selection-btn');
+        if (clearComboBtn) {
+            clearComboBtn.onclick = function() {
+                const comboDuoSelect = document.getElementById('combo-duo-select');
+                const comboTrioSelect = document.getElementById('combo-trio-select');
+                comboDuoSelect.selectedIndex = -1;
+                comboTrioSelect.selectedIndex = -1;
+                document.getElementById('built-combo-result').innerHTML = '';
+                document.getElementById('build-combo-btn').disabled = true;
+            };
         }
-        if (baseSet.length > 0) {
-            // Fill up to 5 unique numbers
-            const rest = generateUniqueNumbers(5-baseSet.length, 1, 69, baseSet);
-            const whiteBalls = baseSet.concat(rest).sort((a,b)=>a-b);
-            const powerball = getRandomInt(1, 26);
-            const count = countComboInHistory(whiteBalls);
-            let html = '<table style="width:100%; border-collapse:collapse; font-size:1.12em;">';
-            html += '<thead><tr><th>#</th><th>Combination</th><th>Results</th></tr></thead><tbody>';
-            html += `<tr><td style='font-weight:bold;'>1</td><td>` +
-                whiteBalls.map(num => `<span class='generated-ball'>${num}</span>`).join('') +
-                `<span class='generated-ball red'>${powerball}</span>` +
-                `</td><td style='color:#234; font-weight:600;'>` +
-                (count > 0 ? `${count} time${count > 1 ? 's' : ''}` : 'Never') +
-                `<br><span style='color:#888; font-weight:400;'>${baseSetType} ${baseSet.join('-')} appeared together ${baseSetCount} time${baseSetCount > 1 ? 's' : ''} in history.</span>` +
-                `</td></tr>`;
-            html += '</tbody></table>';
-            document.getElementById('generated-table').innerHTML = html;
+
+        // Tab switching logic
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                // Remove active class from all buttons
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                // Add active class to clicked button
+                this.classList.add('active');
+                
+                // For history tab
+                if (this.getAttribute('data-tab') === 'history') {
+                    document.getElementById('home-tab').style.display = 'none';
+                    document.getElementById('history-tab').style.display = 'block';
+                    renderHistoryTable();
+                } else {
+                    document.getElementById('home-tab').style.display = 'block';
+                    document.getElementById('history-tab').style.display = 'none';
+                }
+            });
+        });
+
+        // Add event listener for building combinations from duos
+        const buildDuoBtn = document.getElementById('build-duo-combo-btn');
+        if (buildDuoBtn) {
+            buildDuoBtn.addEventListener('click', function() {
+                const duo1Val = document.getElementById('duo1-select').value;
+                const duo2Val = document.getElementById('duo2-select').value;
+                if (!duo1Val || !duo2Val) {
+                    alert('Please select two valid duos to combine');
+                    return;
+                }
+                const duo1 = duo1Val.split('-').map(Number);
+                const duo2 = duo2Val.split('-').map(Number);
+                if (duo1.length === 2 && duo2.length === 2) {
+                    const combined = [...new Set([...duo1, ...duo2])];
+                    if (combined.length === 4) {
+                        const result = document.getElementById('built-duo-combo-result');
+                        result.innerHTML = `
+                            <div class="result-card fade-in">
+                                <div class="result-title">Generated Combination</div>
+                                <div class="result-balls">
+                                    ${combined.sort((a,b) => a-b).map(n => `<span class='generated-ball'>${n}</span>`).join(' ')}
+                                </div>
+                            </div>
+                        `;
+                        return;
+                    }
+                }
+                alert('Please select two valid duos to combine');
+            });
+            // Enable/disable build button logic
+            const duo1Select = document.getElementById('duo1-select');
+            const duo2Select = document.getElementById('duo2-select');
+            [duo1Select, duo2Select].forEach(sel => sel.addEventListener('change', function() {
+                buildDuoBtn.disabled = !(duo1Select.value && duo2Select.value);
+            }));
         }
-    }
-    document.querySelectorAll('.freq-gen-btn').forEach(btn => {
-        btn.onclick = function() {
-            generateFromFrequentSet(btn.getAttribute('data-type'));
-        };
+        // Section 3: Combo build button logic
+        const buildComboBtn = document.getElementById('build-combo-btn');
+        if (buildComboBtn) {
+            buildComboBtn.addEventListener('click', function() {
+                const duoVal = document.getElementById('combo-duo-select').value;
+                const trioVal = document.getElementById('combo-trio-select').value;
+                if (!duoVal || !trioVal) {
+                    alert('Please select a valid duo and trio to combine');
+                    return;
+                }
+                const duo = duoVal.split('-').map(Number);
+                const trio = trioVal.split('-').map(Number);
+                if (duo.length === 2 && trio.length === 3) {
+                    const combined = [...new Set([...duo, ...trio])];
+                    if (combined.length === 5) {
+                        const result = document.getElementById('built-combo-result');
+                        result.innerHTML = `
+    <div class="result-card fade-in">
+        <div class="result-title">Generated Combination</div>
+        <div class="result-balls">
+            ${combined.sort((a,b) => a-b).map(n => `<span class='generated-ball'>${n}</span>`).join(' ')}
+        </div>
+    </div>
+`;
+                        return;
+                    }
+                }
+                alert('Please select a valid duo and trio to combine');
+            });
+            // Enable/disable build button logic
+            const comboDuoSelect = document.getElementById('combo-duo-select');
+            const comboTrioSelect = document.getElementById('combo-trio-select');
+            [comboDuoSelect, comboTrioSelect].forEach(sel => sel.addEventListener('change', function() {
+                buildComboBtn.disabled = !(comboDuoSelect.value && comboTrioSelect.value);
+            }));
+        }
     });
-    // Tab switching logic
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.onclick = function() {
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            document.querySelectorAll('.tab-content').forEach(tab => tab.style.display = 'none');
-            if (btn.id === 'combo-redirect-btn') {
-                window.location.href = 'index.html';
-            } else {
-                document.getElementById('tab-' + btn.getAttribute('data-tab')).style.display = 'block';
-            }
-        };
-    });
-    // Add New Numbers logic
-    var addForm = document.getElementById('add-numbers-form');
-    if (addForm) {
-        addForm.onsubmit = function(e) {
-            e.preventDefault();
-            const inputs = Array.from(document.querySelectorAll('.add-num-input'));
-            const nums = inputs.map(input => parseInt(input.value, 10));
-            const msgDiv = document.getElementById('add-numbers-msg');
-            if (nums.some(isNaN) || new Set(nums).size !== 5 || nums.some(n => n < 1 || n > 69)) {
-                msgDiv.textContent = 'Please enter 5 unique numbers between 1 and 69.';
-                return;
-            }
-            // Add to historicalCombos and allMainDraws
-            const sorted = nums.slice().sort((a,b)=>a-b);
-            historicalCombos.push({ combo: sorted.join('-') });
-            allMainDraws.push(sorted);
-            msgDiv.textContent = 'Numbers added!';
-            inputs.forEach(input => input.value = '');
-            analyzeFrequentSets();
-            renderHistoryTable();
-        };
-    }
+
     // History tab rendering
     function renderHistoryTable() {
-        let html = '<table class="freq-table"><thead><tr><th>#</th><th>Numbers</th></tr></thead><tbody>';
+        const historyContent = document.getElementById('history-content');
+        if (!historyContent) return;
+        
+        let html = '<table class="freq-table" style="width:100%;"><thead><tr><th>#</th><th>Numbers</th></tr></thead><tbody>';
         allMainDraws.forEach((nums, idx) => {
             html += `<tr><td>${idx+1}</td><td>${nums.join('-')}</td></tr>`;
         });
         html += '</tbody></table>';
-        var histTbl = document.getElementById('history-table');
-        if (histTbl) histTbl.innerHTML = html;
+        historyContent.innerHTML = html;
     }
-    // After analyzing frequent sets, update 2x and history tabs
-    const oldAnalyzeFrequentSets = analyzeFrequentSets;
-    analyzeFrequentSets = function() {
-        oldAnalyzeFrequentSets();
-        renderHistoryTable();
-    };
-    // Initial render for 2x and history tabs after CSV load
-    window.addEventListener('DOMContentLoaded', function() {
-        renderHistoryTable();
-    });
+
+    // Function to analyze frequent sets and populate dropdowns
+    function analyzeFrequentSets() {
+        // Analyze and count all pairs and triplets from historical data
+        const pairCounts = new Map();
+        const tripletCounts = new Map();
+        
+        allMainDraws.forEach(draw => {
+            // Get all possible pairs and triplets from this draw
+            const sortedDraw = [...draw].sort((a, b) => a - b);
+            
+            // Count pairs
+            for (let i = 0; i < sortedDraw.length; i++) {
+                for (let j = i + 1; j < sortedDraw.length; j++) {
+                    const pair = [sortedDraw[i], sortedDraw[j]];
+                    const pairKey = pair.join('-');
+                    pairCounts.set(pairKey, (pairCounts.get(pairKey) || 0) + 1);
+                }
+            }
+            
+            // Count triplets
+            for (let i = 0; i < sortedDraw.length; i++) {
+                for (let j = i + 1; j < sortedDraw.length; j++) {
+                    for (let k = j + 1; k < sortedDraw.length; k++) {
+                        const triplet = [sortedDraw[i], sortedDraw[j], sortedDraw[k]];
+                        const tripletKey = triplet.join('-');
+                        tripletCounts.set(tripletKey, (tripletCounts.get(tripletKey) || 0) + 1);
+                    }
+                }
+            }
+        });
+        
+        // Convert to arrays, filter for 2+ occurrences, and sort by frequency (descending)
+        const sortedPairs = Array.from(pairCounts.entries())
+            .filter(([_, count]) => count >= 2)  // Only include pairs that appear 2+ times
+            .sort((a, b) => b[1] - a[1]); // Show all pairs that appear 2+ times
+            
+        const sortedTriplets = Array.from(tripletCounts.entries())
+            .filter(([_, count]) => count >= 2)  // Only include triplets that appear 2+ times
+            .sort((a, b) => b[1] - a[1]); // Show all triplets that appear 2+ times
+        
+        // Populate duo select dropdowns with improved UI
+        const duo1Select = document.getElementById('duo1-select');
+        const duo2Select = document.getElementById('duo2-select');
+        const comboDuoSelect = document.getElementById('combo-duo-select');
+        const comboTrioSelect = document.getElementById('combo-trio-select');
+        
+        // Section 2: Populate duo dropdowns
+        if (duo1Select && duo2Select) {
+            duo1Select.innerHTML = '<option value="">Select First Duo</option>';
+            duo2Select.innerHTML = '<option value="">Select Second Duo</option>';
+            sortedPairs.forEach(([pairKey, count]) => {
+                const option1 = document.createElement('option');
+                option1.value = pairKey;
+                option1.textContent = `${pairKey.replace(/-/g, ' - ')} (${count}×)`;
+                duo1Select.appendChild(option1.cloneNode(true));
+                duo2Select.appendChild(option1);
+            });
+            duo1Select.selectedIndex = -1;
+            duo2Select.selectedIndex = -1; // No selection by default
+        }
+        // Section 3: Populate duo and trio dropdowns
+        if (comboDuoSelect && comboTrioSelect) {
+            comboDuoSelect.innerHTML = '<option value="">Select Duo</option>';
+            comboTrioSelect.innerHTML = '<option value="">Select Trio</option>';
+            sortedPairs.forEach(([pairKey, count]) => {
+                const option = document.createElement('option');
+                option.value = pairKey;
+                option.textContent = `${pairKey.replace(/-/g, ' - ')} (${count}×)`;
+                comboDuoSelect.appendChild(option);
+            });
+            sortedTriplets.forEach(([trioKey, count]) => {
+                const option = document.createElement('option');
+                option.value = trioKey;
+                option.textContent = `${trioKey.replace(/-/g, ' - ')} (${count}×)`;
+                comboTrioSelect.appendChild(option);
+            });
+            comboDuoSelect.selectedIndex = -1;
+            comboTrioSelect.selectedIndex = -1; // No selection by default
+        }
+            // Add a count of available pairs
+            const pairCountElement = document.createElement('div');
+            pairCountElement.style.fontSize = '0.9em';
+            pairCountElement.style.color = '#4a5568';
+            pairCountElement.style.marginTop = '8px';
+            pairCountElement.textContent = `Showing ${sortedPairs.length} frequent pairs (appearing 2+ times)`;
+            duo1Select.parentNode.insertBefore(pairCountElement, duo1Select.nextSibling);
+            // Enable the build button when both duos are selected
+            const buildDuoBtn = document.getElementById('build-duo-combo-btn');
+            if (buildDuoBtn) {
+                const updateBuildButtonState = () => {
+                    buildDuoBtn.disabled = !(duo1Select.value && duo2Select.value);
+                };
+                duo1Select.addEventListener('change', updateBuildButtonState);
+                duo2Select.addEventListener('change', updateBuildButtonState);
+            }
+        }
+    
     </script>
-<script src="script.js"></script>
 </body>
-</html> 
+</html>
