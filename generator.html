@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <!-- Choices.js for searchable dropdowns -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PowerBall Random Generator</title>
@@ -827,8 +830,21 @@
             comboDuoSelect.selectedIndex = -1;
             comboTrioSelect.selectedIndex = -1; // No selection by default
         }
-            // Add a count of available pairs
-            const pairCountElement = document.createElement('div');
+            // Initialize Choices.js on all dropdowns (only once)
+        [duo1Select, duo2Select, comboDuoSelect, comboTrioSelect].forEach(sel => {
+            if (sel && !sel.classList.contains('choices-initialized')) {
+                new Choices(sel, {
+                    searchEnabled: true,
+                    shouldSort: false,
+                    placeholder: true,
+                    itemSelectText: '',
+                    searchPlaceholderValue: 'Type a number...'
+                });
+                sel.classList.add('choices-initialized');
+            }
+        });
+        // Add a count of available pairs
+        const pairCountElement = document.createElement('div');
             pairCountElement.style.fontSize = '0.9em';
             pairCountElement.style.color = '#4a5568';
             pairCountElement.style.marginTop = '8px';
