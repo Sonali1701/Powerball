@@ -519,24 +519,29 @@
                     allMainDraws = [];
                     for (let i = 0; i < data.length; i++) {
                         const row = data[i];
-                        let winNumbers = (row['Winning Numbers'] || '').replace(/®/g, '').toLowerCase().trim();
-                        // Only include draws from 2016 onward (fix: extract year from MM/DD/YYYY)
                         const dateStr = (row.Date || '').trim();
                         const parts = dateStr.split('/');
                         const year = parts.length === 3 ? parseInt(parts[2], 10) : 0;
-                        if (row.Date && year >= 2016 && (winNumbers.includes('powerball numbers') || winNumbers.match(/^(\d+\s*-\s*)+\d+$/))) {
-                            let mainNumbers;
-                            if (winNumbers.includes('powerball numbers')) {
-                                mainNumbers = (row['Winning Numbers'] || '').replace(/.*Numbers\s*/i, '').replace(/®/g, '').trim();
-                            } else {
-                                mainNumbers = (row['Winning Numbers'] || '').replace(/®/g, '').trim();
-                            }
-                            let mainArr = mainNumbers.split(' - ').map(x => parseInt(x.trim(), 10)).filter(n => n >= 1 && n <= 69);
+                        // Main draw row
+                        if (row.Date && year >= 2016 && row['Winning Numbers'] && row['Winning Numbers'].toLowerCase().includes('powerball')) {
+                            let winNumbers = row['Winning Numbers'].replace(/®/g, '').replace(/Powerball.*Numbers\s*/i, '').trim();
+                            let mainArr = winNumbers.split(' - ').map(x => parseInt(x.trim(), 10)).filter(n => n >= 1 && n <= 69);
                             if (mainArr.length === 5) {
                                 historicalCombos.push({
                                     combo: mainArr.slice().sort((a,b)=>a-b).join('-')
                                 });
                                 allMainDraws.push({ arr: mainArr, year });
+                            }
+                            // Check next row for Double Play
+                            if (i + 1 < data.length) {
+                                const nextRow = data[i + 1];
+                                if (!nextRow.Date && nextRow['Winning Numbers'] && nextRow['Winning Numbers'].toLowerCase().includes('double play')) {
+                                    let doubleNumbers = nextRow['Winning Numbers'].replace(/®/g, '').replace(/Double Play.*Numbers\s*/i, '').trim();
+                                    let doubleArr = doubleNumbers.split(' - ').map(x => parseInt(x.trim(), 10)).filter(n => n >= 1 && n <= 69);
+                                    if (doubleArr.length === 5) {
+                                        allMainDraws.push({ arr: doubleArr, year });
+                                    }
+                                }
                             }
                         }
                     }
