@@ -533,7 +533,7 @@
                                 historicalCombos.push({
                                     combo: mainArr.slice().sort((a,b)=>a-b).join('-')
                                 });
-                                allMainDraws.push(mainArr);
+                                allMainDraws.push({ arr: mainArr, year });
                             }
                         }
                     }
@@ -753,9 +753,10 @@
         const pairCounts = new Map();
         const tripletCounts = new Map();
         
-        allMainDraws.forEach(draw => {
-            // Get all possible pairs and triplets from this draw
-            const sortedDraw = [...draw].sort((a, b) => a - b);
+        // Only use draws from 2024 and 2025
+        const filteredDraws = allMainDraws.filter(d => d.year === 2024 || d.year === 2025);
+        filteredDraws.forEach(drawObj => {
+            const sortedDraw = [...drawObj.arr].sort((a, b) => a - b);
             
             // Count pairs
             for (let i = 0; i < sortedDraw.length; i++) {
