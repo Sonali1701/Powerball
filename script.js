@@ -19,7 +19,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     // Save all notes to localStorage
-    function saveAllNotes() {
+    function saveAllNotes() { 
         noteConfigs.forEach(cfg => {
             const ta = document.getElementById(cfg.textarea);
             if (ta) {
