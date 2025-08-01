@@ -166,15 +166,18 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                     }
                     // 1. Filter out draws before 2024 (fix: extract year from MM/DD/YYYY format)
-                    const filteredDrawRows = drawRows.filter(draw => {
+                    window.filteredDrawRows = drawRows.filter(draw => {
                         const dateStr = (draw.date || '').trim();
                         const parts = dateStr.split('/');
                         const year = parts.length === 3 ? parseInt(parts[2], 10) : 0;
                         return year === 2024 || year === 2025;
                     });
-                    window.filteredDrawRows = filteredDrawRows; // Attach globally for all UI
-                    console.log('[DEBUG] filteredDrawRows length:', filteredDrawRows.length);
-                    if (filteredDrawRows.length > 0) console.log('[DEBUG] Sample filteredDrawRows:', filteredDrawRows.slice(0, 2));
+                    console.log('[DEBUG] window.filteredDrawRows length:', window.filteredDrawRows.length);
+                    if (window.filteredDrawRows.length > 0) console.log('[DEBUG] Sample window.filteredDrawRows:', window.filteredDrawRows.slice(0, 2));
+                    // After filteredDrawRows is ready, render the combo table if present
+                    if (document.getElementById('combo-results')) {
+                        renderComboResultsHome([]);
+                    }
                     // --- Render balls with color, tooltip, and count badge ---
                     const panel = document.getElementById('ball-panel');
                     panel.innerHTML = '';
@@ -233,7 +236,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     //     }
                     //     // Efficient: For each draw, count how many selected numbers appear
                     //     let allResults = [];
-                    //     filteredDrawRows.forEach(draw => {
+                    //     window.filteredDrawRows.forEach(draw => {
                     //         // Main draw
                     //         const matchCount = draw.mainArr.filter(num => selectedBalls.has(Number(num))).length;
                     //         if (matchCount >= 1) {
@@ -362,7 +365,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     const quadCounts = new Map();
                     const fiveCounts = new Map();
                     const allMainDraws = [];
-                    filteredDrawRows.forEach(draw => {
+                    window.filteredDrawRows.forEach(draw => {
                         const nums = draw.mainArr.map(Number).filter(n => n >= 1 && n <= 69);
                         if (nums.length === 5) {
                             allMainDraws.push(nums);
@@ -479,8 +482,8 @@ document.addEventListener('DOMContentLoaded', function() {
                             // For each combination, find all draws (main/double play) where it appears
                             combos.forEach(comboArr => {
                                 const comboSet = new Set(comboArr);
-                                // Search filteredDrawRows for mainArr and doublePlayArr
-                                filteredDrawRows.forEach(draw => {
+                                // Search window.filteredDrawRows for mainArr and doublePlayArr
+                                window.filteredDrawRows.forEach(draw => {
                                     // Main draw
                                     if (draw.mainArr && draw.mainArr.length >= k) {
                                         const mainSet = new Set(draw.mainArr.map(Number));
@@ -568,7 +571,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         const k = groupSize;
                         const selectedSet = new Set(selected.map(Number));
                         let matches = [];
-                        filteredDrawRows.forEach(draw => {
+                        window.filteredDrawRows.forEach(draw => {
                             // Main
                             if (draw.mainArr && draw.mainArr.length === 5) {
                                 const matchArr = draw.mainArr.filter(num => selectedSet.has(Number(num)));
@@ -675,7 +678,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         // Always show all draws, highlight selected numbers
                         const selectedSet = new Set((selected || []).map(Number));
                         let html = `<table class='freq-table combo-results-table' style='margin-bottom:24px;'><thead><tr><th>Date</th><th>Type</th><th>Numbers</th><th>Powerball</th></tr></thead><tbody>`;
-                        filteredDrawRows.forEach(draw => {
+                        window.filteredDrawRows.forEach(draw => {
                             // Main draw
                             if (draw.mainArr && draw.mainArr.length === 5) {
                                 const balls = draw.mainArr.map((num, idx) => selectedSet.has(Number(num))
@@ -719,7 +722,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     function renderHistoryTab() {
                         let html = '<table class="freq-table"><thead><tr><th>#</th><th>Date</th><th>Main Numbers</th><th>Double Play Numbers</th></tr></thead><tbody>';
                         let rowNum = 1;
-                        filteredDrawRows.forEach(draw => {
+                        window.filteredDrawRows.forEach(draw => {
                             html += `<tr><td>${rowNum++}</td><td>${draw.date}</td><td>${draw.mainArr.join('-')}</td><td>${draw.doublePlayArr && draw.doublePlayArr.length === 5 ? draw.doublePlayArr.join('-') : ''}</td></tr>`;
                         });
                         html += '</tbody></table>';
@@ -794,7 +797,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         html += `<table class='freq-table' style='margin-bottom:24px;'><thead><tr><th>Date</th><th>Type</th><th>Numbers</th><th>Powerball</th></tr></thead><tbody>`;
                         
                         // Filter and display draws that contain at least one of the selected numbers
-                        filteredDrawRows.forEach(draw => {
+                        window.filteredDrawRows.forEach(draw => {
                             // Main draw
                             if (draw.mainArr && draw.mainArr.length === 5) {
                                 const matchArr = draw.mainArr.filter(num => selectedSet.has(Number(num)));
@@ -1015,10 +1018,8 @@ if (genComboBtn && genSingleBtn && genResult) {
     }
 });
 
-// After CSV and filteredDrawRows are ready, render the full combo table on the home page
-if (document.getElementById('combo-results')) {
-    renderComboResultsHome([]);
-}
+// After CSV and window.filteredDrawRows are ready, render the full combo table on the home page
+
 
 // --- FREQUENT PAIRS & TRIOS (ALWAYS VISIBLE TABLES) ---
 function getAllCombos(arr, k) {
@@ -1037,7 +1038,7 @@ function getAllCombos(arr, k) {
 }
 function renderFrequentPairsTriosTables() {
     // Analyze all pairs/trios for main and double play
-    if (!window.filteredDrawRows) return;
+    if (!window.window.filteredDrawRows) return;
     const pairCounts = new Map();
     const trioCounts = new Map();
     const pairDraws = new Map();
@@ -1047,7 +1048,7 @@ function renderFrequentPairsTriosTables() {
         if (!map.has(combo)) map.set(combo, []);
         map.get(combo).push({date, type});
     }
-    window.filteredDrawRows.forEach(draw => {
+    window.window.filteredDrawRows.forEach(draw => {
         if (draw.mainArr && draw.mainArr.length === 5) {
             getAllCombos(draw.mainArr, 2).forEach(pair => {
                 pairCounts.set(pair, (pairCounts.get(pair)||0)+1);
@@ -1128,7 +1129,7 @@ function renderFrequentPairsTriosTables() {
     };
     renderTable();
 }
-// Ensure this runs after filteredDrawRows is ready
+// Ensure this runs after window.filteredDrawRows is ready
 window.addEventListener('DOMContentLoaded', () => {
     setTimeout(renderFrequentPairsTriosTables, 1200);
 });
@@ -1136,7 +1137,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
 
 
-// Ensure this runs after filteredDrawRows is ready
+// Ensure this runs after window.filteredDrawRows is ready
 window.addEventListener('DOMContentLoaded', () => {
     setTimeout(renderFrequentPairsTriosTables, 1200);
 });
@@ -1147,7 +1148,7 @@ function renderComboResultsHome(selected) {
     if (!resultsDiv) return;
     const selectedSet = new Set((selected || []).map(Number));
     let html = `<table class='freq-table combo-results-table' style='margin-bottom:24px;'><thead><tr><th>Date</th><th>Type</th><th>Numbers</th><th>Powerball</th></tr></thead><tbody>`;
-    filteredDrawRows.forEach(draw => {
+    window.filteredDrawRows.forEach(draw => {
         // Main draw
         if (draw.mainArr && draw.mainArr.length === 5) {
             const balls = draw.mainArr.map(num => selectedSet.has(Number(num))
@@ -1248,16 +1249,82 @@ function render2xResultsForSelectedBalls(selected) {
     html += '</div>';
     resultsDiv.innerHTML = html;
 }
-// Update 2x Check My Numbers button logic to use the new function and remove group size
-// setTimeout(() => {
-//     const checkBtn = document.getElementById('twox-check-btn');
-//     if (checkBtn) {
-//         checkBtn.onclick = function() {
-//             const selectedBalls = [];
-//             document.querySelectorAll('#twox-ball-panel .ball.selected').forEach(ball => {
-//                 selectedBalls.push(Number(ball.textContent));
-//             });
-//             render2xResultsForSelectedBalls(selectedBalls);
-//         };
-//     }
-// }, 0);
+
+// --- Download Pairs & Trios CSV Button Logic ---
+window.addEventListener('DOMContentLoaded', function() {
+    const downloadBtn = document.getElementById('download-combo-csv-btn');
+    if (downloadBtn) {
+        downloadBtn.addEventListener('click', function() {
+            // Debugging logs
+            console.log("Download button clicked");
+            console.log(window.window.filteredDrawRows);
+            console.log(typeof getAllCombos);
+            if (!window.window.filteredDrawRows) {
+                alert('Data not loaded yet!');
+                return;
+            }
+            const pairCounts = new Map();
+            const trioCounts = new Map();
+            const pairDraws = new Map();
+            const trioDraws = new Map();
+            function addToMap(map, combo, date, type) {
+                if (!map.has(combo)) map.set(combo, []);
+                map.get(combo).push({date, type});
+            }
+            window.window.filteredDrawRows.forEach(draw => {
+                if (draw.mainArr && draw.mainArr.length === 5) {
+                    getAllCombos(draw.mainArr, 2).forEach(pair => {
+                        pairCounts.set(pair, (pairCounts.get(pair)||0)+1);
+                        addToMap(pairDraws, pair, draw.date, 'Main');
+                    });
+                    getAllCombos(draw.mainArr, 3).forEach(trio => {
+                        trioCounts.set(trio, (trioCounts.get(trio)||0)+1);
+                        addToMap(trioDraws, trio, draw.date, 'Main');
+                    });
+                }
+                if (draw.doublePlayArr && draw.doublePlayArr.length === 5) {
+                    getAllCombos(draw.doublePlayArr, 2).forEach(pair => {
+                        pairCounts.set(pair, (pairCounts.get(pair)||0)+1);
+                        addToMap(pairDraws, pair, draw.date, 'Double');
+                    });
+                    getAllCombos(draw.doublePlayArr, 3).forEach(trio => {
+                        trioCounts.set(trio, (trioCounts.get(trio)||0)+1);
+                        addToMap(trioDraws, trio, draw.date, 'Double');
+                    });
+                }
+            });
+            const pairs = Array.from(pairCounts.entries()).filter(([_,c])=>c>=2).sort((a,b)=>b[1]-a[1]);
+            const trios = Array.from(trioCounts.entries()).filter(([_,c])=>c>=2).sort((a,b)=>b[1]-a[1]);
+            function csvEscape(val) {
+                const str = String(val);
+                if (str.includes('"')) return '"' + str.replace(/"/g, '""') + '"';
+                if (str.includes(',') || str.includes('\n') || str.includes('\r') || str.includes(';')) return '"' + str + '"';
+                return str;
+            }
+            let csvRows = [];
+            csvRows.push(['Type','Combo','Count','Dates+Types']);
+            pairs.forEach(([combo, count]) => {
+                const draws = pairDraws.get(combo) || [];
+                const datesStr = draws.map(d=>`${d.date} (${d.type})`).join('; ');
+                csvRows.push(['Pair', combo.split(',').join('-'), count, csvEscape(datesStr)]);
+            });
+            trios.forEach(([combo, count]) => {
+                const draws = trioDraws.get(combo) || [];
+                const datesStr = draws.map(d=>`${d.date} (${d.type})`).join('; ');
+                csvRows.push(['Trio', combo.split(',').join('-'), count, csvEscape(datesStr)]);
+            });
+            const csvContent = csvRows.map(row => row.map(csvEscape).join(',')).join('\r\n');
+            const blob = new Blob([csvContent], {type: 'text/csv'});
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'powerball_pairs_trios.csv';
+            document.body.appendChild(link);
+            link.click();
+            setTimeout(() => {
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+            }, 100);
+        });
+    }
+});
