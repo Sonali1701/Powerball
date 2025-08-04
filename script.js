@@ -166,12 +166,13 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                     }
                     // 1. Filter out draws before 2024 (fix: extract year from MM/DD/YYYY format)
+                    // [MODIFIED] Show draws from 2016 through 2025 (inclusive) for 2x tab and others using filteredDrawRows
                     window.filteredDrawRows = drawRows.filter(draw => {
                         const dateStr = (draw.date || '').trim();
                         const parts = dateStr.split('/');
                         const year = parts.length === 3 ? parseInt(parts[2], 10) : 0;
-                        return year === 2024 || year === 2025;
-                    });
+                        return year >= 2016 && year <= 2025;
+                    }); // <-- Now includes full history from 2016
                     console.log('[DEBUG] window.filteredDrawRows length:', window.filteredDrawRows.length);
                     if (window.filteredDrawRows.length > 0) console.log('[DEBUG] Sample window.filteredDrawRows:', window.filteredDrawRows.slice(0, 2));
                     // After filteredDrawRows is ready, render the combo table if present
