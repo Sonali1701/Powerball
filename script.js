@@ -205,22 +205,15 @@ document.addEventListener('DOMContentLoaded', function() {
                         const ball = document.createElement('span');
                         ball.className = 'ball';
                         ball.textContent = n;
-                        ball.style.background = '#fff';
-                        ball.style.color = '#222';
-                        ball.style.border = '2px solid #888';
                         // Tooltip
                         ball.onclick = function(e) {
                             // Multi-select: toggle selection
                             if (selectedBalls.has(n)) {
                                 selectedBalls.delete(n);
                                 ball.classList.remove('selected');
-                                // No stats panel to update
                             } else {
                                 selectedBalls.add(n);
                                 ball.classList.add('selected');
-                                ball.style.animation = 'popin 0.3s';
-                                setTimeout(() => { ball.style.animation = ''; }, 300);
-                                // No stats panel to update
                             }
                         };
                         panel.appendChild(ball);
@@ -422,9 +415,6 @@ document.addEventListener('DOMContentLoaded', function() {
                             const ball = document.createElement('span');
                             ball.className = 'ball';
                             ball.textContent = n;
-                            ball.style.background = '#fff';
-                            ball.style.color = '#222';
-                            ball.style.border = '2px solid #888';
                             // Tooltip
                             ball.onclick = function() {
                                 if (selectedBalls.has(n)) {
@@ -433,8 +423,6 @@ document.addEventListener('DOMContentLoaded', function() {
                                 } else {
                                     selectedBalls.add(n);
                                     ball.classList.add('selected');
-                                    ball.style.animation = 'popin 0.3s';
-                                    setTimeout(() => { ball.style.animation = ''; }, 300);
                                 }
                                 render2xCombinations(Array.from(selectedBalls).sort((a,b)=>a-b));
                             };
@@ -637,9 +625,6 @@ document.addEventListener('DOMContentLoaded', function() {
                             const ball = document.createElement('span');
                             ball.className = 'ball';
                             ball.textContent = n;
-                            ball.style.background = selectedBalls.has(n) ? '#e74c3c' : '#fff';
-                            ball.style.color = selectedBalls.has(n) ? '#fff' : '#222';
-                            ball.style.border = selectedBalls.has(n) ? '2px solid #c0392b' : '2px solid #888';
                             // Tooltip
                             ball.onclick = function() {
                                 if (selectedBalls.has(n)) {
@@ -1152,19 +1137,17 @@ function renderComboResultsHome(selected) {
     window.filteredDrawRows.forEach(draw => {
         // Main draw
         if (draw.mainArr && draw.mainArr.length === 5) {
-            const balls = draw.mainArr.map(num => selectedSet.has(Number(num))
-                ? `<span class='red-ball'>${num}</span>`
-                : `<span class='plain-number'>${num}</span>`
-            ).join("");
-            html += `<tr><td>${draw.date}</td><td>Main</td><td><div class='aligned-numbers' style='display:flex;gap:8px;align-items:center;flex-wrap:wrap;'>${balls}</div></td><td><span class='yellow-ball'>${draw.powerball || ''}</span></td></tr>`;
+            // Assign color classes in pattern: blue, sky, orange, red, blue
+            const colorClasses = ['ball-blue', 'ball-sky', 'ball-orange', 'ball-red', 'ball-blue'];
+            const balls = draw.mainArr.map((num, idx) => `<span class='${colorClasses[idx % colorClasses.length]}'>${num}</span>`).join("");
+            html += `<tr><td>${draw.date}</td><td>Main</td><td><div class='aligned-numbers'>${balls}</div></td><td><span class='yellow-ball'>${draw.powerball || ''}</span></td></tr>`;
         }
         // Double Play draw
         if (draw.doublePlayArr && draw.doublePlayArr.length === 5) {
-            const balls = draw.doublePlayArr.map(num => selectedSet.has(Number(num))
-                ? `<span class='red-ball'>${num}</span>`
-                : `<span class='plain-number'>${num}</span>`
-            ).join("");
-            html += `<tr><td>${draw.date}</td><td>Double Play</td><td><div class='aligned-numbers' style='display:flex;gap:8px;align-items:center;flex-wrap:wrap;'>${balls}</div></td><td><span class='yellow-ball'>${draw.doublePlayPowerball || ''}</span></td></tr>`;
+            // Use same color pattern for double play
+            const colorClasses = ['ball-blue', 'ball-sky', 'ball-orange', 'ball-red', 'ball-blue'];
+            const balls = draw.doublePlayArr.map((num, idx) => `<span class='${colorClasses[idx % colorClasses.length]}'>${num}</span>`).join("");
+            html += `<tr><td>${draw.date}</td><td>Double Play</td><td><div class='aligned-numbers'>${balls}</div></td><td><span class='yellow-ball'>${draw.doublePlayPowerball || ''}</span></td></tr>`;
         }
     });
     html += '</tbody></table>';

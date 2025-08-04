@@ -108,13 +108,72 @@ body {
     100% { transform: scale(1); }
 }
 .ball.selected {
-    background: radial-gradient(circle at 65% 35%, #fffbe6 60%, #ffe066 100%), linear-gradient(145deg, #ffe066 0%, #e6b800 100%);
-    border: 2.5px solid #e6b800;
-    color: #a65c00 !important;
-    box-shadow: 0 0 0 5px #ffe066, 0 4px 16px rgba(44,62,80,0.18);
+    background: radial-gradient(circle at 60% 38%, #fff 65%, #4a90e2 100%), linear-gradient(145deg, #4a90e2 0%, #217dbb 100%);
+    border: 2.5px solid #217dbb;
+    color: #fff !important;
+    box-shadow: 0 2px 12px rgba(52,152,219,0.23), 0 0 0 5px #b3d8ff, 0 4px 16px rgba(44,62,80,0.18);
+    text-shadow: 0 1px 0 #217dbb, 0 2px 6px rgba(44,62,80,0.10);
     transform: scale(1.13);
     z-index: 3;
 }
+
+.ball {
+    width: 36px;
+    height: 36px;
+    font-size: 1.08em;
+    margin: 4px 2px;
+    border-radius: 50%;
+    overflow: visible;
+    background: radial-gradient(circle at 65% 35%, #fff 65%, #b3d1ff 100%), linear-gradient(145deg, #4a90e2 0%, #357ab7 100%);
+    border: 2.5px solid #b3d1ff;
+    box-shadow: 0 2px 10px rgba(44,62,80,0.18), 0 1.5px 0 #fff inset;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    position: relative;
+    color: #234;
+    transition: box-shadow 0.18s, background 0.18s, border 0.18s, color 0.18s, transform 0.13s;
+    animation: none;
+    text-shadow: 0 1px 0 #217dbb, 0 2px 6px rgba(44,62,80,0.10);
+}
+
+.ball:hover, .ball.selected {
+    box-shadow: 0 0 0 7px #a3d8ff, 0 2px 12px rgba(44,62,80,0.22), 0 2px 10px rgba(44,62,80,0.18);
+    transform: scale(1.15);
+    z-index: 4;
+    border-color: #217dbb;
+}
+
+.ball-blue {
+    background: radial-gradient(circle at 60% 38%, #fff 65%, #4a90e2 100%), linear-gradient(145deg, #4a90e2 0%, #217dbb 100%);
+    border: 2.5px solid #217dbb;
+    color: #fff;
+    text-shadow: 0 1px 0 #217dbb, 0 2px 6px rgba(44,62,80,0.10);
+    box-shadow: 0 2px 12px rgba(52,152,219,0.18), 0 1.5px 0 #fff inset;
+}
+.ball-sky {
+    background: radial-gradient(circle at 60% 38%, #fff 70%, #6ec6ff 100%), linear-gradient(135deg, #6ec6ff 0%, #2196f3 100%);
+    border: 2.5px solid #2196f3;
+    color: #fff;
+    text-shadow: 0 1px 0 #2196f3, 0 2px 6px rgba(44,62,80,0.10);
+    box-shadow: 0 2px 12px rgba(33,150,243,0.18), 0 1.5px 0 #fff inset;
+}
+.ball-orange {
+    background: radial-gradient(circle at 60% 38%, #fff 60%, #ffb347 100%), linear-gradient(135deg, #ffb347 0%, #ff8008 100%);
+    border: 2.5px solid #ff8008;
+    color: #fff;
+    text-shadow: 0 1px 0 #ff8008, 0 2px 6px rgba(44,62,80,0.10);
+    box-shadow: 0 2px 12px rgba(255,128,8,0.18), 0 1.5px 0 #fff inset;
+}
+.ball-red {
+    background: radial-gradient(circle at 60% 38%, #fff 60%, #ff7b7b 100%), linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+    border: 2.5px solid #c0392b;
+    color: #fff;
+    text-shadow: 0 1px 0 #c0392b, 0 2px 6px rgba(44,62,80,0.10);
+    box-shadow: 0 2px 12px rgba(231,76,60,0.18), 0 1.5px 0 #fff inset;
+}
+
 .ball:hover {
     box-shadow: 0 0 0 7px #a3d8ff, 0 2px 12px rgba(44,62,80,0.22);
     transform: scale(1.15);
@@ -227,17 +286,71 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 38px;
-  height: 38px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
-  background: radial-gradient(circle at 60% 40%, #fff 65%, #ff7b7b 100%), linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+  background: radial-gradient(circle at 65% 35%, #fff 60%, #ff7b7b 100%), linear-gradient(145deg, #e74c3c 0%, #c0392b 100%);
   color: #fff;
   font-weight: bold;
-  font-size: 1.13em;
-  border: 2.5px solid #ffb3b3;
-  box-shadow: 0 2px 8px rgba(231,76,60,0.15);
-  margin: 0 2px;
+  font-size: 1.19em;
+  border: 3px solid #ffb3b3;
+  box-shadow: 0 4px 12px rgba(231,76,60,0.18), 0 2px 0 #fff inset;
+  margin: 0 3px;
+  text-shadow: 0 1px 0 #b71c1c, 0 2px 6px rgba(44,62,80,0.12);
+  transition: transform 0.13s, box-shadow 0.13s;
 }
+
+.yellow-ball {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 60% 40%, #fff 65%, #ffe066 100%), linear-gradient(135deg, #ffe066 0%, #e6b800 100%);
+  color: #a65c00;
+  font-weight: bold;
+  font-size: 1.19em;
+  border: 3px solid #e6b800;
+  box-shadow: 0 4px 14px rgba(230, 198, 0, 0.16), 0 2px 0 #fff inset;
+  margin: 0 3px;
+  text-shadow: 0 1px 0 #a65c00, 0 2px 6px rgba(44,62,80,0.10);
+  transition: transform 0.13s, box-shadow 0.13s;
+}
+
+.blue-ball {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 60% 40%, #fff 65%, #6db3f2 100%), linear-gradient(135deg, #3498db 0%, #217dbb 100%);
+  color: #fff;
+  font-weight: bold;
+  font-size: 1.19em;
+  border: 3px solid #217dbb;
+  box-shadow: 0 4px 14px rgba(52, 152, 219, 0.14), 0 2px 0 #fff inset;
+  margin: 0 3px;
+  text-shadow: 0 1px 0 #217dbb, 0 2px 6px rgba(44,62,80,0.10);
+  transition: transform 0.13s, box-shadow 0.13s;
+}
+
+/* Ball hover effect for pop */
+.red-ball:hover, .yellow-ball:hover, .blue-ball:hover {
+  transform: scale(1.10);
+  box-shadow: 0 6px 18px rgba(44,62,80,0.23), 0 2px 0 #fff inset;
+}
+
+/* Ensure balls in tables are always centered */
+.aligned-numbers {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
 .fade-in {
   animation: fadein 0.6s;
 }
@@ -558,6 +671,74 @@ tr:hover {
 } 
 
 .red-ball {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 65% 35%, #fff 60%, #ff7b7b 100%), linear-gradient(145deg, #e74c3c 0%, #c0392b 100%);
+  color: #fff;
+  font-weight: bold;
+  font-size: 1.19em;
+  border: 3px solid #ffb3b3;
+  box-shadow: 0 4px 12px rgba(231,76,60,0.18), 0 2px 0 #fff inset;
+  margin: 0 3px;
+  text-shadow: 0 1px 0 #b71c1c, 0 2px 6px rgba(44,62,80,0.12);
+  transition: transform 0.13s, box-shadow 0.13s;
+}
+
+.yellow-ball {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 60% 40%, #fff 65%, #ffe066 100%), linear-gradient(135deg, #ffe066 0%, #e6b800 100%);
+  color: #a65c00;
+  font-weight: bold;
+  font-size: 1.19em;
+  border: 3px solid #e6b800;
+  box-shadow: 0 4px 14px rgba(230, 198, 0, 0.16), 0 2px 0 #fff inset;
+  margin: 0 3px;
+  text-shadow: 0 1px 0 #a65c00, 0 2px 6px rgba(44,62,80,0.10);
+  transition: transform 0.13s, box-shadow 0.13s;
+}
+
+.blue-ball {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 60% 40%, #fff 65%, #6db3f2 100%), linear-gradient(135deg, #3498db 0%, #217dbb 100%);
+  color: #fff;
+  font-weight: bold;
+  font-size: 1.19em;
+  border: 3px solid #217dbb;
+  box-shadow: 0 4px 14px rgba(52, 152, 219, 0.14), 0 2px 0 #fff inset;
+  margin: 0 3px;
+  text-shadow: 0 1px 0 #217dbb, 0 2px 6px rgba(44,62,80,0.10);
+  transition: transform 0.13s, box-shadow 0.13s;
+}
+
+/* Ball hover effect for pop */
+.red-ball:hover, .yellow-ball:hover, .blue-ball:hover {
+  transform: scale(1.10);
+  box-shadow: 0 6px 18px rgba(44,62,80,0.23), 0 2px 0 #fff inset;
+}
+
+/* Ensure balls in tables are always centered */
+.aligned-numbers {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1431,6 +1612,74 @@ tr:hover {
 } 
 
 .generated-ball.red, .red-ball {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 65% 35%, #fff 60%, #ff7b7b 100%), linear-gradient(145deg, #e74c3c 0%, #c0392b 100%);
+  color: #fff;
+  font-weight: bold;
+  font-size: 1.19em;
+  border: 3px solid #ffb3b3;
+  box-shadow: 0 4px 12px rgba(231,76,60,0.18), 0 2px 0 #fff inset;
+  margin: 0 3px;
+  text-shadow: 0 1px 0 #b71c1c, 0 2px 6px rgba(44,62,80,0.12);
+  transition: transform 0.13s, box-shadow 0.13s;
+}
+
+.yellow-ball {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 60% 40%, #fff 65%, #ffe066 100%), linear-gradient(135deg, #ffe066 0%, #e6b800 100%);
+  color: #a65c00;
+  font-weight: bold;
+  font-size: 1.19em;
+  border: 3px solid #e6b800;
+  box-shadow: 0 4px 14px rgba(230, 198, 0, 0.16), 0 2px 0 #fff inset;
+  margin: 0 3px;
+  text-shadow: 0 1px 0 #a65c00, 0 2px 6px rgba(44,62,80,0.10);
+  transition: transform 0.13s, box-shadow 0.13s;
+}
+
+.blue-ball {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 60% 40%, #fff 65%, #6db3f2 100%), linear-gradient(135deg, #3498db 0%, #217dbb 100%);
+  color: #fff;
+  font-weight: bold;
+  font-size: 1.19em;
+  border: 3px solid #217dbb;
+  box-shadow: 0 4px 14px rgba(52, 152, 219, 0.14), 0 2px 0 #fff inset;
+  margin: 0 3px;
+  text-shadow: 0 1px 0 #217dbb, 0 2px 6px rgba(44,62,80,0.10);
+  transition: transform 0.13s, box-shadow 0.13s;
+}
+
+/* Ball hover effect for pop */
+.red-ball:hover, .yellow-ball:hover, .blue-ball:hover {
+  transform: scale(1.10);
+  box-shadow: 0 6px 18px rgba(44,62,80,0.23), 0 2px 0 #fff inset;
+}
+
+/* Ensure balls in tables are always centered */
+.aligned-numbers {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
     background: #e74c3c !important;
     color: #fff !important;
     border: 2.5px solid #c0392b !important;
