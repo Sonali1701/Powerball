@@ -1,0 +1,307 @@
+/* style1.css - Dedicated styles for Cash 5 game */
+
+body.cash5 {
+    background: #f7fafc;
+    margin: 0;
+    padding: 0;
+}
+
+.container.main-flex {
+    display: flex;
+    flex-direction: row;
+    max-width: 1200px;
+    margin: 28px auto 0 auto;
+    padding: 0 10px 32px 10px;
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 4px 24px rgba(44,62,80,0.08);
+    min-height: 60vh;
+    gap: 18px;
+}
+.left-col, .right-col {
+    flex: 1 1 180px;
+    min-width: 170px;
+    padding-top: 16px;
+}
+.center-col {
+    flex: 3 1 0;
+    min-width: 320px;
+    padding: 16px 0 0 0;
+}
+
+.ball-panel {
+    margin: 0 auto 16px auto;
+    max-width: 650px;
+}
+
+.lottery-banner {
+    background: linear-gradient(90deg, #ffe066 0%, #27ae60 100%) !important;
+    color: #234;
+    font-size: 2em;
+    font-weight: bold;
+    text-align: center;
+    padding: 18px 0 10px 0;
+    letter-spacing: 2px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.07);
+    margin-bottom: 12px;
+    border-bottom: 4px solid #27ae60;
+}
+
+.tab-nav {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-start;
+    margin: 0 auto 18px auto;
+    max-width: 1200px;
+    padding: 0 10px;
+}
+.tab-btn {
+    padding: 7px 18px;
+    border: 1.5px solid #27ae60;
+    border-radius: 7px;
+    background: #fff;
+    color: #27ae60;
+    font-size: 1.01em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, border 0.15s;
+    margin-bottom: 2px;
+}
+.tab-btn.active, .tab-btn:hover, .tab-btn:focus {
+    background: #27ae60;
+    color: #fff;
+    border-color: #27ae60;
+}
+
+/* Powerball Section */
+.powerball-selection {
+    background: #f8f8f8;
+    padding: 15px;
+    margin: 0 0 15px;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+}
+
+.powerball-grid {
+    display: grid;
+    grid-template-columns: repeat(10, 1fr);
+    gap: 6px;
+    margin: 10px 0;
+}
+
+.legend {
+    font-size: 14px;
+    color: #666;
+    margin: 5px 0;
+    font-weight: 500;
+}
+
+.powerball-label {
+    font-weight: bold;
+    color: #555;
+    margin-bottom: 5px;
+    display: block;
+}
+
+
+.results-table {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 1px 6px rgba(44,62,80,0.07);
+    margin-bottom: 24px;
+    padding: 0 8px;
+    font-size: 1.08em;
+    width: 100%;
+    border-collapse: collapse;
+}
+.results-table th, .results-table td {
+    padding: 14px 10px;
+    font-size: 1.08em;
+    border-bottom: 1px solid #eaeaea;
+    text-align: center;
+}
+.results-table th {
+    background: #f8faff;
+    color: #27ae60;
+}
+
+#cash5-custom-note-combo, #cash5-custom-note-2x, #cash5-custom-note-new {
+    background: #f8faff;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(44,62,80,0.07);
+    padding: 12px 8px 18px 8px;
+    margin: 24px 0 18px 0;
+    min-height: 80px;
+    text-align: center;
+    font-size: 1.13em;
+    color: #555;
+    width: 100%;
+}
+textarea[id^='cash5-note-textarea-'] {
+    width: 98%;
+    min-height: 120px;
+    font-size: 1.13em;
+    border-radius: 8px;
+    border: 1.5px solid #e0e0e0;
+    padding: 8px;
+    resize: vertical;
+    margin-bottom: 8px;
+}
+button[id^='cash5-download-note-btn-'], #cash5-download-combo-csv-btn {
+    display: block;
+    margin: 10px auto 0 auto;
+    font-size: 0.98em;
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: 1.5px solid #27ae60;
+    background: #fff;
+    color: #27ae60;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background 0.15s, color 0.15s, border 0.15s;
+}
+button[id^='cash5-download-note-btn-']:hover, #cash5-download-combo-csv-btn:hover {
+    background: #27ae60;
+    color: #fff;
+    border-color: #27ae60;
+}
+
+@media (max-width: 900px) {
+    .container.main-flex {
+        flex-direction: column;
+        padding: 0 2px 24px 2px;
+    }
+    .left-col, .center-col, .right-col {
+        min-width: 0;
+        padding: 0;
+    }
+    .ball-panel {
+        max-width: 100%;
+    }
+}
+
+@media (max-width: 600px) {
+    .lottery-banner {
+        font-size: 1.2em;
+        padding: 10px 0 6px 0;
+    }
+    .tab-nav {
+        flex-direction: column;
+        gap: 4px;
+        padding: 0 2px;
+    }
+    .container.main-flex {
+        padding: 0 0 16px 0;
+        border-radius: 8px;
+    }
+    .powerball-selection {
+        padding: 7px 0 5px 0;
+        border-radius: 6px;
+    }
+    .powerball-grid {
+        grid-template-columns: repeat(5, 1fr);
+        gap: 4px;
+    }
+}
+
+
+.lottery-banner {
+    background: linear-gradient(90deg, #ffe066 0%, #27ae60 100%) !important;
+    color: #234;
+    font-size: 2em;
+    font-weight: bold;
+    text-align: center;
+    padding: 18px 0 10px 0;
+    letter-spacing: 2px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.07);
+    margin-bottom: 8px;
+    border-bottom: 4px solid #27ae60;
+}
+
+.powerball-selection {
+    background: #e8fff2;
+    padding: 15px 0 10px 0;
+    margin: 0 0 15px;
+    border: 1px solid #b6e6c9;
+    border-radius: 8px;
+}
+
+.powerball-label {
+    font-weight: bold;
+    color: #27ae60;
+    margin-bottom: 5px;
+    display: block;
+}
+
+.powerball-grid {
+    display: grid;
+    grid-template-columns: repeat(10, 1fr);
+    gap: 6px;
+    margin: 10px 0;
+}
+
+.ball {
+    background: #fff;
+    border: 2px solid #27ae60;
+    color: #27ae60;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1em;
+    font-weight: bold;
+    margin: 0 2px;
+    line-height: 32px;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s, border 0.2s;
+}
+.ball.selected {
+    background: #27ae60;
+    color: #fff;
+    border: 2px solid #27ae60;
+}
+
+.results-table {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 1px 6px rgba(44,62,80,0.07);
+    margin-bottom: 24px;
+    padding: 0 8px;
+    font-size: 1.08em;
+    width: 100%;
+    border-collapse: collapse;
+}
+.results-table th, .results-table td {
+    padding: 14px 10px;
+    font-size: 1.08em;
+    border-bottom: 1px solid #eaeaea;
+    text-align: center;
+}
+.results-table th {
+    background: #f8faff;
+    color: #27ae60;
+}
+
+.generated-ball {
+    display: inline-block;
+    background: #27ae60;
+    color: #fff;
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    text-align: center;
+    line-height: 36px;
+    font-size: 1.2em;
+    font-weight: bold;
+    margin: 0 4px;
+}
+
+/* Notes panel for Cash 5 */
+#cash5-custom-note-combo, #cash5-custom-note-2x, #cash5-custom-note-new {
+    background: #f8faff;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(44,62,80,0.07);
+    padding: 12px 8px;
+}

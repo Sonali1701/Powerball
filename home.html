@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lottery Game Selector</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .game-select-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 90vh;
+        }
+        .game-select-title {
+            font-size: 2.2em;
+            font-weight: bold;
+            margin-bottom: 32px;
+            color: #234;
+        }
+        .game-select-btn {
+            padding: 24px 48px;
+            font-size: 1.4em;
+            font-weight: 600;
+            border-radius: 12px;
+            border: 2px solid #3498db;
+            background: #f8faff;
+            color: #3498db;
+            margin: 18px 0;
+            cursor: pointer;
+            transition: background 0.2s, color 0.2s, border 0.2s;
+            box-shadow: 0 2px 12px rgba(44,62,80,0.08);
+        }
+        .game-select-btn:hover {
+            background: #3498db;
+            color: #fff;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-select-container">
+        <div class="game-select-title">Select a Lottery Game</div>
+        <button class="game-select-btn" onclick="window.location.href='index.html'">Powerball</button>
+        <button class="game-select-btn" onclick="window.location.href='cash5.html'">Cash 5</button>
+    </div>
+</body>
+</html>
