@@ -73,14 +73,7 @@ body.cash5 {
     border-color: #27ae60;
 }
 
-/* Powerball Section */
-.powerball-selection {
-    background: #f8f8f8;
-    padding: 15px;
-    margin: 0 0 15px;
-    border: 1px solid #e0e0e0;
-    border-radius: 4px;
-}
+
 
 .powerball-grid {
     display: grid;
@@ -164,6 +157,33 @@ button[id^='cash5-download-note-btn-']:hover, #cash5-download-combo-csv-btn:hove
     background: #27ae60;
     color: #fff;
     border-color: #27ae60;
+}
+
+.show-more-btn {
+  display: block;
+  margin: 12px auto 18px auto;
+  padding: 8px 22px;
+  font-size: 1.08em;
+  font-weight: 600;
+  color: #fff;
+  background: linear-gradient(90deg, #27ae60 0%, #2ecc71 100%);
+  border: none;
+  border-radius: 24px;
+  box-shadow: 0 2px 8px rgba(39,174,96,0.12);
+  cursor: pointer;
+  transition: background 0.18s, box-shadow 0.18s, color 0.18s, transform 0.13s;
+  outline: none;
+}
+.show-more-btn:hover, .show-more-btn:focus {
+  background: linear-gradient(90deg, #2ecc71 0%, #27ae60 100%);
+  color: #fff;
+  box-shadow: 0 4px 18px rgba(39,174,96,0.18);
+  transform: translateY(-2px) scale(1.04);
+}
+.show-more-btn:active {
+  background: #219150;
+  color: #eaf3fb;
+  transform: scale(0.97);
 }
 
 @media (max-width: 900px) {

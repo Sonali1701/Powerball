@@ -42,10 +42,7 @@
         <div class="container main-flex">
             <div class="left-col"></div>
             <div class="center-col">
-                <div id="cash5-duos-table"></div>
-                <div id="cash5-trios-table"></div>
-                <div id="cash5-quads-table"></div>
-                <div id="cash5-fives-table"></div>
+                <div id="cash5-freq-table"></div>
                 <div id="cash5-twox-results"></div>
             </div>
             <div class="right-col">
@@ -75,14 +72,43 @@
     </div>
     <!-- Random Tab Content -->
     <div id="tab-random" class="tab-content" style="display:none;">
-        <div class="container main-flex">
-            <div class="left-col"></div>
-            <div class="center-col">
-                <button id="cash5-generate-btn" style="margin: 20px 0; font-size: 1.2em; padding: 10px 22px; border-radius: 8px; border: 1.5px solid #27ae60; background: #fff; color: #27ae60; cursor: pointer;">Generate Random Numbers</button>
-                <div id="cash5-random-result" style="margin-top:24px;font-size:1.5em;"></div>
+    <div class="container main-flex">
+        <div class="left-col"></div>
+        <div class="center-col">
+            <div class="generator-panel" style="margin-bottom: 32px;">
+                <h2 style="color:#27ae60;">1. Quick Random Generator</h2>
+                <div style="margin-bottom: 18px;">
+                    <button class="cash5-multi-gen-btn" data-count="4">Generate 4</button>
+                    <button class="cash5-multi-gen-btn" data-count="8">Generate 8</button>
+                    <button class="cash5-multi-gen-btn" data-count="16">Generate 16</button>
+                </div>
+                <div id="cash5-generated-table" style="margin-top:18px;"></div>
+                <div id="cash5-csv-loading" style="margin-top:10px; color:#888; font-size:1.05em;"></div>
+                <div style="margin-top:18px; color:#888; font-size:1.05em;">Each combination: 5 unique numbers (1-38).</div>
             </div>
-            <div class="right-col"></div>
+            <div class="generator-panel" style="margin-bottom: 32px;">
+                <h2 style="color:#27ae60;">2. Create Combination from 2 Duos</h2>
+                <label for="cash5-duo1-select" class="duo-select-label">Select Duo 1:</label>
+                <select id="cash5-duo1-select" class="duo-select"></select>
+                <label for="cash5-duo2-select" class="duo-select-label">Select Duo 2:</label>
+                <select id="cash5-duo2-select" class="duo-select"></select>
+                <button id="cash5-build-duo-combo-btn" class="cash5-freq-gen-btn" disabled>Generate from Two Duos</button>
+                <button id="cash5-clear-duo-selection-btn" class="cash5-multi-gen-btn" style="margin-top:8px; background: #eee; color: #27ae60; border: 1.5px solid #b6e6c9;">Clear Selection</button>
+                <div id="cash5-built-duo-combo-result"></div>
+            </div>
+            <div class="generator-panel">
+                <h2 style="color:#27ae60;">3. Create Combination from 1 Duo and 1 Trio</h2>
+                <label for="cash5-combo-duo-select" class="duo-select-label">Select Duo:</label>
+                <select id="cash5-combo-duo-select" class="duo-select"></select>
+                <label for="cash5-combo-trio-select" class="duo-select-label">Select Trio:</label>
+                <select id="cash5-combo-trio-select" class="duo-select"></select>
+                <button id="cash5-build-combo-btn" class="cash5-freq-gen-btn" style="margin-top:8px;" disabled>Generate from Duo + Trio</button>
+                <button id="cash5-clear-combo-selection-btn" class="cash5-multi-gen-btn" style="margin-top:8px; background: #eee; color: #27ae60; border: 1.5px solid #b6e6c9;">Clear Selection</button>
+                <div id="cash5-built-combo-result" style="margin-top:18px;"></div>
+            </div>
         </div>
+        <div class="right-col"></div>
     </div>
+</div>
 </body>
 </html>
