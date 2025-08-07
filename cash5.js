@@ -2,6 +2,111 @@
 // Assumes 'Cash5_results(Andrea) - SCEL_Results.csv' is the data file
 
 document.addEventListener('DOMContentLoaded', function() {
+    // --- Download Notes Buttons (Combo, 2x, New) ---
+    [
+        { btn: 'cash5-download-note-btn-combo', textarea: 'cash5-note-textarea-combo', filename: 'cash5_combo_notes.txt' },
+        { btn: 'cash5-download-note-btn-2x', textarea: 'cash5-note-textarea-2x', filename: 'cash5_2x_notes.txt' },
+        { btn: 'cash5-download-note-btn-new', textarea: 'cash5-note-textarea-new', filename: 'cash5_new_notes.txt' }
+    ].forEach(cfg => {
+        const btn = document.getElementById(cfg.btn);
+        if (btn) {
+            btn.onclick = function() {
+                const ta = document.getElementById(cfg.textarea);
+                if (!ta || ta.value.trim() === '') {
+                    alert('Your note is empty!');
+                    return;
+                }
+                const blob = new Blob([ta.value], { type: 'text/plain' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = cfg.filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            };
+        }
+    });
+    // --- Download CSV for Combo Tab ---
+    const csvBtn = document.getElementById('cash5-download-combo-csv-btn');
+    if (csvBtn) {
+        csvBtn.onclick = function() {
+            // Gather all pairs and trios from history
+            if (!window.cash5DrawRows) {
+                alert('Data not loaded yet!');
+                return;
+            }
+            const pairCounts = new Map();
+            const trioCounts = new Map();
+            const pairDraws = new Map();
+            const trioDraws = new Map();
+            // Helper to get all k-combos
+            function getCombos(arr, k) {
+                const results = [];
+                function helper(start, combo) {
+                    if (combo.length === k) {
+                        results.push(combo.slice().sort((a,b)=>a-b));
+                        return;
+                    }
+                    for (let i = start; i < arr.length; i++) {
+                        combo.push(arr[i]);
+                        helper(i + 1, combo);
+                        combo.pop();
+                    }
+                }
+                helper(0, []);
+                return results;
+            }
+            (window.cash5DrawRows||[]).forEach(draw => {
+                const arr = draw.mainArr;
+                if (!arr || arr.length < 2) return;
+                // Pairs
+                getCombos(arr, 2).forEach(combo => {
+                    const key = combo.join('-');
+                    pairCounts.set(key, (pairCounts.get(key)||0)+1);
+                    if (!pairDraws.has(key)) pairDraws.set(key, []);
+                    pairDraws.get(key).push(draw.date);
+                });
+                // Trios
+                getCombos(arr, 3).forEach(combo => {
+                    const key = combo.join('-');
+                    trioCounts.set(key, (trioCounts.get(key)||0)+1);
+                    if (!trioDraws.has(key)) trioDraws.set(key, []);
+                    trioDraws.get(key).push(draw.date);
+                });
+            });
+            // Build CSV
+            let csvRows = [];
+            csvRows.push(['Type','Combo','Count','Dates']);
+            pairCounts.forEach((count, combo) => {
+                const datesStr = (pairDraws.get(combo)||[]).join('; ');
+                csvRows.push(['Pair', combo.replace(/-/g,'-'), count, datesStr]);
+            });
+            trioCounts.forEach((count, combo) => {
+                const datesStr = (trioDraws.get(combo)||[]).join('; ');
+                csvRows.push(['Trio', combo.replace(/-/g,'-'), count, datesStr]);
+            });
+            const csvContent = csvRows.map(row => row.map(val => {
+                const str = String(val);
+                if (str.includes('"')) return '"' + str.replace(/"/g, '""') + '"';
+                if (str.includes(',') || str.includes('\n') || str.includes('\r') || str.includes(';')) return '"' + str + '"';
+                return str;
+            }).join(',')).join('\r\n');
+            const blob = new Blob([csvContent], {type: 'text/csv'});
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'cash5_pairs_trios.csv';
+            document.body.appendChild(link);
+            link.click();
+            setTimeout(() => {
+                document.body.removeChild(link);
+                URL.revokeObjectURL(url);
+            }, 100);
+        };
+    }
+
     // --- Notes auto-save logic ---
     const noteConfigs = [
         { textarea: 'cash5-note-textarea-combo', key: 'cash5_notes_combo' },
@@ -77,6 +182,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     renderCash5ComboBallPanel();
                     renderCash5TwoxBallPanel();
                     renderCash5NewBallPanel();
+                    if (typeof window.initCash5RandomTab === 'function') window.initCash5RandomTab();
                 }
             });
         });
@@ -106,22 +212,22 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     function renderCash5ComboResults() {
-        const div = document.getElementById('cash5-combo-tab-results');
-        if (!div) return;
-        let html = `<table class='results-table'><thead><tr><th>Date</th><th>Winning Numbers</th><th>Multiplier</th><th>Matches</th></tr></thead><tbody>`;
-        const selected = window.cash5SelectedCombo || [];
-        let hasMatches = false;
-        (window.cash5DrawRows||[]).forEach(draw => {
-            let matches = selected.filter(n => draw.mainArr.includes(n)).length;
-            if (matches > 0) hasMatches = true;
-            html += `<tr><td>${draw.date||''}</td><td>${draw.mainArr.map(n => selected.includes(n) ? `<span class='ball selected'>${n}</span>` : n).join('-')}</td><td>${draw.multiplier||''}</td><td>${matches}</td></tr>`;
-        });
-        html += '</tbody></table>';
-        if (!hasMatches && selected.length > 0) {
-            html = `<div style='color:#aaa; margin-bottom:12px;'>No draws contain any of the selected balls.</div>`;
-        }
-        div.innerHTML = html;
+    const div = document.getElementById('cash5-combo-tab-results');
+    if (!div) return;
+    let html = `<table class='results-table cash5-wide results-table-interactive'><thead><tr><th>Date</th><th>Winning Numbers</th><th>Multiplier</th></tr></thead><tbody>`;
+    const selected = window.cash5SelectedCombo || [];
+    let hasMatches = false;
+    (window.cash5DrawRows||[]).forEach(draw => {
+        let matches = selected.filter(n => draw.mainArr.includes(n)).length;
+        if (matches > 0) hasMatches = true;
+        html += `<tr tabindex='0'><td>${draw.date||''}</td><td>${draw.mainArr.map(n => selected.includes(n) ? `<span class='ball selected'>${n}</span>` : `<span class='plain-number'>${n}</span>`).join('')}</td><td>${draw.multiplier||''}</td></tr>`;
+    });
+    html += '</tbody></table>';
+    if (!hasMatches && selected.length > 0) {
+        html = `<div style='color:#aaa; margin-bottom:12px;'>No draws contain any of the selected balls.</div>`;
     }
+    div.innerHTML = html;
+}
 
     // --- 2x Tab: Ball Panel & Results ---
     window.cash5SelectedTwox = [];
@@ -367,94 +473,141 @@ function populateCash5DuoTrioDropdowns(draws) {
 }
 
 // --- Cash 5 Random Tab Event Handlers ---
-document.addEventListener('DOMContentLoaded', function() {
-    // Multi-gen
+// All event handlers for the Random tab are now set up ONLY inside window.initCash5RandomTab, which is called after CSV load.
+// This avoids duplicate/conflicting event handlers and ensures all elements exist.
+
+window.initCash5RandomTab = function() {
+    // Populate dropdowns
+    populateCash5DuoTrioDropdowns((window.cash5DrawRows||[]).map(d=>d.mainArr));
+
+    // Quick Random Generator buttons (Generate 4, 8, 16)
     document.querySelectorAll('.cash5-multi-gen-btn').forEach(btn => {
         btn.onclick = function() {
-            renderCash5Combinations(parseInt(btn.getAttribute('data-count')));
+            const count = parseInt(btn.getAttribute('data-count'), 10);
+            renderCash5Combinations(count);
         };
     });
-    // Clear duos
-    const clearDuoBtn = document.getElementById('cash5-clear-duo-selection-btn');
-    if (clearDuoBtn) {
-        clearDuoBtn.onclick = function() {
-            const duo1 = document.getElementById('cash5-duo1-select');
-            const duo2 = document.getElementById('cash5-duo2-select');
-            duo1.selectedIndex = -1;
-            duo2.selectedIndex = -1;
-            document.getElementById('cash5-built-duo-combo-result').innerHTML = '';
-            document.getElementById('cash5-build-duo-combo-btn').disabled = true;
-        };
-    }
-    // Clear combo
-    const clearComboBtn = document.getElementById('cash5-clear-combo-selection-btn');
-    if (clearComboBtn) {
-        clearComboBtn.onclick = function() {
-            const duo = document.getElementById('cash5-combo-duo-select');
-            const trio = document.getElementById('cash5-combo-trio-select');
-            duo.selectedIndex = -1;
-            trio.selectedIndex = -1;
-            document.getElementById('cash5-built-combo-result').innerHTML = '';
-            document.getElementById('cash5-build-combo-btn').disabled = true;
-        };
-    }
-    // Enable/disable build buttons
-    const buildDuoBtn = document.getElementById('cash5-build-duo-combo-btn');
+
+    // Two Duos Generator
     const duo1 = document.getElementById('cash5-duo1-select');
     const duo2 = document.getElementById('cash5-duo2-select');
-    if (buildDuoBtn && duo1 && duo2) {
-        [duo1, duo2].forEach(sel => sel.addEventListener('change', function() {
-            buildDuoBtn.disabled = !(duo1.value && duo2.value);
-        }));
-        buildDuoBtn.onclick = function() {
-            const d1 = duo1.value.split('-').map(Number);
-            const d2 = duo2.value.split('-').map(Number);
-            if (d1.length===2 && d2.length===2) {
-                const combined = [...new Set([...d1, ...d2])];
-                if (combined.length === 4) {
-                    document.getElementById('cash5-built-duo-combo-result').innerHTML =
-                        `<div class="result-card fade-in"><div class="result-title">Generated Combination</div><div class="result-balls">${combined.sort((a,b)=>a-b).map(n=>`<span class='ball selected'>${n}</span>`).join(' ')}</div></div>`;
-                    return;
-                }
-            }
-            alert('Please select two valid duos to combine');
-        };
+    const buildDuoComboBtn = document.getElementById('cash5-build-duo-combo-btn');
+    const duoComboResult = document.getElementById('cash5-built-duo-combo-result');
+    const clearDuoSelectionBtn = document.getElementById('cash5-clear-duo-selection-btn');
+
+    function updateDuoComboBtn() {
+        buildDuoComboBtn.disabled = !(duo1 && duo2 && duo1.value && duo2.value && duo1.value !== duo2.value);
     }
-    // Enable/disable build combo
-    const buildComboBtn = document.getElementById('cash5-build-combo-btn');
+    if (duo1 && duo2 && buildDuoComboBtn) {
+        duo1.onchange = duo2.onchange = updateDuoComboBtn;
+        buildDuoComboBtn.onclick = function() {
+            if (!(duo1.value && duo2.value && duo1.value !== duo2.value)) return;
+            // Merge duos, ensure unique numbers, must be 4 numbers
+            let nums = duo1.value.split('-').concat(duo2.value.split('-')).map(Number);
+            nums = Array.from(new Set(nums));
+            if (nums.length !== 4) {
+                duoComboResult.innerHTML = '<div style="color:#e74c3c;">Selected duos must have 4 unique numbers.</div>';
+                return;
+            }
+            // Generate 5th number
+            let extra = generateCash5UniqueNumbers(1, 1, 38, nums)[0];
+            let combo = nums.concat([extra]).sort((a,b)=>a-b);
+            duoComboResult.innerHTML = `<div class='result-card'><div class='result-title'>Generated Combo:</div><div>${combo.map(n=>`<span class='ball selected' style='margin:0 6px;font-size:1.3em;'>${n}</span>`).join('')}</div></div>`;
+        };
+        clearDuoSelectionBtn.onclick = function() {
+            duo1.selectedIndex = 0;
+            duo2.selectedIndex = 0;
+            duoComboResult.innerHTML = '';
+            updateDuoComboBtn();
+        };
+        updateDuoComboBtn();
+    }
+
+    // Duo + Trio Generator
     const comboDuo = document.getElementById('cash5-combo-duo-select');
     const comboTrio = document.getElementById('cash5-combo-trio-select');
-    if (buildComboBtn && comboDuo && comboTrio) {
-        [comboDuo, comboTrio].forEach(sel => sel.addEventListener('change', function() {
-            buildComboBtn.disabled = !(comboDuo.value && comboTrio.value);
-        }));
+    const buildComboBtn = document.getElementById('cash5-build-combo-btn');
+    const comboResult = document.getElementById('cash5-built-combo-result');
+    const clearComboSelectionBtn = document.getElementById('cash5-clear-combo-selection-btn');
+
+    function updateComboBtn() {
+        buildComboBtn.disabled = !(comboDuo && comboTrio && comboDuo.value && comboTrio.value && !comboTrio.value.split('-').some(n => comboDuo.value.split('-').includes(n)));
+    }
+    if (comboDuo && comboTrio && buildComboBtn) {
+        comboDuo.onchange = comboTrio.onchange = updateComboBtn;
         buildComboBtn.onclick = function() {
-            const d = comboDuo.value.split('-').map(Number);
-            const t = comboTrio.value.split('-').map(Number);
-            if (d.length===2 && t.length===3) {
-                const combined = [...new Set([...d, ...t])];
-                if (combined.length === 5) {
-                    document.getElementById('cash5-built-combo-result').innerHTML =
-                        `<div class="result-card fade-in"><div class="result-title">Generated Combination</div><div class="result-balls">${combined.sort((a,b)=>a-b).map(n=>`<span class='ball selected'>${n}</span>`).join(' ')}</div></div>`;
-                    return;
-                }
+            if (!(comboDuo.value && comboTrio.value)) return;
+            // Merge duo and trio, ensure unique numbers, must be 5 numbers
+            let nums = comboDuo.value.split('-').concat(comboTrio.value.split('-')).map(Number);
+            nums = Array.from(new Set(nums));
+            if (nums.length !== 5) {
+                comboResult.innerHTML = '<div style="color:#e74c3c;">Duo and Trio must combine to 5 unique numbers.</div>';
+                return;
             }
-            alert('Please select a valid duo and trio to combine');
+            comboResult.innerHTML = `<div class='result-card'><div class='result-title'>Generated Combo:</div><div>${nums.map(n=>`<span class='ball selected' style='margin:0 6px;font-size:1.3em;'>${n}</span>`).join('')}</div></div>`;
         };
+        clearComboSelectionBtn.onclick = function() {
+            comboDuo.selectedIndex = 0;
+            comboTrio.selectedIndex = 0;
+            comboResult.innerHTML = '';
+            updateComboBtn();
+        };
+        updateComboBtn();
     }
-    // Populate dropdowns from historical draws if available
-    if (window.cash5DrawRows && Array.isArray(window.cash5DrawRows)) {
-        const draws = window.cash5DrawRows.map(d=>d.mainArr);
-        populateCash5DuoTrioDropdowns(draws);
+}
+
+function renderCash5ComboBallPanel() {
+    const panel = document.getElementById('cash5-combo-ball-panel');
+    if (!panel) return;
+    let html = '<div class="powerball-selection"><div class="powerball-label">Select numbers</div><div class="powerball-grid" style="display: flex; flex-wrap: wrap; justify-content: space-around;">';
+    for (let i = 1; i <= 38; i++) {
+        html += `<span class="ball${window.cash5SelectedCombo.includes(i)?' selected':''}" data-ball="${i}" style="border-radius: 50%; width: 30px; height: 30px; display: inline-block; margin: 5px; text-align: center; line-height: 30px;">${i}</span>`;
     }
-});
+    html += '</div></div>';
+    panel.innerHTML = html;
+    panel.querySelectorAll('.ball').forEach(ball => {
+        ball.onclick = function() {
+            const n = parseInt(ball.getAttribute('data-ball'));
+            if (window.cash5SelectedCombo.includes(n)) {
+                window.cash5SelectedCombo = window.cash5SelectedCombo.filter(x=>x!==n);
+            } else {
+                window.cash5SelectedCombo.push(n);
+            } // No selection limit
+            renderCash5ComboBallPanel();
+            renderCash5ComboResults();
+        };
+    });
+}
+
+function renderCash5TwoxBallPanel() {
+    const panel = document.getElementById('cash5-twox-ball-panel');
+    if (!panel) return;
+    let html = '<div class="powerball-selection"><div class="powerball-label">Select numbers</div><div class="powerball-grid" style="display: flex; flex-wrap: wrap; justify-content: space-around;">';
+    for (let i = 1; i <= 38; i++) {
+        html += `<span class="ball${window.cash5SelectedTwox.includes(i)?' selected':''}" data-ball="${i}" style="border-radius: 50%; width: 30px; height: 30px; display: inline-block; margin: 5px; text-align: center; line-height: 30px;">${i}</span>`;
+    }
+    html += '</div></div>';
+    panel.innerHTML = html;
+    panel.querySelectorAll('.ball').forEach(ball => {
+        ball.onclick = function() {
+            const n = parseInt(ball.getAttribute('data-ball'));
+            if (window.cash5SelectedTwox.includes(n)) {
+                window.cash5SelectedTwox = window.cash5SelectedTwox.filter(x=>x!==n);
+            } else {
+                window.cash5SelectedTwox.push(n);
+            } // No selection limit
+            renderCash5TwoxBallPanel();
+            renderCash5TwoxResults();
+        };
+    });
+}
 
 function renderCash5NewBallPanel() {
     const panel = document.getElementById('cash5-new-ball-panel');
     if (!panel) return;
-    let html = '<div class="powerball-selection"><div class="powerball-label">Select numbers</div><div class="powerball-grid">';
+    let html = '<div class="powerball-selection"><div class="powerball-label">Select numbers</div><div class="powerball-grid" style="display: flex; flex-wrap: wrap; justify-content: space-around;">';
     for (let i = 1; i <= 38; i++) {
-        html += `<span class="ball${window.cash5SelectedNew.includes(i)?' selected':''}" data-ball="${i}">${i}</span>`;
+        html += `<span class="ball${window.cash5SelectedNew.includes(i)?' selected':''}" data-ball="${i}" style="border-radius: 50%; width: 30px; height: 30px; display: inline-block; margin: 5px; text-align: center; line-height: 30px;">${i}</span>`;
     }
     html += '</div></div>';
     panel.innerHTML = html;
@@ -471,6 +624,30 @@ function renderCash5NewBallPanel() {
         };
     });
 }
+
+function renderCash5RandomBallPanel() {
+    const panel = document.getElementById('cash5-random-ball-panel');
+    if (!panel) return;
+    let html = '<div class="powerball-selection"><div class="powerball-label">Select numbers</div><div class="powerball-grid" style="display: flex; flex-wrap: wrap; justify-content: space-around;">';
+    for (let i = 1; i <= 38; i++) {
+        html += `<span class="ball${window.cash5SelectedRandom.includes(i)?' selected':''}" data-ball="${i}" style="border-radius: 50%; width: 30px; height: 30px; display: inline-block; margin: 5px; text-align: center; line-height: 30px;">${i}</span>`;
+    }
+    html += '</div></div>';
+    panel.innerHTML = html;
+    panel.querySelectorAll('.ball').forEach(ball => {
+        ball.onclick = function() {
+            const n = parseInt(ball.getAttribute('data-ball'));
+            if (window.cash5SelectedRandom.includes(n)) {
+                window.cash5SelectedRandom = window.cash5SelectedRandom.filter(x=>x!==n);
+            } else {
+                window.cash5SelectedRandom.push(n);
+            } // No selection limit
+            renderCash5RandomBallPanel();
+            renderCash5RandomResults();
+        };
+    });
+}
+
 function renderCash5NewResults() {
     const div = document.getElementById('cash5-new-tab-results');
     if (!div) return;
