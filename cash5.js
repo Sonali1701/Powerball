@@ -1,7 +1,73 @@
 // Cash 5 Analyzer & Generator Logic
 // Assumes 'Cash5_results(Andrea) - SCEL_Results.csv' is the data file
 
+// Performance optimization utilities
+const perf = {
+    // Debounce function to limit how often a function can be called
+    debounce: (func, wait) => {
+        let timeout;
+        return function(...args) {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => func.apply(this, args), wait);
+        };
+    },
+    
+    // Throttle function to limit how often a function can be called
+    throttle: (func, limit) => {
+        let inThrottle;
+        return function() {
+            const args = arguments;
+            const context = this;
+            if (!inThrottle) {
+                func.apply(context, args);
+                inThrottle = true;
+                setTimeout(() => inThrottle = false, limit);
+            }
+        };
+    },
+    
+    // Optimized forEach for large arrays
+    batchProcess: (array, process, batchSize = 100, timeout = 50) => {
+        let index = 0;
+        const total = array.length;
+        
+        const processBatch = () => {
+            const batchEnd = Math.min(index + batchSize, total);
+            for (; index < batchEnd; index++) {
+                process(array[index], index, array);
+            }
+            
+            if (index < total) {
+                setTimeout(processBatch, timeout);
+            }
+        };
+        
+        processBatch();
+    }
+};
+
+// Cache DOM elements for better performance
+const domCache = {
+    comboResults: null,
+    newResults: null,
+    comboBallPanel: null,
+    newBallPanel: null,
+    twoxBallPanel: null,
+    randomBallPanel: null,
+    
+    init: function() {
+        this.comboResults = document.getElementById('cash5-combo-tab-results');
+        this.newResults = document.getElementById('cash5-new-tab-results');
+        this.comboBallPanel = document.getElementById('cash5-combo-ball-panel');
+        this.newBallPanel = document.getElementById('cash5-new-ball-panel');
+        this.twoxBallPanel = document.getElementById('cash5-twox-ball-panel');
+        this.randomBallPanel = document.getElementById('cash5-random-ball-panel');
+    }
+};
+
 document.addEventListener('DOMContentLoaded', function() {
+    // Initialize DOM cache
+    domCache.init();
     // --- Download Notes Buttons (Combo, 2x, New) ---
     [
         { btn: 'cash5-download-note-btn-combo', textarea: 'cash5-note-textarea-combo', filename: 'cash5_combo_notes.txt' },
@@ -189,45 +255,161 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // --- Combo Tab: Ball Panel & Results ---
     window.cash5SelectedCombo = [];
+    // Cache for ball panels to avoid unnecessary re-renders
+    const ballPanelCache = {
+        combo: { lastSelected: null, html: '' },
+        new: { lastSelected: null, html: '' },
+        twox: { lastSelected: null, html: '' },
+        random: { lastSelected: null, html: '' }
+    };
+
     function renderCash5ComboBallPanel() {
-        const panel = document.getElementById('cash5-combo-ball-panel');
-        if (!panel) return;
-        let html = '<div class="powerball-selection"><div class="powerball-label">Select numbers</div><div class="powerball-grid">';
-        for (let i = 1; i <= 42; i++) {
-            html += `<span class="ball${window.cash5SelectedCombo.includes(i)?' selected':''}" data-ball="${i}">${i}</span>`;
+        if (!domCache.comboBallPanel) return;
+        
+        const selected = window.cash5SelectedCombo || [];
+        const selectedKey = selected.sort((a, b) => a - b).join(',');
+        
+        // Return cached result if selection hasn't changed
+        if (ballPanelCache.combo.lastSelected === selectedKey) {
+            domCache.comboBallPanel.innerHTML = ballPanelCache.combo.html;
+            return;
         }
-        html += '</div></div>';
-        panel.innerHTML = html;
-        panel.querySelectorAll('.ball').forEach(ball => {
-            ball.onclick = function() {
-                const n = parseInt(ball.getAttribute('data-ball'));
-                if (window.cash5SelectedCombo.includes(n)) {
-                    window.cash5SelectedCombo = window.cash5SelectedCombo.filter(x=>x!==n);
+        
+        // Use document fragment for better performance
+        const fragment = document.createDocumentFragment();
+        const container = document.createElement('div');
+        container.className = 'powerball-selection';
+        container.innerHTML = '<div class="powerball-label">Select numbers</div><div class="powerball-grid"></div>';
+        
+        const grid = container.querySelector('.powerball-grid');
+        
+        // Create balls in batches to prevent UI freeze
+        const createBalls = () => {
+            const batchSize = 21; // Process 21 balls at a time (half of 42)
+            let i = 1;
+            
+            const processBatch = () => {
+                const batchEnd = Math.min(i + batchSize, 43); // 1-42 inclusive
+                
+                for (; i < batchEnd; i++) {
+                    const ball = document.createElement('span');
+                    ball.className = `ball${selected.includes(i) ? ' selected' : ''}`;
+                    ball.textContent = i;
+                    ball.setAttribute('data-ball', i);
+                    grid.appendChild(ball);
+                }
+                
+                if (i < 43) {
+                    // Use setTimeout to allow UI updates between batches
+                    setTimeout(processBatch, 0);
                 } else {
-                    window.cash5SelectedCombo.push(n);
-                } // No selection limit
-                renderCash5ComboBallPanel();
-                renderCash5ComboResults();
+                    // All balls created, update the DOM
+                    fragment.appendChild(container);
+                    domCache.comboBallPanel.innerHTML = '';
+                    domCache.comboBallPanel.appendChild(fragment);
+                    
+                    // Cache the result
+                    ballPanelCache.combo.lastSelected = selectedKey;
+                    ballPanelCache.combo.html = domCache.comboBallPanel.innerHTML;
+                    
+                    // Add click handler to the grid (event delegation)
+                    grid.addEventListener('click', function(e) {
+                        const ball = e.target.closest('.ball');
+                        if (!ball) return;
+                        
+                        const num = parseInt(ball.getAttribute('data-ball'), 10);
+                        if (isNaN(num)) return;
+                        
+                        // Toggle selection
+                        const index = selected.indexOf(num);
+                        if (index > -1) {
+                            selected.splice(index, 1);
+                        } else {
+                            selected.push(num);
+                        }
+                        
+                        // Update UI
+                        renderCash5ComboBallPanel();
+                        renderCash5ComboResults();
+                    });
+                }
             };
+            
+            processBatch();
+        };
+        
+        createBalls();
+    }
+    // Cache for combo results to avoid recalculating
+    const comboResultsCache = {
+        lastSelected: null,
+        html: '',
+        hasMatches: false
+    };
+
+    function renderCash5ComboResults() {
+        if (!domCache.comboResults) return;
+        
+        const selected = window.cash5SelectedCombo || [];
+        const selectedKey = selected.sort((a, b) => a - b).join(',');
+        
+        // Return cached result if selection hasn't changed
+        if (comboResultsCache.lastSelected === selectedKey) {
+            domCache.comboResults.innerHTML = comboResultsCache.html;
+            return;
+        }
+        
+        // Use requestAnimationFrame for smoother UI updates
+        requestAnimationFrame(() => {
+            let html = `<table class='results-table cash5-wide results-table-interactive'><thead><tr><th>Date</th><th>Winning Numbers</th><th>Multiplier</th></tr></thead><tbody>`;
+            const draws = window.cash5DrawRows || [];
+            let hasMatches = false;
+            let rowCount = 0;
+            const maxVisibleRows = 100; // Limit number of visible rows for better performance
+            
+            // Process in batches to prevent UI freeze
+            perf.batchProcess(draws, (draw) => {
+                if (rowCount >= maxVisibleRows) return;
+                
+                const matches = selected.length > 0 ? selected.filter(n => draw.mainArr.includes(n)).length : 0;
+                if (selected.length === 0 || matches > 0) {
+                    if (matches > 0) hasMatches = true;
+                    if (rowCount < maxVisibleRows) {
+                        const rowHtml = `
+                            <tr tabindex='0'>
+                                <td>${draw.date||''}</td>
+                                <td>${draw.mainArr.map(n => 
+                                    selected.includes(n) 
+                                        ? `<span class='ball selected' data-ball='${n}'>${n}</span>` 
+                                        : `<span class='plain-number' data-ball='${n}'>${n}</span>`
+                                ).join('')}</td>
+                                <td>${draw.multiplier||''}</td>
+                            </tr>`;
+                        html += rowHtml;
+                        rowCount++;
+                    }
+                }
+            });
+            
+            html += '</tbody></table>';
+            if (rowCount >= maxVisibleRows) {
+                html += `<div class='result-more'>Showing ${maxVisibleRows} of ${draws.length} results. Select fewer numbers to see all matches.</div>`;
+            } else if (!hasMatches && selected.length > 0) {
+                html = `<div class='result-message'>No draws contain any of the selected balls.</div>`;
+            }
+            
+            // Cache the result
+            comboResultsCache.lastSelected = selectedKey;
+            comboResultsCache.html = html;
+            comboResultsCache.hasMatches = hasMatches;
+            
+            // Update the DOM
+            domCache.comboResults.innerHTML = html;
+            
+            // Add click handlers to plain numbers
+            addNumberClickHandlers(domCache.comboResults, 'cash5SelectedCombo');
         });
     }
-    function renderCash5ComboResults() {
-    const div = document.getElementById('cash5-combo-tab-results');
-    if (!div) return;
-    let html = `<table class='results-table cash5-wide results-table-interactive'><thead><tr><th>Date</th><th>Winning Numbers</th><th>Multiplier</th></tr></thead><tbody>`;
-    const selected = window.cash5SelectedCombo || [];
-    let hasMatches = false;
-    (window.cash5DrawRows||[]).forEach(draw => {
-        let matches = selected.filter(n => draw.mainArr.includes(n)).length;
-        if (matches > 0) hasMatches = true;
-        html += `<tr tabindex='0'><td>${draw.date||''}</td><td>${draw.mainArr.map(n => selected.includes(n) ? `<span class='ball selected'>${n}</span>` : `<span class='plain-number'>${n}</span>`).join('')}</td><td>${draw.multiplier||''}</td></tr>`;
-    });
-    html += '</tbody></table>';
-    if (!hasMatches && selected.length > 0) {
-        html = `<div style='color:#aaa; margin-bottom:12px;'>No draws contain any of the selected balls.</div>`;
-    }
-    div.innerHTML = html;
-}
 
     // --- 2x Tab: Ball Panel & Results ---
     window.cash5SelectedTwox = [];
@@ -648,54 +830,115 @@ function renderCash5RandomBallPanel() {
     });
 }
 
-function renderCash5NewResults() {
-    const div = document.getElementById('cash5-new-tab-results');
-    if (!div) return;
-    const selected = window.cash5SelectedNew || [];
-    let html = `<table class='results-table'><thead><tr><th>Date</th><th>Winning Numbers</th><th>Matches</th></tr></thead><tbody>`;
-    (window.cash5DrawRows||[]).forEach(draw => {
-            ball.onclick = function() {
-                const n = parseInt(ball.getAttribute('data-ball'));
-                if (window.cash5SelectedNew.includes(n)) {
-                    window.cash5SelectedNew = window.cash5SelectedNew.filter(x=>x!==n);
-                } else {
-                    window.cash5SelectedNew.push(n);
-                } // No selection limit
+    // Cache for new results to avoid recalculating
+    const newResultsCache = {
+        lastSelected: null,
+        html: '',
+        hasMatches: false
+    };
+
+    // Helper function to add click handlers to number elements
+    function addNumberClickHandlers(container, selectionArrayName) {
+        if (!container) return;
+        
+        // Use event delegation instead of adding individual handlers
+        container.addEventListener('click', function(event) {
+            const target = event.target.closest('.ball, .plain-number');
+            if (!target) return;
+            
+            const num = parseInt(target.getAttribute('data-ball'), 10);
+            if (isNaN(num)) return;
+            
+            // Get the appropriate selection array
+            const selectionArray = window[selectionArrayName] || [];
+            const index = selectionArray.indexOf(num);
+            
+            // Toggle selection
+            if (index > -1) {
+                selectionArray.splice(index, 1);
+            } else {
+                selectionArray.push(num);
+            }
+            
+            // Update the UI based on which tab we're in
+            if (selectionArrayName === 'cash5SelectedNew') {
                 renderCash5NewBallPanel();
                 renderCash5NewResults();
-            };
-        });
-    }
-    function renderCash5NewResults() {
-        const div = document.getElementById('cash5-new-tab-results');
-        if (!div) return;
-        const selected = window.cash5SelectedNew || [];
-        let html = `<table class='results-table'><thead><tr><th>Date</th><th>Winning Numbers</th><th>Matches</th></tr></thead><tbody>`;
-        (window.cash5DrawRows||[]).forEach(draw => {
-            // Only show draws with at least one match if any balls are selected
-            const matchCount = selected.filter(n => draw.mainArr.includes(n)).length;
-            if (selected.length === 0 || matchCount > 0) {
-                let ballsHtml = draw.mainArr.map(num =>
-                    selected.includes(num)
-                        ? `<span class="ball selected">${num}</span>`
-                        : `<span class="plain-number">${num}</span>`
-                ).join(' ');
-                html += `<tr><td>${draw.date||''}</td><td>${ballsHtml}</td><td>${matchCount}</td></tr>`;
+            } else if (selectionArrayName === 'cash5SelectedCombo') {
+                renderCash5ComboBallPanel();
+                renderCash5ComboResults();
             }
         });
-        html += '</tbody></table>';
-        div.innerHTML = html;
-        // Attach click handler to all .plain-number spans
-        div.querySelectorAll('.plain-number').forEach(el => {
-            el.style.cursor = 'pointer';
-            el.addEventListener('click', function() {
-                const num = parseInt(el.textContent, 10);
-                if (!isNaN(num) && !selected.includes(num)) {
-                    window.cash5SelectedNew.push(num);
-                    renderCash5NewBallPanel();
-                    renderCash5NewResults();
+    }
+
+    function renderCash5NewResults() {
+        if (!domCache.newResults) return;
+        
+        const selected = window.cash5SelectedNew || [];
+        const selectedKey = selected.sort((a, b) => a - b).join(',');
+        
+        // Return cached result if selection hasn't changed
+        if (newResultsCache.lastSelected === selectedKey) {
+            domCache.newResults.innerHTML = newResultsCache.html;
+            return;
+        }
+        
+        // Use requestAnimationFrame for smoother UI updates
+        requestAnimationFrame(() => {
+            let html = `<table class='results-table'><thead><tr><th>Date</th><th>Winning Numbers</th><th>Matches</th></tr></thead><tbody>`;
+            
+            // Filter and sort draws (newest first)
+            const allDraws = window.cash5DrawRows || [];
+            const filteredDraws = allDraws
+                .filter(draw => {
+                    if (selected.length === 0) return true;
+                    return selected.some(n => draw.mainArr.includes(n));
+                })
+                .sort((a, b) => new Date(b.date) - new Date(a.date));
+            
+            let rowCount = 0;
+            const maxVisibleRows = 100; // Limit number of visible rows for better performance
+            
+            // Process in batches to prevent UI freeze
+            perf.batchProcess(filteredDraws, (draw) => {
+                if (rowCount >= maxVisibleRows) return;
+                
+                const matchCount = selected.length > 0 ? selected.filter(n => draw.mainArr.includes(n)).length : 0;
+                const ballsHtml = draw.mainArr.map(num => {
+                    const isSelected = selected.includes(num);
+                    const className = isSelected ? 'ball selected' : 'ball';
+                    return `<span class="${className}" data-ball="${num}">${num}</span>`;
+                }).join(' ');
+                
+                if (rowCount < maxVisibleRows) {
+                    html += `
+                        <tr>
+                            <td>${draw.date || ''}</td>
+                            <td class="number-cells">${ballsHtml}</td>
+                            <td>${matchCount > 0 ? matchCount : ''}</td>
+                        </tr>`;
+                    rowCount++;
                 }
             });
+            
+            html += '</tbody></table>';
+            
+            if (rowCount >= maxVisibleRows) {
+                html += `<div class='result-more'>Showing ${maxVisibleRows} of ${filteredDraws.length} results. Select fewer numbers to see all matches.</div>`;
+            } else if (filteredDraws.length === 0) {
+                html = '<p class="result-message">No matching draws found.</p>';
+            }
+            
+            // Cache the result
+            newResultsCache.lastSelected = selectedKey;
+            newResultsCache.html = html;
+            newResultsCache.hasMatches = filteredDraws.length > 0;
+            
+            // Update the DOM
+            domCache.newResults.innerHTML = html;
+            
+            // Add click handlers using event delegation
+            addNumberClickHandlers(domCache.newResults, 'cash5SelectedNew');
         });
     }
 
