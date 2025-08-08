@@ -444,10 +444,15 @@
       <div class="generator-title">Random Number Generator</div>
       <nav class="tab-nav">
         <button class="tab-btn active" data-tab="home">Quick Generator</button>
-        <button class="tab-btn" data-tab="combo" onclick="window.location.href='index.html'">Combo</button>
+        <button class="tab-btn" data-tab="history">History</button>
+        
       </nav>
       <div id="home-tab" class="tab-content" style="display:block;">
-        <div class="generator-flex-layout">
+      </div>
+      <div id="history-tab" class="tab-content" style="display:none;">
+        <div id="history-content"></div>
+      </div>
+      <div class="generator-flex-layout">
           <!-- Section 1: Quick Random Generator -->
           <section class="generator-section">
             <div class="generator-panel">
@@ -749,7 +754,7 @@
         
         let html = '<table class="freq-table" style="width:100%;"><thead><tr><th>#</th><th>Numbers</th></tr></thead><tbody>';
         allMainDraws.forEach((nums, idx) => {
-            html += `<tr><td>${idx+1}</td><td>${nums.join('-')}</td></tr>`;
+            html += `<tr><td>${idx+1}</td><td><div class="aligned-numbers">${nums.map((num, i) => `<span class='plain-number'>${num}</span>${i < nums.length - 1 ? '<b style=\"color:#000;font-size:1.2em;\">-</b>' : ''}`).join('')}</div></td></tr>`;
         });
         html += '</tbody></table>';
         historyContent.innerHTML = html;

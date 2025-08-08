@@ -193,7 +193,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const panel = document.getElementById('cash5-combo-ball-panel');
         if (!panel) return;
         let html = '<div class="powerball-selection"><div class="powerball-label">Select numbers</div><div class="powerball-grid">';
-        for (let i = 1; i <= 38; i++) {
+        for (let i = 1; i <= 42; i++) {
             html += `<span class="ball${window.cash5SelectedCombo.includes(i)?' selected':''}" data-ball="${i}">${i}</span>`;
         }
         html += '</div></div>';
@@ -235,7 +235,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const panel = document.getElementById('cash5-twox-ball-panel');
         if (!panel) return;
         let html = '<div class="powerball-selection"><div class="powerball-label">Select numbers</div><div class="powerball-grid">';
-        for (let i = 1; i <= 38; i++) {
+        for (let i = 1; i <= 42; i++) {
             html += `<span class="ball${window.cash5SelectedTwox.includes(i)?' selected':''}" data-ball="${i}">${i}</span>`;
         }
         html += '</div></div>';
@@ -559,9 +559,9 @@ window.initCash5RandomTab = function() {
 function renderCash5ComboBallPanel() {
     const panel = document.getElementById('cash5-combo-ball-panel');
     if (!panel) return;
-    let html = '<div class="powerball-selection"><div class="powerball-label">Select numbers</div><div class="powerball-grid" style="display: flex; flex-wrap: wrap; justify-content: space-around;">';
-    for (let i = 1; i <= 38; i++) {
-        html += `<span class="ball${window.cash5SelectedCombo.includes(i)?' selected':''}" data-ball="${i}" style="border-radius: 50%; width: 30px; height: 30px; display: inline-block; margin: 5px; text-align: center; line-height: 30px;">${i}</span>`;
+    let html = '<div class="powerball-selection"><div class="powerball-label">Select numbers</div><div class="powerball-grid">';
+    for (let i = 1; i <= 42; i++) {
+        html += `<span class="ball${window.cash5SelectedCombo.includes(i)?' selected':''}" data-ball="${i}">${i}</span>`;
     }
     html += '</div></div>';
     panel.innerHTML = html;
@@ -582,9 +582,9 @@ function renderCash5ComboBallPanel() {
 function renderCash5TwoxBallPanel() {
     const panel = document.getElementById('cash5-twox-ball-panel');
     if (!panel) return;
-    let html = '<div class="powerball-selection"><div class="powerball-label">Select numbers</div><div class="powerball-grid" style="display: flex; flex-wrap: wrap; justify-content: space-around;">';
-    for (let i = 1; i <= 38; i++) {
-        html += `<span class="ball${window.cash5SelectedTwox.includes(i)?' selected':''}" data-ball="${i}" style="border-radius: 50%; width: 30px; height: 30px; display: inline-block; margin: 5px; text-align: center; line-height: 30px;">${i}</span>`;
+    let html = '<div class="powerball-selection"><div class="powerball-label">Select numbers</div><div class="powerball-grid">';
+    for (let i = 1; i <= 42; i++) {
+        html += `<span class="ball${window.cash5SelectedTwox.includes(i)?' selected':''}" data-ball="${i}">${i}</span>`;
     }
     html += '</div></div>';
     panel.innerHTML = html;
@@ -605,9 +605,9 @@ function renderCash5TwoxBallPanel() {
 function renderCash5NewBallPanel() {
     const panel = document.getElementById('cash5-new-ball-panel');
     if (!panel) return;
-    let html = '<div class="powerball-selection"><div class="powerball-label">Select numbers</div><div class="powerball-grid" style="display: flex; flex-wrap: wrap; justify-content: space-around;">';
-    for (let i = 1; i <= 38; i++) {
-        html += `<span class="ball${window.cash5SelectedNew.includes(i)?' selected':''}" data-ball="${i}" style="border-radius: 50%; width: 30px; height: 30px; display: inline-block; margin: 5px; text-align: center; line-height: 30px;">${i}</span>`;
+    let html = '<div class="powerball-selection"><div class="powerball-label">Select numbers</div><div class="powerball-grid">';
+    for (let i = 1; i <= 42; i++) {
+        html += `<span class="ball${window.cash5SelectedNew.includes(i)?' selected':''}" data-ball="${i}">${i}</span>`;
     }
     html += '</div></div>';
     panel.innerHTML = html;
@@ -628,9 +628,9 @@ function renderCash5NewBallPanel() {
 function renderCash5RandomBallPanel() {
     const panel = document.getElementById('cash5-random-ball-panel');
     if (!panel) return;
-    let html = '<div class="powerball-selection"><div class="powerball-label">Select numbers</div><div class="powerball-grid" style="display: flex; flex-wrap: wrap; justify-content: space-around;">';
-    for (let i = 1; i <= 38; i++) {
-        html += `<span class="ball${window.cash5SelectedRandom.includes(i)?' selected':''}" data-ball="${i}" style="border-radius: 50%; width: 30px; height: 30px; display: inline-block; margin: 5px; text-align: center; line-height: 30px;">${i}</span>`;
+    let html = '<div class="powerball-selection"><div class="powerball-label">Select numbers</div><div class="powerball-grid">';
+    for (let i = 1; i <= 42; i++) {
+        html += `<span class="ball${window.cash5SelectedRandom.includes(i)?' selected':''}" data-ball="${i}">${i}</span>`;
     }
     html += '</div></div>';
     panel.innerHTML = html;

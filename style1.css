@@ -3,7 +3,8 @@
 body.cash5 {
     background: #f7fafc;
     margin: 0;
-    padding: 0;
+    padding: 20px 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
 }
 
 .container.main-flex {
@@ -290,12 +291,104 @@ button[id^='cash5-download-note-btn-']:hover, #cash5-download-combo-csv-btn:hove
     border-bottom: 4px solid #27ae60;
 }
 
+/* Ball Selection Panel */
 .powerball-selection {
-    background: #e8fff2;
-    padding: 15px 0 10px 0;
-    margin: 0 0 15px;
-    border: 1px solid #b6e6c9;
+    background: #fff;
+    padding: 15px 20px;
+    margin: 0 0 20px;
     border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    border: 1px solid #e0e0e0;
+    max-width: 100%;
+    overflow: hidden;
+}
+
+.powerball-label {
+    font-size: 14px;
+    color: #666;
+    margin: 0 0 12px 0;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.powerball-grid {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding: 8px 0 12px 0;
+    gap: 8px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: #ccc transparent;
+    margin: 0 -4px;
+}
+
+.powerball-grid::-webkit-scrollbar {
+    height: 6px;
+}
+
+.powerball-grid::-webkit-scrollbar-thumb {
+    background-color: #ccc;
+    border-radius: 3px;
+}
+
+/* Ball Styles */
+.ball {
+    flex: 0 0 38px;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 15px;
+    cursor: pointer;
+    user-select: none;
+    color: #333;
+    margin: 0;
+    border: 2px solid #e0e0e0;
+    transition: all 0.15s ease;
+    background: #fff;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.ball:hover {
+    transform: scale(1.08);
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.3);
+    border-color: #a0c4e4;
+}
+
+.ball.selected {
+    background: #e74c3c;
+    color: white;
+    border-color: #c0392b;
+    box-shadow: 0 2px 6px rgba(231, 76, 60, 0.3);
+}
+
+.ball.selected:hover {
+    transform: scale(1.05);
+    box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.4);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .ball {
+        flex: 0 0 36px;
+        width: 36px;
+        height: 36px;
+        font-size: 14px;
+    }
+    
+    .powerball-selection {
+        padding: 12px 15px;
+        margin: 0 0 16px;
+    }
+    
+    .powerball-grid {
+        gap: 6px;
+    }
 }
 
 .powerball-label {
