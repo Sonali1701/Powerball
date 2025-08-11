@@ -49,6 +49,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     const resultsDiv = document.getElementById('new-tab-results');
                     if (resultsDiv) resultsDiv.innerHTML = '';
                 }
+                if (tabId === 'combo45') {
+                    renderPowerballCombo45Results();
+                }
             }
         });
     });
@@ -1022,6 +1025,136 @@ if (genComboBtn && genSingleBtn && genResult) {
         };
     }
 });
+
+// Function to generate combinations of numbers
+function generateCombinations(numbers, size) {
+    const result = [];
+    
+    function backtrack(start, current) {
+        if (current.length === size) {
+            result.push([...current]);
+            return;
+        }
+        
+        for (let i = start; i < numbers.length; i++) {
+            current.push(numbers[i]);
+            backtrack(i + 1, current);
+            current.pop();
+        }
+    }
+    
+    backtrack(0, []);
+    return result;
+}
+
+// Function to count occurrences of combinations in the draw history
+function countPowerballCombinations(draws, comboSize) {
+    const comboCounts = new Map();
+    
+    draws.forEach(draw => {
+        if (!draw.mainArr || draw.mainArr.length < comboSize) return;
+        
+        // Sort numbers to ensure consistent ordering
+        const sortedNumbers = [...draw.mainArr].sort((a, b) => a - b);
+        const combinations = generateCombinations(sortedNumbers, comboSize);
+        
+        combinations.forEach(combo => {
+            const comboKey = combo.join(',');
+            comboCounts.set(comboKey, (comboCounts.get(comboKey) || 0) + 1);
+        });
+    });
+    
+    return comboCounts;
+}
+
+// Function to render the 4&5 Combo tab results
+function renderPowerballCombo45Results() {
+    const resultsContainer = document.getElementById('combo45-results');
+    if (!resultsContainer || !window.filteredDrawRows) return;
+    
+    // Filter valid draws (only main numbers, no Powerball)
+    const validDraws = window.filteredDrawRows.filter(draw => 
+        draw && Array.isArray(draw.mainArr) && draw.mainArr.length === 5
+    );
+    
+    // Count 4-number and 5-number combinations
+    const fourNumberCombos = countPowerballCombinations(validDraws, 4);
+    const fiveNumberCombos = countPowerballCombinations(validDraws, 5);
+    
+    // Process and filter combinations
+    const processCombos = (comboMap, comboSize) => {
+        const combos = [];
+        comboMap.forEach((count, comboStr) => {
+            if (count >= 2) {
+                combos.push({
+                    numbers: comboStr.split(',').map(Number).sort((a, b) => a - b),
+                    count,
+                    type: `${comboSize}-number`
+                });
+            }
+        });
+        
+        // Sort by count (descending) and then by numbers
+        return combos.sort((a, b) => {
+            if (b.count !== a.count) return b.count - a.count;
+            return a.numbers.join(',').localeCompare(b.numbers.join(','));
+        });
+    };
+    
+    const fourNumberResults = processCombos(fourNumberCombos, 4);
+    const fiveNumberResults = processCombos(fiveNumberCombos, 5);
+    
+    // Generate HTML for a combo table
+    const generateComboTable = (combos, title) => {
+        if (combos.length === 0) return '';
+        
+        const rows = combos.map(combo => {
+            const ballsHtml = combo.numbers.map(num => 
+                `<span class="ball" style="margin: 0 2px; display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; font-size: 14px; background: #e74c3c; color: white; border-radius: 50%;">${num}</span>`
+            ).join(' ');
+            
+            return `
+                <tr>
+                    <td style="padding: 8px; border-bottom: 1px solid #e0e0e0;">${ballsHtml}</td>
+                    <td style="padding: 8px; text-align: center; border-bottom: 1px solid #e0e0e0; font-weight: bold;">${combo.count}x</td>
+                </tr>
+            `;
+        }).join('');
+        
+        return `
+            <div class="combo-table-container" style="margin-bottom: 30px;">
+                <h3 style="color: #2c3e50; margin-bottom: 10px; padding-bottom: 5px; border-bottom: 2px solid #e0e0e0;">${title} (${combos.length} combinations)</h3>
+                <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+                    <thead>
+                        <tr>
+                            <th style="padding: 10px; text-align: left; background-color: #f5f7fa; border-bottom: 2px solid #e0e0e0;">Numbers</th>
+                            <th style="padding: 10px; text-align: center; background-color: #f5f7fa; border-bottom: 2px solid #e0e0e0; width: 80px;">Frequency</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            </div>
+        `;
+    };
+    
+    // Generate the final HTML with both tables side by side
+    let html = `
+        <div style="display: flex; gap: 30px; margin-top: 20px;">
+            <div style="flex: 1;">
+                ${generateComboTable(fourNumberResults, '4-Number Combinations')}
+            </div>
+            <div style="flex: 1;">
+                ${generateComboTable(fiveNumberResults, '5-Number Combinations')}
+            </div>
+        </div>
+    `;
+    
+    if (fourNumberResults.length === 0 && fiveNumberResults.length === 0) {
+        html = '<div style="text-align: center; padding: 30px; color: #666; font-size: 16px;">No combinations found that appear 2 or more times.</div>';
+    }
+    
+    resultsContainer.innerHTML = html;
+}
 
 // After CSV and window.filteredDrawRows are ready, render the full combo table on the home page
 
