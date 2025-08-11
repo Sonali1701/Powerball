@@ -793,10 +793,14 @@ function filterDropdownOptions(searchInput, selectId) {
     defaultOption.textContent = selectId.includes('duo') ? 'Select Duo...' : 'Select Trio...';
     select.appendChild(defaultOption);
     
-    // Filter and add matching options
+    // Filter and add matching options - match exact numbers
     select._options.forEach(option => {
         if (option.value === '') return;
-        if (option.textContent.toLowerCase().includes(searchTerm)) {
+        // Split the option text into individual numbers
+        const numbers = option.textContent.trim().split(/\s+/);
+        // Check if any of the numbers exactly match the search term
+        const hasExactMatch = numbers.some(num => num === searchTerm);
+        if (hasExactMatch) {
             select.appendChild(option.cloneNode(true));
         }
     });
