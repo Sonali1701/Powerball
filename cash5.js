@@ -361,40 +361,40 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Use requestAnimationFrame for smoother UI updates
         requestAnimationFrame(() => {
-            let html = `<table class='results-table cash5-wide results-table-interactive'><thead><tr><th>Date</th><th>Winning Numbers</th><th>Multiplier</th></tr></thead><tbody>`;
-            const draws = window.cash5DrawRows || [];
-            let hasMatches = false;
-            let rowCount = 0;
-            const maxVisibleRows = 100; // Limit number of visible rows for better performance
+            let html = `<div class='result-meta'>Showing results from 2015 to 2025</div>`;
+            html += `<table class='results-table cash5-wide results-table-interactive'><thead><tr><th>Date</th><th>Winning Numbers</th><th>Multiplier</th></tr></thead><tbody>`;
             
-            // Process in batches to prevent UI freeze
-            perf.batchProcess(draws, (draw) => {
-                if (rowCount >= maxVisibleRows) return;
+            // Filter draws to only include 2015-2025 and sort by date (newest first)
+            const draws = (window.cash5DrawRows || [])
+                .filter(draw => {
+                    if (!draw.date) return false;
+                    const year = new Date(draw.date).getFullYear();
+                    return year >= 2015 && year <= 2025;
+                })
+                .sort((a, b) => new Date(b.date) - new Date(a.date));
                 
+            let hasMatches = false;
+            
+            // Process all matching draws
+            draws.forEach(draw => {
                 const matches = selected.length > 0 ? selected.filter(n => draw.mainArr.includes(n)).length : 0;
                 if (selected.length === 0 || matches > 0) {
                     if (matches > 0) hasMatches = true;
-                    if (rowCount < maxVisibleRows) {
-                        const rowHtml = `
-                            <tr tabindex='0'>
-                                <td>${draw.date||''}</td>
-                                <td>${draw.mainArr.map(n => 
-                                    selected.includes(n) 
-                                        ? `<span class='ball selected' data-ball='${n}'>${n}</span>` 
-                                        : `<span class='plain-number' data-ball='${n}'>${n}</span>`
-                                ).join('')}</td>
-                                <td>${draw.multiplier||''}</td>
-                            </tr>`;
-                        html += rowHtml;
-                        rowCount++;
-                    }
+                    html += `
+                        <tr tabindex='0'>
+                            <td>${draw.date||''}</td>
+                            <td>${draw.mainArr.map(n => 
+                                selected.includes(n) 
+                                    ? `<span class='ball selected' data-ball='${n}'>${n}</span>` 
+                                    : `<span class='plain-number' data-ball='${n}'>${n}</span>`
+                            ).join('')}</td>
+                            <td>${draw.multiplier||''}</td>
+                        </tr>`;
                 }
             });
             
             html += '</tbody></table>';
-            if (rowCount >= maxVisibleRows) {
-                html += `<div class='result-more'>Showing ${maxVisibleRows} of ${draws.length} results. Select fewer numbers to see all matches.</div>`;
-            } else if (!hasMatches && selected.length > 0) {
+            if (!hasMatches && selected.length > 0) {
                 html = `<div class='result-message'>No draws contain any of the selected balls.</div>`;
             }
             
@@ -658,9 +658,76 @@ function populateCash5DuoTrioDropdowns(draws) {
 // All event handlers for the Random tab are now set up ONLY inside window.initCash5RandomTab, which is called after CSV load.
 // This avoids duplicate/conflicting event handlers and ensures all elements exist.
 
+// Function to filter dropdown options based on search input
+function filterDropdownOptions(searchInput, selectId) {
+    const searchTerm = searchInput.value.toLowerCase();
+    const select = document.getElementById(selectId);
+    if (!select) return;
+    
+    // Store all options if not already stored
+    if (!select._options) {
+        select._options = Array.from(select.options);
+    }
+    
+    // Clear existing options
+    select.innerHTML = '';
+    
+    // Add default option
+    const defaultOption = document.createElement('option');
+    defaultOption.value = '';
+    defaultOption.textContent = selectId.includes('duo') ? 'Select Duo...' : 'Select Trio...';
+    select.appendChild(defaultOption);
+    
+    // Filter and add matching options
+    select._options.forEach(option => {
+        if (option.value === '') return;
+        if (option.textContent.toLowerCase().includes(searchTerm)) {
+            select.appendChild(option.cloneNode(true));
+        }
+    });
+    
+    // Reset selection
+    select.selectedIndex = 0;
+}
+
 window.initCash5RandomTab = function() {
+    // Store the original draw data for filtering
+    const allDraws = (window.cash5DrawRows||[]).map(d=>d.mainArr);
+    
     // Populate dropdowns
-    populateCash5DuoTrioDropdowns((window.cash5DrawRows||[]).map(d=>d.mainArr));
+    populateCash5DuoTrioDropdowns(allDraws);
+    
+    // Set up search functionality for duo1
+    const duo1Search = document.getElementById('cash5-duo1-search');
+    if (duo1Search) {
+        duo1Search.addEventListener('input', () => {
+            filterDropdownOptions(duo1Search, 'cash5-duo1-select');
+        });
+    }
+    
+    // Set up search functionality for duo2
+    const duo2Search = document.getElementById('cash5-duo2-search');
+    if (duo2Search) {
+        duo2Search.addEventListener('input', () => {
+            filterDropdownOptions(duo2Search, 'cash5-duo2-select');
+        });
+    }
+    
+    // Set up search functionality for combo duo
+    const comboDuoSearch = document.getElementById('cash5-combo-duo-search');
+    if (comboDuoSearch) {
+        comboDuoSearch.addEventListener('input', () => {
+            filterDropdownOptions(comboDuoSearch, 'cash5-combo-duo-select');
+        });
+    }
+    
+    // Set up search functionality for combo trio
+    const comboTrioSearch = document.getElementById('cash5-combo-trio-search');
+    if (comboTrioSearch) {
+        comboTrioSearch.addEventListener('input', () => {
+            filterDropdownOptions(comboTrioSearch, 'cash5-combo-trio-select');
+        });
+    }
 
     // Quick Random Generator buttons (Generate 4, 8, 16)
     document.querySelectorAll('.cash5-multi-gen-btn').forEach(btn => {
@@ -885,24 +952,26 @@ function renderCash5RandomBallPanel() {
         
         // Use requestAnimationFrame for smoother UI updates
         requestAnimationFrame(() => {
-            let html = `<table class='results-table'><thead><tr><th>Date</th><th>Winning Numbers</th><th>Matches</th></tr></thead><tbody>`;
-            
-            // Filter and sort draws (newest first)
-            const allDraws = window.cash5DrawRows || [];
-            const filteredDraws = allDraws
+            // Filter draws to only include 2015-2025 and sort by date (newest first)
+            const allDraws = (window.cash5DrawRows || [])
                 .filter(draw => {
-                    if (selected.length === 0) return true;
-                    return selected.some(n => draw.mainArr.includes(n));
+                    if (!draw.date) return false;
+                    const year = new Date(draw.date).getFullYear();
+                    return year >= 2015 && year <= 2025;
                 })
                 .sort((a, b) => new Date(b.date) - new Date(a.date));
-            
-            let rowCount = 0;
-            const maxVisibleRows = 100; // Limit number of visible rows for better performance
-            
-            // Process in batches to prevent UI freeze
-            perf.batchProcess(filteredDraws, (draw) => {
-                if (rowCount >= maxVisibleRows) return;
                 
+            let html = `<div class='result-meta'>Showing results from 2015 to 2025</div>`;
+            html += `<table class='results-table'><thead><tr><th>Date</th><th>Winning Numbers</th><th>Matches</th></tr></thead><tbody>`;
+            
+            // Filter based on selection
+            const filteredDraws = allDraws.filter(draw => {
+                if (selected.length === 0) return true;
+                return selected.some(n => draw.mainArr.includes(n));
+            });
+            
+            // Process all matching draws
+            filteredDraws.forEach(draw => {
                 const matchCount = selected.length > 0 ? selected.filter(n => draw.mainArr.includes(n)).length : 0;
                 const ballsHtml = draw.mainArr.map(num => {
                     const isSelected = selected.includes(num);
@@ -910,22 +979,17 @@ function renderCash5RandomBallPanel() {
                     return `<span class="${className}" data-ball="${num}">${num}</span>`;
                 }).join(' ');
                 
-                if (rowCount < maxVisibleRows) {
-                    html += `
-                        <tr>
-                            <td>${draw.date || ''}</td>
-                            <td class="number-cells">${ballsHtml}</td>
-                            <td>${matchCount > 0 ? matchCount : ''}</td>
-                        </tr>`;
-                    rowCount++;
-                }
+                html += `
+                    <tr>
+                        <td>${draw.date || ''}</td>
+                        <td class="number-cells">${ballsHtml}</td>
+                        <td>${matchCount > 0 ? matchCount : ''}</td>
+                    </tr>`;
             });
             
             html += '</tbody></table>';
             
-            if (rowCount >= maxVisibleRows) {
-                html += `<div class='result-more'>Showing ${maxVisibleRows} of ${filteredDraws.length} results. Select fewer numbers to see all matches.</div>`;
-            } else if (filteredDraws.length === 0) {
+            if (filteredDraws.length === 0) {
                 html = '<p class="result-message">No matching draws found.</p>';
             }
             

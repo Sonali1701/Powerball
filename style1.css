@@ -292,15 +292,108 @@ button[id^='cash5-download-note-btn-']:hover, #cash5-download-combo-csv-btn:hove
 }
 
 /* Ball Selection Panel */
-.powerball-selection {
+.generator-panel {
     background: #fff;
-    padding: 15px 20px;
-    margin: 0 0 20px;
-    border-radius: 8px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-    border: 1px solid #e0e0e0;
-    max-width: 100%;
-    overflow: hidden;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 24px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+/* Search container styles */
+.search-container {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.search-input {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 0.95em;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: #27ae60;
+    box-shadow: 0 0 0 2px rgba(39, 174, 96, 0.2);
+}
+
+/* Style for select dropdowns with search */
+.duo-select {
+    width: 100%;
+    padding: 8px 12px;
+    margin-bottom: 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    background-color: #fff;
+    font-size: 0.95em;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.duo-select:focus {
+    border-color: #27ae60;
+    box-shadow: 0 0 0 2px rgba(39, 174, 96, 0.2);
+    outline: none;
+}
+
+.duo-select-label {
+    display: block;
+    margin: 8px 0 4px 0;
+    font-size: 0.95em;
+    color: #444;
+    font-weight: 500;
+}
+
+/* Search container styles */
+.search-container {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.search-input {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 0.95em;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: #27ae60;
+    box-shadow: 0 0 0 2px rgba(39, 174, 96, 0.2);
+}
+
+/* Style for select dropdowns with search */
+.duo-select {
+    width: 100%;
+    padding: 8px 12px;
+    margin-bottom: 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    background-color: #fff;
+    font-size: 0.95em;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.duo-select:focus {
+    border-color: #27ae60;
+    box-shadow: 0 0 0 2px rgba(39, 174, 96, 0.2);
+    outline: none;
+}
+
+.duo-select-label {
+    display: block;
+    margin: 8px 0 4px 0;
+    font-size: 0.95em;
+    color: #444;
+    font-weight: 500;
 }
 
 .powerball-label {
