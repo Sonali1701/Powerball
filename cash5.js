@@ -488,24 +488,25 @@ document.addEventListener('DOMContentLoaded', function() {
                 })
                 .sort((a, b) => new Date(b.date) - new Date(a.date));
                 
-            let hasMatches = false;
+            // Always show all draws, just highlight matches
+            let hasMatches = selected.length > 0 && draws.some(draw => 
+                selected.some(n => draw.mainArr.includes(n))
+            );
             
-            // Process all matching draws
+            // Process all draws
             draws.forEach(draw => {
-                const matches = selected.length > 0 ? selected.filter(n => draw.mainArr.includes(n)).length : 0;
-                if (selected.length === 0 || matches > 0) {
-                    if (matches > 0) hasMatches = true;
-                    html += `
-                        <tr tabindex='0'>
-                            <td>${draw.date||''}</td>
-                            <td>${draw.mainArr.map(n => 
-                                selected.includes(n) 
-                                    ? `<span class='ball selected' data-ball='${n}'>${n}</span>` 
-                                    : `<span class='plain-number' data-ball='${n}'>${n}</span>`
-                            ).join('')}</td>
-                            <td>${draw.multiplier||''}</td>
-                        </tr>`;
-                }
+                const matches = selected.length > 0 ? selected.filter(n => draw.mainArr.includes(n)) : [];
+                
+                html += `
+                    <tr tabindex='0'>
+                        <td>${draw.date||''}</td>
+                        <td>${draw.mainArr.map(n => 
+                            selected.includes(n) 
+                                ? `<span class='ball selected' style='margin:0 2px;'>${n}</span>` 
+                                : `<span class='plain-number'>${n}</span>`
+                        ).join(' ')}</td>
+                        <td>${draw.multiplier||''}</td>
+                    </tr>`;
             });
             
             html += '</tbody></table>';
