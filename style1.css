@@ -213,6 +213,84 @@ button[id^='cash5-download-note-btn-']:hover, #cash5-download-combo-csv-btn:hove
     border-color: #27ae60;
 }
 
+/* Download Buttons Container */
+.download-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 20px;
+    width: 100%;
+}
+
+/* Base Button Style */
+.download-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px 16px;
+    font-size: 0.95em;
+    font-weight: 600;
+    border-radius: 8px;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: center;
+    white-space: nowrap;
+    background-color: #f8f9fa;
+    color: #2c3e50;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+/* Button Hover & Active States */
+.download-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    background-color: #fff;
+}
+
+.download-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+/* Specific Button Types */
+#cash5-download-pairs-trios-csv-btn {
+    background-color: #e8f5e9;
+    border-color: #81c784;
+    color: #2e7d32;
+}
+
+#cash5-download-quads-csv-btn {
+    background-color: #e3f2fd;
+    border-color: #90caf9;
+    color: #1565c0;
+}
+
+#cash5-download-fives-csv-btn {
+    background-color: #f3e5f5;
+    border-color: #ce93d8;
+    color: #7b1fa2;
+}
+
+/* Button Icons */
+.download-btn::before {
+    content: '📊';
+    margin-right: 6px;
+    font-size: 1.1em;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    .download-buttons {
+        flex-direction: column;
+    }
+    
+    .download-btn {
+        width: 100%;
+        padding: 12px 16px;
+    }
+}
+
 .show-more-btn {
   display: block;
   margin: 12px auto 18px auto;

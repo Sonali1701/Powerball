@@ -865,11 +865,14 @@ document.addEventListener('DOMContentLoaded', function() {
                         render2xBallPanel();
                         renderAll2xCombinations();
                     }
-                    if (document.getElementById('tab-combo').style.display === 'block') {
+                    const tabCombo = document.getElementById('tab-combo');
+                    const tabHistory = document.getElementById('tab-history');
+                    
+                    if (tabCombo && tabCombo.style.display === 'block') {
                         renderComboBallPanel();
                         renderComboResults([]);
                     }
-                    if (document.getElementById('tab-history').style.display === 'block') renderHistoryTab();
+                    if (tabHistory && tabHistory.style.display === 'block') renderHistoryTab();
 
                     // --- Download Notes ---
                     // Main tab notes
@@ -957,6 +960,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 }
             });
+            
+            // Initialize download buttons after CSV is loaded and processed
+            initializeDownloadButtons();
         });
 });
 
@@ -1080,6 +1086,8 @@ function renderFrequentPairsTriosTables() {
     const togglePairs = document.getElementById('freq-toggle-pairs');
     const toggleTrios = document.getElementById('freq-toggle-trios');
     function renderTable() {
+        if (!tableDiv) return; // Exit if tableDiv doesn't exist
+        
         let data = mode==='pair'?pairs:trios;
         let html = `<table class='freq-table'><thead><tr><th>${mode==='pair'?'Pair':'Trio'}</th><th>Count</th></tr></thead><tbody>`;
         data.forEach(([combo, count])=>{
@@ -1088,14 +1096,21 @@ function renderFrequentPairsTriosTables() {
         });
         html += '</tbody></table>';
         tableDiv.innerHTML = html;
-        datesDiv.style.display = 'none';
+        
+        if (datesDiv) {
+            datesDiv.style.display = 'none';
+        }
+        
         // Add click handler
-        tableDiv.querySelectorAll('.combo-row').forEach(row => {
-            row.onclick = function() {
-                selectedCombo = row.getAttribute('data-combo');
-                renderDrawsTable();
-            };
-        });
+        const rows = tableDiv.querySelectorAll('.combo-row');
+        if (rows && rows.length > 0) {
+            rows.forEach(row => {
+                row.onclick = function() {
+                    selectedCombo = row.getAttribute('data-combo');
+                    renderDrawsTable();
+                };
+            });
+        }
     }
     function renderDrawsTable() {
         if (!selectedCombo) return;
@@ -1112,34 +1127,28 @@ function renderFrequentPairsTriosTables() {
         datesDiv.style.display = 'block';
         document.getElementById('freq-hide-dates-btn').onclick = ()=>{datesDiv.style.display='none';};
     }
-    togglePairs.onclick = ()=>{
-        mode='pair';
-        togglePairs.classList.add('active');
-        toggleTrios.classList.remove('active');
-        selectedCombo = null;
-        renderTable();
-    };
-    toggleTrios.onclick = ()=>{
-        mode='trio';
-        toggleTrios.classList.add('active');
-        togglePairs.classList.remove('active');
-        selectedCombo = null;
-        renderTable();
-    };
+    if (togglePairs) {
+        togglePairs.onclick = ()=>{
+            mode='pair';
+            togglePairs.classList.add('active');
+            if (toggleTrios) toggleTrios.classList.remove('active');
+            selectedCombo = null;
+            renderTable();
+        };
+    }
+    if (toggleTrios) {
+        toggleTrios.onclick = ()=>{
+            mode='trio';
+            toggleTrios.classList.add('active');
+            if (togglePairs) togglePairs.classList.remove('active');
+            selectedCombo = null;
+            renderTable();
+        };
+    }
     renderTable();
 }
-// Ensure this runs after window.filteredDrawRows is ready
-window.addEventListener('DOMContentLoaded', () => {
-    setTimeout(renderFrequentPairsTriosTables, 1200);
-});
-
-
-
-
-// Ensure this runs after window.filteredDrawRows is ready
-window.addEventListener('DOMContentLoaded', () => {
-    setTimeout(renderFrequentPairsTriosTables, 1200);
-});
+// This is now handled in the CSV loading completion handler
+// to ensure data is loaded before initializing download buttons
 
 // Add a new function to render the combo table in the home tab (uses #combo-results)
 function renderComboResultsHome(selected) {
@@ -1247,83 +1256,242 @@ function render2xResultsForSelectedBalls(selected) {
     }
     html += '</div>';
     resultsDiv.innerHTML = html;
+
+    // Filter for combinations that appear 2+ times
+    const filteredCombos = Array.from(comboCounts.entries())
+        .filter(([_, count]) => count >= 2)
+        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+
+    // Build CSV
+    const csvRows = [['Combo', 'Count', 'Dates']];
+    filteredCombos.forEach(([combo, count]) => {
+        const draws = comboDraws.get(combo) || [];
+        const datesStr = draws.map(d => `${d.date} (${d.type})`).join('; ');
+        csvRows.push([combo.replace(/-/g, '-'), count, datesStr]);
+    });
+
+    const csvContent = csvRows.map(row => 
+        row.map(val => {
+            const str = String(val);
+            if (str.includes('"')) return '"' + str.replace(/"/g, '""') + '"';
+            if (str.includes(',') || str.includes('\n') || str.includes('\r') || str.includes(';')) {
+                return '"' + str + '"';
+            }
+            return str;
+        }).join(',')
+    ).join('\r\n');
+
+    // Create and trigger download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `powerball_${comboType}_2plus.csv`;
+    document.body.appendChild(link);
+    link.click();
+    setTimeout(() => {
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    }, 100);
 }
 
-// --- Download Pairs & Trios CSV Button Logic ---
-window.addEventListener('DOMContentLoaded', function() {
-    const downloadBtn = document.getElementById('download-combo-csv-btn');
-    if (downloadBtn) {
-        downloadBtn.addEventListener('click', function() {
-            // Debugging logs
-            console.log("Download button clicked");
-            console.log(window.window.filteredDrawRows);
-            console.log(typeof getAllCombos);
-            if (!window.window.filteredDrawRows) {
-                alert('Data not loaded yet!');
+// --- Download Buttons Logic ---
+function initializeDownloadButtons() {
+    // Pairs & Trios Button
+    const pairsTriosBtn = document.getElementById('download-pairs-trios-csv-btn');
+    if (pairsTriosBtn) {
+        pairsTriosBtn.addEventListener('click', function() {
+            if (!window.filteredDrawRows) {
+                alert('Please wait for the data to load.');
                 return;
+            }
+            // Helper function to add to map with type info
+            function addToMap(map, combo, date, type) {
+                if (!map.has(combo)) map.set(combo, []);
+                map.get(combo).push({date, type});
             }
             const pairCounts = new Map();
             const trioCounts = new Map();
             const pairDraws = new Map();
             const trioDraws = new Map();
-            function addToMap(map, combo, date, type) {
-                if (!map.has(combo)) map.set(combo, []);
-                map.get(combo).push({date, type});
-            }
-            window.window.filteredDrawRows.forEach(draw => {
+            
+            console.log('Processing', window.filteredDrawRows.length, 'draws for pairs and trios');
+            
+            window.filteredDrawRows.forEach(draw => {
                 if (draw.mainArr && draw.mainArr.length === 5) {
+                    // Process pairs
                     getAllCombos(draw.mainArr, 2).forEach(pair => {
-                        pairCounts.set(pair, (pairCounts.get(pair)||0)+1);
-                        addToMap(pairDraws, pair, draw.date, 'Main');
+                        // Ensure pair is an array before sorting
+                        const sortedPair = Array.isArray(pair) ? [...pair].sort((a,b) => a-b) : pair.split('-').map(Number).sort((a,b) => a-b);
+                        const pairKey = sortedPair.join('-');
+                        pairCounts.set(pairKey, (pairCounts.get(pairKey)||0)+1);
+                        addToMap(pairDraws, pairKey, draw.date, 'Main');
                     });
+                    
+                    // Process trios
                     getAllCombos(draw.mainArr, 3).forEach(trio => {
-                        trioCounts.set(trio, (trioCounts.get(trio)||0)+1);
-                        addToMap(trioDraws, trio, draw.date, 'Main');
+                        // Ensure trio is an array before sorting
+                        const sortedTrio = Array.isArray(trio) ? [...trio].sort((a,b) => a-b) : trio.split('-').map(Number).sort((a,b) => a-b);
+                        const trioKey = sortedTrio.join('-');
+                        trioCounts.set(trioKey, (trioCounts.get(trioKey)||0)+1);
+                        addToMap(trioDraws, trioKey, draw.date, 'Main');
                     });
                 }
                 if (draw.doublePlayArr && draw.doublePlayArr.length === 5) {
+                    // Process pairs for double play
                     getAllCombos(draw.doublePlayArr, 2).forEach(pair => {
-                        pairCounts.set(pair, (pairCounts.get(pair)||0)+1);
-                        addToMap(pairDraws, pair, draw.date, 'Double');
+                        // Ensure pair is an array before sorting
+                        const sortedPair = Array.isArray(pair) ? [...pair].sort((a,b) => a-b) : pair.split('-').map(Number).sort((a,b) => a-b);
+                        const pairKey = sortedPair.join('-');
+                        pairCounts.set(pairKey, (pairCounts.get(pairKey)||0)+1);
+                        addToMap(pairDraws, pairKey, draw.date, 'Double');
                     });
+                    
+                    // Process trios for double play
                     getAllCombos(draw.doublePlayArr, 3).forEach(trio => {
-                        trioCounts.set(trio, (trioCounts.get(trio)||0)+1);
-                        addToMap(trioDraws, trio, draw.date, 'Double');
+                        // Ensure trio is an array before sorting
+                        const sortedTrio = Array.isArray(trio) ? [...trio].sort((a,b) => a-b) : trio.split('-').map(Number).sort((a,b) => a-b);
+                        const trioKey = sortedTrio.join('-');
+                        trioCounts.set(trioKey, (trioCounts.get(trioKey)||0)+1);
+                        addToMap(trioDraws, trioKey, draw.date, 'Double');
                     });
                 }
             });
-            const pairs = Array.from(pairCounts.entries()).filter(([_,c])=>c>=2).sort((a,b)=>b[1]-a[1]);
-            const trios = Array.from(trioCounts.entries()).filter(([_,c])=>c>=2).sort((a,b)=>b[1]-a[1]);
+            const pairs = Array.from(pairCounts.entries())
+                .filter(([_, count]) => count >= 2)
+                .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+                
+            const trios = Array.from(trioCounts.entries())
+                .filter(([_, count]) => count >= 2)
+                .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+            
             function csvEscape(val) {
+                if (val === null || val === undefined) return '';
                 const str = String(val);
                 if (str.includes('"')) return '"' + str.replace(/"/g, '""') + '"';
-                if (str.includes(',') || str.includes('\n') || str.includes('\r') || str.includes(';')) return '"' + str + '"';
+                if (str.includes(',') || str.includes('\n') || str.includes('\r')) return '"' + str + '"';
                 return str;
             }
+            
             let csvRows = [];
             csvRows.push(['Type','Combo','Count','Dates+Types']);
+            
+            // Add pairs to CSV
             pairs.forEach(([combo, count]) => {
                 const draws = pairDraws.get(combo) || [];
-                const datesStr = draws.map(d=>`${d.date} (${d.type})`).join('; ');
-                csvRows.push(['Pair', combo.split(',').join('-'), count, csvEscape(datesStr)]);
+                const datesStr = draws.map(d => `${d.date} (${d.type})`).join('; ');
+                csvRows.push(['Pair', combo, count, datesStr]);
             });
+            
+            // Add trios to CSV
             trios.forEach(([combo, count]) => {
                 const draws = trioDraws.get(combo) || [];
-                const datesStr = draws.map(d=>`${d.date} (${d.type})`).join('; ');
-                csvRows.push(['Trio', combo.split(',').join('-'), count, csvEscape(datesStr)]);
+                const datesStr = draws.map(d => `${d.date} (${d.type})`).join('; ');
+                csvRows.push(['Trio', combo, count, datesStr]);
             });
-            const csvContent = csvRows.map(row => row.map(csvEscape).join(',')).join('\r\n');
-            const blob = new Blob([csvContent], {type: 'text/csv'});
+            
+            const csvContent = csvRows.map(row => 
+                row.map(cell => csvEscape(cell)).join(',')
+            ).join('\r\n');
+            
+            const blob = new Blob([csvContent], {type: 'text/csv;charset=utf-8;'});
             const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = 'powerball_pairs_trios.csv';
-            document.body.appendChild(link);
-            link.click();
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'powerball_pairs_trios.csv';
+            document.body.appendChild(a);
+            a.click();
             setTimeout(() => {
-                document.body.removeChild(link);
+                document.body.removeChild(a);
                 URL.revokeObjectURL(url);
             }, 100);
         });
     }
-});
+    
+    // Quads Button
+    const quadsBtn = document.getElementById('download-quads-csv-btn');
+    if (quadsBtn) {
+        quadsBtn.addEventListener('click', function() {
+            generateComboCSV('quads');
+        });
+    }
+    
+    // Fives Button
+    const fivesBtn = document.getElementById('download-fives-csv-btn');
+    if (fivesBtn) {
+        fivesBtn.addEventListener('click', function() {
+            generateComboCSV('fives');
+        });
+    }
+}
+
+function generateComboCSV(comboType) {
+    if (!window.filteredDrawRows) {
+        alert('Please wait for the data to load.');
+        return;
+    }
+    const comboCounts = new Map();
+    const comboDraws = new Map();
+    const comboSize = comboType === 'quads' ? 4 : 5;
+    window.filteredDrawRows.forEach(draw => {
+        if (draw.mainArr && draw.mainArr.length === 5) {
+            getAllCombos(draw.mainArr, comboSize).forEach(combo => {
+                // Ensure combo is an array before sorting
+                const sortedCombo = Array.isArray(combo) ? [...combo].sort((a,b) => a-b) : combo.split('-').map(Number).sort((a,b) => a-b);
+                const comboKey = sortedCombo.join('-');
+                comboCounts.set(comboKey, (comboCounts.get(comboKey)||0)+1);
+                addToMap(comboDraws, comboKey, draw.date, 'Main');
+            });
+        }
+        if (draw.doublePlayArr && draw.doublePlayArr.length === 5) {
+            getAllCombos(draw.doublePlayArr, comboSize).forEach(combo => {
+                // Ensure combo is an array before sorting
+                const sortedCombo = Array.isArray(combo) ? [...combo].sort((a,b) => a-b) : combo.split('-').map(Number).sort((a,b) => a-b);
+                const comboKey = sortedCombo.join('-');
+                comboCounts.set(comboKey, (comboCounts.get(comboKey)||0)+1);
+                addToMap(comboDraws, comboKey, draw.date, 'Double');
+            });
+        }
+    });
+    const combos = Array.from(comboCounts.entries())
+        .filter(([_, count]) => count >= 2)
+        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+    
+    function csvEscape(val) {
+        if (val === null || val === undefined) return '';
+        const str = String(val);
+        if (str.includes('"')) return '"' + str.replace(/"/g, '""') + '"';
+        if (str.includes(',') || str.includes('\n') || str.includes('\r')) return '"' + str + '"';
+        return str;
+    }
+    
+    let csvRows = [];
+    csvRows.push(['Combo','Count','Dates+Types']);
+    
+    combos.forEach(([combo, count]) => {
+        const draws = comboDraws.get(combo) || [];
+        const datesStr = draws.map(d => `${d.date} (${d.type})`).join('; ');
+        csvRows.push([combo, count, datesStr]);
+    });
+    
+    const csvContent = csvRows.map(row => 
+        row.map(cell => csvEscape(cell)).join(',')
+    ).join('\r\n');
+    
+    const blob = new Blob([csvContent], {type: 'text/csv;charset=utf-8;'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `powerball_${comboType}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }, 100);
+}
+
+function addToMap(map, combo, date, type) {
+    if (!map.has(combo)) map.set(combo, []);
+    map.get(combo).push({date, type});
+}

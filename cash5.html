@@ -15,7 +15,7 @@
     <nav class="tab-nav" style="margin-bottom:18px;">
         <button class="tab-btn active" data-tab="combo">Combo</button>
         <button class="tab-btn" data-tab="2x">2x</button>
-        <button class="tab-btn" data-tab="new">New</button>
+        <button class="tab-btn" data-tab="new">2 years history</button>
         <button class="tab-btn" data-tab="random">Random</button>
         <button class="tab-btn" onclick="window.location.href='home.html'">Back to Home</button>
     </nav>
@@ -24,7 +24,11 @@
         <div class="ball-panel" id="cash5-combo-ball-panel"></div>
         <div class="container main-flex">
     <div class="center-col">
-        <button id="cash5-download-combo-csv-btn" style="display: block; margin-bottom: 14px; font-size: 1em; padding: 8px 16px; border-radius: 8px; border: 1.5px solid #27ae60; background: #fff; color: #27ae60; cursor: pointer; font-weight: 600;">Download Pairs & Trios CSV</button>
+        <div class="download-buttons" style="margin-bottom: 20px;">
+            <button id="cash5-download-pairs-trios-csv-btn" class="download-btn">Download Pairs & Trios CSV</button>
+            <button id="cash5-download-quads-csv-btn" class="download-btn" style="margin-left: 10px;">Download Quads (4#) 2x+</button>
+            <button id="cash5-download-fives-csv-btn" class="download-btn" style="margin-left: 10px;">Download Fives (5#) 2x+</button>
+        </div>
         <div id="cash5-combo-tab-results"></div>
     </div>
     <div class="right-col">

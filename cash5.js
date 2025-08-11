@@ -95,10 +95,92 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     // --- Download CSV for Combo Tab ---
-    const csvBtn = document.getElementById('cash5-download-combo-csv-btn');
-    if (csvBtn) {
-        csvBtn.onclick = function() {
-            // Gather all pairs and trios from history
+    function generateComboCSV(comboType) {
+        if (!window.cash5DrawRows) {
+            alert('Data not loaded yet!');
+            return;
+        }
+        
+        const comboSize = comboType === 'pairs' ? 2 : 
+                         comboType === 'trios' ? 3 :
+                         comboType === 'quads' ? 4 : 5;
+        
+        const comboCounts = new Map();
+        const comboDraws = new Map();
+        
+        // Helper to get all k-combos
+        function getCombos(arr, k) {
+            const results = [];
+            function helper(start, combo) {
+                if (combo.length === k) {
+                    results.push(combo.slice().sort((a,b) => a - b));
+                    return;
+                }
+                for (let i = start; i < arr.length; i++) {
+                    combo.push(arr[i]);
+                    helper(i + 1, combo);
+                    combo.pop();
+                }
+            }
+            helper(0, []);
+            return results;
+        }
+
+        // Process all draws
+        (window.cash5DrawRows || []).forEach(draw => {
+            const arr = draw.mainArr;
+            if (!arr || arr.length < comboSize) return;
+            
+            getCombos(arr, comboSize).forEach(combo => {
+                const key = combo.join('-');
+                comboCounts.set(key, (comboCounts.get(key) || 0) + 1);
+                if (!comboDraws.has(key)) comboDraws.set(key, []);
+                comboDraws.get(key).push(draw.date);
+            });
+        });
+
+        // Filter for combinations that appear 2+ times
+        const filteredCombos = Array.from(comboCounts.entries())
+            .filter(([_, count]) => count >= 2)
+            .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+
+        // Build CSV
+        const csvRows = [['Combo', 'Count', 'Dates']];
+        filteredCombos.forEach(([combo, count]) => {
+            const datesStr = (comboDraws.get(combo) || []).join('; ');
+            csvRows.push([combo.replace(/-/g, '-'), count, datesStr]);
+        });
+
+        const csvContent = csvRows.map(row => 
+            row.map(val => {
+                const str = String(val);
+                if (str.includes('"')) return '"' + str.replace(/"/g, '""') + '"';
+                if (str.includes(',') || str.includes('\n') || str.includes('\r') || str.includes(';')) {
+                    return '"' + str + '"';
+                }
+                return str;
+            }).join(',')
+        ).join('\r\n');
+
+        // Create and trigger download
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `cash5_${comboType}_2plus.csv`;
+        document.body.appendChild(link);
+        link.click();
+        setTimeout(() => {
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        }, 100);
+    }
+
+    // Set up event listeners for download buttons
+    const pairsTriosBtn = document.getElementById('cash5-download-pairs-trios-csv-btn');
+    if (pairsTriosBtn) {
+        pairsTriosBtn.onclick = function() {
+            // Original pairs and trios CSV generation
             if (!window.cash5DrawRows) {
                 alert('Data not loaded yet!');
                 return;
@@ -107,12 +189,13 @@ document.addEventListener('DOMContentLoaded', function() {
             const trioCounts = new Map();
             const pairDraws = new Map();
             const trioDraws = new Map();
+            
             // Helper to get all k-combos
             function getCombos(arr, k) {
                 const results = [];
                 function helper(start, combo) {
                     if (combo.length === k) {
-                        results.push(combo.slice().sort((a,b)=>a-b));
+                        results.push(combo.slice().sort((a,b) => a - b));
                         return;
                     }
                     for (let i = start; i < arr.length; i++) {
@@ -124,42 +207,63 @@ document.addEventListener('DOMContentLoaded', function() {
                 helper(0, []);
                 return results;
             }
-            (window.cash5DrawRows||[]).forEach(draw => {
+
+            // Process all draws
+            (window.cash5DrawRows || []).forEach(draw => {
                 const arr = draw.mainArr;
                 if (!arr || arr.length < 2) return;
+                
                 // Pairs
                 getCombos(arr, 2).forEach(combo => {
                     const key = combo.join('-');
-                    pairCounts.set(key, (pairCounts.get(key)||0)+1);
+                    pairCounts.set(key, (pairCounts.get(key) || 0) + 1);
                     if (!pairDraws.has(key)) pairDraws.set(key, []);
                     pairDraws.get(key).push(draw.date);
                 });
+                
                 // Trios
-                getCombos(arr, 3).forEach(combo => {
-                    const key = combo.join('-');
-                    trioCounts.set(key, (trioCounts.get(key)||0)+1);
-                    if (!trioDraws.has(key)) trioDraws.set(key, []);
-                    trioDraws.get(key).push(draw.date);
-                });
+                if (arr.length >= 3) {
+                    getCombos(arr, 3).forEach(combo => {
+                        const key = combo.join('-');
+                        trioCounts.set(key, (trioCounts.get(key) || 0) + 1);
+                        if (!trioDraws.has(key)) trioDraws.set(key, []);
+                        trioDraws.get(key).push(draw.date);
+                    });
+                }
             });
+
             // Build CSV
-            let csvRows = [];
-            csvRows.push(['Type','Combo','Count','Dates']);
-            pairCounts.forEach((count, combo) => {
-                const datesStr = (pairDraws.get(combo)||[]).join('; ');
-                csvRows.push(['Pair', combo.replace(/-/g,'-'), count, datesStr]);
-            });
-            trioCounts.forEach((count, combo) => {
-                const datesStr = (trioDraws.get(combo)||[]).join('; ');
-                csvRows.push(['Trio', combo.replace(/-/g,'-'), count, datesStr]);
-            });
-            const csvContent = csvRows.map(row => row.map(val => {
-                const str = String(val);
-                if (str.includes('"')) return '"' + str.replace(/"/g, '""') + '"';
-                if (str.includes(',') || str.includes('\n') || str.includes('\r') || str.includes(';')) return '"' + str + '"';
-                return str;
-            }).join(',')).join('\r\n');
-            const blob = new Blob([csvContent], {type: 'text/csv'});
+            const csvRows = [['Type', 'Combo', 'Count', 'Dates']];
+            
+            // Add pairs to CSV
+            Array.from(pairCounts.entries())
+                .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+                .forEach(([combo, count]) => {
+                    const datesStr = (pairDraws.get(combo) || []).join('; ');
+                    csvRows.push(['Pair', combo.replace(/-/g, '-'), count, datesStr]);
+                });
+            
+            // Add trios to CSV
+            Array.from(trioCounts.entries())
+                .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+                .forEach(([combo, count]) => {
+                    const datesStr = (trioDraws.get(combo) || []).join('; ');
+                    csvRows.push(['Trio', combo.replace(/-/g, '-'), count, datesStr]);
+                });
+
+            const csvContent = csvRows.map(row => 
+                row.map(val => {
+                    const str = String(val);
+                    if (str.includes('"')) return '"' + str.replace(/"/g, '""') + '"';
+                    if (str.includes(',') || str.includes('\n') || str.includes('\r') || str.includes(';')) {
+                        return '"' + str + '"';
+                    }
+                    return str;
+                }).join(',')
+            ).join('\r\n');
+
+            // Create and trigger download
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
             const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.href = url;
@@ -171,6 +275,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 URL.revokeObjectURL(url);
             }, 100);
         };
+    }
+
+    // Set up event listeners for quads and fives download buttons
+    const quadsBtn = document.getElementById('cash5-download-quads-csv-btn');
+    if (quadsBtn) {
+        quadsBtn.onclick = () => generateComboCSV('quads');
+    }
+
+    const fivesBtn = document.getElementById('cash5-download-fives-csv-btn');
+    if (fivesBtn) {
+        fivesBtn.onclick = () => generateComboCSV('fives');
     }
 
     // --- Notes auto-save logic ---
@@ -952,16 +1067,16 @@ function renderCash5RandomBallPanel() {
         
         // Use requestAnimationFrame for smoother UI updates
         requestAnimationFrame(() => {
-            // Filter draws to only include 2015-2025 and sort by date (newest first)
+            // Filter draws to only include 2024-2025 and sort by date (newest first)
             const allDraws = (window.cash5DrawRows || [])
                 .filter(draw => {
                     if (!draw.date) return false;
                     const year = new Date(draw.date).getFullYear();
-                    return year >= 2015 && year <= 2025;
+                    return year >= 2024 && year <= 2025;
                 })
                 .sort((a, b) => new Date(b.date) - new Date(a.date));
                 
-            let html = `<div class='result-meta'>Showing results from 2015 to 2025</div>`;
+            let html = `<div class='result-meta'>Showing results from 2024 to 2025</div>`;
             html += `<table class='results-table'><thead><tr><th>Date</th><th>Winning Numbers</th><th>Matches</th></tr></thead><tbody>`;
             
             // Filter based on selection
