@@ -680,22 +680,28 @@ function generateCombinations(numbers, size) {
 }
 
 function countCombinations(draws, comboSize) {
-    const comboCounts = new Map();
+    const comboMap = new Map();
     
     draws.forEach(draw => {
-        if (!draw.mainArr || !Array.isArray(draw.mainArr)) return;
+        const numbers = [...draw.mainArr].sort((a, b) => a - b);
+        const drawDate = draw.date || 'Unknown date';
         
-        // Generate all possible combinations of comboSize numbers from this draw
-        const combos = generateCombinations(draw.mainArr, comboSize);
+        // Generate all possible combinations of comboSize numbers
+        const combinations = generateCombinations(numbers, comboSize);
         
-        // Count each combination
-        combos.forEach(combo => {
+        // Count each combination and track dates
+        combinations.forEach(combo => {
             const key = combo.join(',');
-            comboCounts.set(key, (comboCounts.get(key) || 0) + 1);
+            const existing = comboMap.get(key) || { count: 0, dates: [] };
+            
+            comboMap.set(key, {
+                count: existing.count + 1,
+                dates: [...existing.dates, drawDate].sort().reverse() // Most recent first
+            });
         });
     });
     
-    return comboCounts;
+    return comboMap;
 }
 
 // Global variables for Cash 5 combo tab
@@ -752,7 +758,7 @@ function renderCash5Combo45BallPanel() {
     ballPanel.innerHTML = '';
     
     // Create balls for numbers 1-38 (Cash 5 uses numbers 1-38)
-    for (let i = 1; i <= 38; i++) {
+    for (let i = 1; i <= 42; i++) {
         const ball = document.createElement('div');
         ball.className = 'ball';
         ball.textContent = i;
@@ -872,7 +878,8 @@ function renderCash5Combo45Results() {
     // Process and filter combinations
     const processCombos = (comboMap, comboSize) => {
         const combos = [];
-        comboMap.forEach((count, comboStr) => {
+        comboMap.forEach((comboData, comboStr) => {
+            const count = comboData.count;
             if (count >= 2) {
                 const numbers = comboStr.split(',').map(Number).sort((a, b) => a - b);
                 
@@ -886,7 +893,7 @@ function renderCash5Combo45Results() {
                 
                 // Filter by search query
                 if (window.cash5Combo45SearchQuery) {
-                    const searchNumbers = window.cash5Combo45SearchQuery.split(/\s+/).map(Number).filter(n => !isNaN(n) && n >= 1 && n <= 38);
+                    const searchNumbers = window.cash5Combo45SearchQuery.split(/\s+/).map(Number).filter(n => !isNaN(n) && n >= 1 && n <= 42);
                     if (searchNumbers.length > 0) {
                         const hasAllSearched = searchNumbers.every(num => 
                             numbers.includes(num)
@@ -897,7 +904,8 @@ function renderCash5Combo45Results() {
                 
                 combos.push({
                     numbers: numbers,
-                    count,
+                    count: count,
+                    dates: comboData.dates || [],
                     type: `${comboSize}-number`
                 });
             }
@@ -938,10 +946,27 @@ function renderCash5Combo45Results() {
                 return `<span class="${ballClass}" style="${ballStyle}" data-number="${num}">${num}</span>`;
             }).join(' ');
             
+            // Format dates for display (most recent 3 or all if <= 3)
+            const maxDatesToShow = 3;
+            const datesToShow = combo.dates.length > maxDatesToShow 
+                ? [...combo.dates.slice(0, maxDatesToShow), `+${combo.dates.length - maxDatesToShow} more`]
+                : combo.dates;
+                
+            const datesHtml = datesToShow.map(date => 
+                `<div style="font-size: 0.85em; color: #666; margin: 2px 0; white-space: nowrap;">${date}</div>`
+            ).join('');
+            
             return `
                 <tr>
-                    <td style="padding: 8px; border-bottom: 1px solid #e0e0e0;">${ballsHtml}</td>
-                    <td style="padding: 8px; text-align: center; border-bottom: 1px solid #e0e0e0; font-weight: bold;">${combo.count}x</td>
+                    <td style="padding: 8px; border-bottom: 1px solid #e0e0e0;">
+                        <div style="margin-bottom: 5px;">${ballsHtml}</div>
+                        <div style="font-size: 0.9em; color: #27ae60; font-weight: 500;">
+                            ${combo.count} occurrence${combo.count > 1 ? 's' : ''}
+                        </div>
+                    </td>
+                    <td style="padding: 8px; border-bottom: 1px solid #e0e0e0; max-width: 150px; overflow: hidden;">
+                        ${datesHtml}
+                    </td>
                 </tr>
             `;
         }).join('');
@@ -952,8 +977,8 @@ function renderCash5Combo45Results() {
                 <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
                     <thead>
                         <tr>
-                            <th style="padding: 10px; text-align: left; background-color: #f5f7fa; border-bottom: 2px solid #e0e0e0;">Numbers</th>
-                            <th style="padding: 10px; text-align: center; background-color: #f5f7fa; border-bottom: 2px solid #e0e0e0; width: 80px;">Frequency</th>
+                            <th style="padding: 10px; text-align: left; background-color: #f5f7fa; border-bottom: 2px solid #e0e0e0;">Combination</th>
+                            <th style="padding: 10px; text-align: left; background-color: #f5f7fa; border-bottom: 2px solid #e0e0e0; width: 150px;">Draw Dates</th>
                         </tr>
                     </thead>
                     <tbody>${rows}</tbody>
@@ -1058,7 +1083,7 @@ function renderCash5Combinations(n) {
     const allDraws = (window.cash5DrawRows || []).map(d => d.mainArr);
     
     for (let i = 0; i < n; i++) {
-        const mainNumbers = generateCash5UniqueNumbers(5, 1, 38);
+        const mainNumbers = generateCash5UniqueNumbers(5, 1, 42);
         
         // Find all matching historical draws
         const matches = [];
@@ -1325,7 +1350,7 @@ window.initCash5RandomTab = function() {
                 return;
             }
             // Generate 5th number
-            let extra = generateCash5UniqueNumbers(1, 1, 38, nums)[0];
+            let extra = generateCash5UniqueNumbers(1, 1, 42, nums)[0];
             let combo = nums.concat([extra]).sort((a,b)=>a-b);
             duoComboResult.innerHTML = `<div class='result-card'><div class='result-title'>Generated Combo:</div><div>${combo.map(n=>`<span class='ball selected' style='margin:0 6px;font-size:1.3em;'>${n}</span>`).join('')}</div></div>`;
         };

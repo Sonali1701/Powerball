@@ -84,12 +84,15 @@ document.addEventListener('DOMContentLoaded', function() {
                     const drawRows = [];
                     for (let i = 0; i < data.length; i++) {
                         const row = data[i];
-                        let winNumbers = (row['Winning Numbers'] || '').replace(/®/g, '').toLowerCase().trim();
-                        if (row.Date && (winNumbers.includes('powerball numbers') || winNumbers.match(/^(\d+\s*-\s*)+\d+$/))) {
+                        // Get the raw winning numbers without modifying the case
+                        let winNumbers = (row['Winning Numbers'] || '').trim();
+                        // Check if this is a valid draw row (has a date and looks like a draw)
+                        if (row.Date && (winNumbers.toLowerCase().includes('powerball') || winNumbers.match(/^(\d+\s*-\s*)+\d+$/))) {
                             // --- Main Numbers ---
                             let mainNumbers;
-                            if (winNumbers.includes('powerball numbers')) {
-                                mainNumbers = (row['Winning Numbers'] || '').replace(/.*Numbers\s*/i, '').replace(/®/g, '').trim();
+                            if (winNumbers.toLowerCase().includes('powerball')) {
+                                // Handle both 'Powerball® Numbers' and 'Powerball Numbers' formats
+                                mainNumbers = (row['Winning Numbers'] || '').replace(/.*[nN]umbers\s*/i, '').replace(/®/g, '').trim();
                             } else {
                                 mainNumbers = (row['Winning Numbers'] || '').replace(/®/g, '').trim();
                             }
@@ -108,10 +111,16 @@ document.addEventListener('DOMContentLoaded', function() {
                             let doublePlayArr = [];
                             if (i + 1 < data.length) {
                                 const nextRow = data[i + 1];
-                                let nextWinNumbers = (nextRow['Winning Numbers'] || '').replace(/®/g, '').toLowerCase().trim();
-                                if (nextWinNumbers.includes('double play numbers')) {
-                                    // Labeled Double Play
-                                    const dpNums = (nextRow['Winning Numbers'] || '').replace(/.*Numbers\s*/i, '').replace(/®/g, '').trim();
+                                // Check if the next row is a continuation (empty date) and contains Double Play
+                                if ((!nextRow.Date || nextRow.Date.trim() === '') && nextRow['Winning Numbers'] && 
+                                    (nextRow['Winning Numbers'].toLowerCase().includes('double play') || 
+                                     nextRow['Winning Numbers'].match(/^(\d+\s*-\s*)+\d+$/))) {
+                                    
+                                    // Extract Double Play numbers, handling both formats
+                                    let dpNums = (nextRow['Winning Numbers'] || '').trim();
+                                    dpNums = dpNums.replace(/.*[nN]umbers\s*/i, '').replace(/®/g, '').trim();
+                                    
+                                    // Process the numbers
                                     doublePlayArr = dpNums.split(' - ').map(x => x.trim()).filter(Boolean);
                                     doublePlayArr.forEach(num => {
                                         if (numberStats[num]) {
@@ -119,27 +128,14 @@ document.addEventListener('DOMContentLoaded', function() {
                                             numberStats[num].dates.push(row.Date + ' (Double Play)');
                                         }
                                     });
+                                    
+                                    // Get the Powerball number from the Double Play row
                                     const numsArr = dpNums.split(' - ');
                                     if (numsArr.length > 0) {
                                         doublePlayPowerball = nextRow['Powerball'] || numsArr[numsArr.length - 1];
-                                        doublePlayNumbers = numsArr.slice(0, numsArr.length - 1).join(' - ');
+                                        doublePlayNumbers = numsArr.slice(0, Math.min(numsArr.length, 5)).join(' - ');
                                     }
-                                    i++; // Skip the Double Play row in the next iteration
-                                } else if (nextWinNumbers.match(/^(\d+\s*-\s*)+\d+$/)) {
-                                    // Unlabeled Double Play (just numbers)
-                                    const dpNums = (nextRow['Winning Numbers'] || '').replace(/®/g, '').trim();
-                                    doublePlayArr = dpNums.split(' - ').map(x => x.trim()).filter(Boolean);
-                                    doublePlayArr.forEach(num => {
-                                        if (numberStats[num]) {
-                                            numberStats[num].count++;
-                                            numberStats[num].dates.push(row.Date + ' (Double Play)');
-                                        }
-                                    });
-                                    const numsArr = dpNums.split(' - ');
-                                    if (numsArr.length > 0) {
-                                        doublePlayPowerball = nextRow['Powerball'] || numsArr[numsArr.length - 1];
-                                        doublePlayNumbers = numsArr.slice(0, numsArr.length - 1).join(' - ');
-                                    }
+                                    
                                     i++; // Skip the Double Play row in the next iteration
                                 }
                             }
