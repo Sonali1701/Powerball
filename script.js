@@ -1067,6 +1067,189 @@ function countPowerballCombinations(draws, comboSize) {
     return comboCounts;
 }
 
+// Function to render the ball panel for Combo45 tab
+function renderPowerballCombo45BallPanel() {
+    const ballPanel = document.getElementById('combo45-ball-panel');
+    if (!ballPanel) return;
+    
+    let html = '<div class="ball-panel-container" style="display: flex; flex-wrap: wrap; gap: 5px;">';
+    for (let i = 1; i <= 69; i++) {
+        html += `<span class="ball" data-number="${i}" style="cursor: pointer;" 
+                  onclick="togglePowerballCombo45Selection(${i}, this)">${i}</span>`;
+    }
+    html += '</div>';
+    
+    ballPanel.innerHTML = html;
+    
+    // Add event listener for clear button
+    const clearBtn = document.getElementById('combo45-clear-btn');
+    if (clearBtn) {
+        clearBtn.addEventListener('click', clearPowerballCombo45Selection);
+    }
+    
+    // Add event listeners for search
+    const searchInput = document.getElementById('combo45-search');
+    const searchBtn = document.getElementById('combo45-search-btn');
+    
+    if (searchInput) {
+        searchInput.addEventListener('keyup', function(event) {
+            if (event.key === 'Enter') {
+                filterPowerballCombo45Results();
+            }
+        });
+    }
+    
+    if (searchBtn) {
+        searchBtn.addEventListener('click', filterPowerballCombo45Results);
+    }
+}
+
+// Toggle number selection in Combo45 tab
+function togglePowerballCombo45Selection(number, element) {
+    if (!window.powerballCombo45Selected) {
+        window.powerballCombo45Selected = [];
+    }
+    
+    const index = window.powerballCombo45Selected.indexOf(number);
+    if (index === -1) {
+        window.powerballCombo45Selected.push(number);
+        element.classList.add('selected');
+    } else {
+        window.powerballCombo45Selected.splice(index, 1);
+        element.classList.remove('selected');
+    }
+    
+    updatePowerballCombo45SelectedNumbers();
+    filterPowerballCombo45Results();
+}
+
+// Clear all selected numbers in Combo45 tab
+function clearPowerballCombo45Selection() {
+    window.powerballCombo45Selected = [];
+    document.querySelectorAll('#combo45-ball-panel .ball').forEach(ball => {
+        ball.classList.remove('selected');
+    });
+    updatePowerballCombo45SelectedNumbers();
+    filterPowerballCombo45Results();
+}
+
+// Update the selected numbers display
+function updatePowerballCombo45SelectedNumbers() {
+    const container = document.getElementById('combo45-selected-numbers');
+    if (!container) return;
+    
+    container.innerHTML = window.powerballCombo45Selected && window.powerballCombo45Selected.length > 0
+        ? window.powerballCombo45Selected.map(num => 
+            `<span class="ball" style="background: #e74c3c; margin: 0 2px;">${num}</span>`
+          ).join('')
+        : '<span style="color: #777;">No numbers selected</span>';
+}
+
+// Filter results based on search and selected numbers
+function filterPowerballCombo45Results() {
+    const searchTerm = document.getElementById('combo45-search')?.value.toLowerCase() || '';
+    const resultsContainer = document.getElementById('combo45-results');
+    if (!resultsContainer || !window.powerballCombo45Data) return;
+    
+    const { fourNumberResults, fiveNumberResults } = window.powerballCombo45Data;
+    
+    const filterFn = (combo) => {
+        // Filter by selected numbers if any
+        if (window.powerballCombo45Selected && window.powerballCombo45Selected.length > 0) {
+            const hasAllSelected = window.powerballCombo45Selected.every(num => 
+                combo.numbers.includes(num)
+            );
+            if (!hasAllSelected) return false;
+        }
+        
+        // Filter by search term
+        if (searchTerm) {
+            const numbersStr = combo.numbers.join(' ');
+            return numbersStr.includes(searchTerm);
+        }
+        
+        return true;
+    };
+    
+    const filteredFourNumber = fourNumberResults.filter(filterFn);
+    const filteredFiveNumber = fiveNumberResults.filter(filterFn);
+    
+    // Update the display with filtered results
+    updatePowerballCombo45Display(filteredFourNumber, filteredFiveNumber);
+}
+
+// Update the display with filtered results
+function updatePowerballCombo45Display(fourNumberResults, fiveNumberResults) {
+    const resultsContainer = document.getElementById('combo45-results');
+    if (!resultsContainer) return;
+    
+    // Generate HTML for a combo table
+    const generateComboTable = (combos, title) => {
+        if (combos.length === 0) return '';
+        
+        const rows = combos.map(combo => {
+            const ballsHtml = combo.numbers.map(num => {
+                const isSelected = window.powerballCombo45Selected && window.powerballCombo45Selected.includes(num);
+                return `<span class="ball" 
+                           style="margin: 0 2px; display: inline-flex; align-items: center; justify-content: center; 
+                                  width: 30px; height: 30px; font-size: 14px; 
+                                  background: ${isSelected ? '#e74c3c' : '#e74c3c'}; 
+                                  color: white; border-radius: 50%;
+                                  cursor: pointer;
+                                  box-shadow: ${isSelected ? '0 0 0 2px #000' : 'none'};"
+                           onclick="togglePowerballCombo45Selection(${num}, this)">${num}</span>`;
+            }).join(' ');
+            
+            return `
+                <tr>
+                    <td style="padding: 8px; border-bottom: 1px solid #e0e0e0;">${ballsHtml}</td>
+                    <td style="padding: 8px; text-align: center; border-bottom: 1px solid #e0e0e0; font-weight: bold;">${combo.count}x</td>
+                </tr>
+            `;
+        }).join('');
+        
+        return `
+            <div class="combo-table-container" style="margin-bottom: 30px;">
+                <h3 style="color: #2c3e50; margin-bottom: 10px; padding-bottom: 5px; border-bottom: 2px solid #e0e0e0;">
+                    ${title} (${combos.length} combinations)
+                </h3>
+                <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+                    <thead>
+                        <tr>
+                            <th style="padding: 10px; text-align: left; background-color: #f5f7fa; border-bottom: 2px solid #e0e0e0;">Numbers</th>
+                            <th style="padding: 10px; text-align: center; background-color: #f5f7fa; border-bottom: 2px solid #e0e0e0; width: 80px;">Frequency</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rows}</tbody>
+                </table>
+            </div>
+        `;
+    };
+    
+    // Generate the final HTML with both tables side by side
+    let html = `
+        <div style="display: flex; gap: 30px; margin-top: 20px;">
+            <div style="flex: 1;">
+                ${generateComboTable(fourNumberResults, '4-Number Combinations')}
+            </div>
+            <div style="flex: 1;">
+                ${generateComboTable(fiveNumberResults, '5-Number Combinations')}
+            </div>
+        </div>
+    `;
+    
+    if (fourNumberResults.length === 0 && fiveNumberResults.length === 0) {
+        const searchTerm = document.getElementById('combo45-search')?.value || '';
+        const noResultsMsg = searchTerm 
+            ? `No combinations found matching "${searchTerm}"${window.powerballCombo45Selected?.length ? ' with selected numbers' : ''}.`
+            : 'No combinations found that match the selected criteria.';
+        
+        html = `<div style="text-align: center; padding: 30px; color: #666; font-size: 16px;">${noResultsMsg}</div>`;
+    }
+    
+    resultsContainer.innerHTML = html;
+}
+
 // Function to render the 4&5 Combo tab results
 function renderPowerballCombo45Results() {
     const resultsContainer = document.getElementById('combo45-results');
@@ -1137,23 +1320,16 @@ function renderPowerballCombo45Results() {
         `;
     };
     
-    // Generate the final HTML with both tables side by side
-    let html = `
-        <div style="display: flex; gap: 30px; margin-top: 20px;">
-            <div style="flex: 1;">
-                ${generateComboTable(fourNumberResults, '4-Number Combinations')}
-            </div>
-            <div style="flex: 1;">
-                ${generateComboTable(fiveNumberResults, '5-Number Combinations')}
-            </div>
-        </div>
-    `;
+    // Store the results for filtering
+    window.powerballCombo45Data = { fourNumberResults, fiveNumberResults };
     
-    if (fourNumberResults.length === 0 && fiveNumberResults.length === 0) {
-        html = '<div style="text-align: center; padding: 30px; color: #666; font-size: 16px;">No combinations found that appear 2 or more times.</div>';
+    // Initialize the ball panel if not already done
+    if (!document.getElementById('combo45-ball-panel').hasChildNodes()) {
+        renderPowerballCombo45BallPanel();
     }
     
-    resultsContainer.innerHTML = html;
+    // Display the results
+    updatePowerballCombo45Display(fourNumberResults, fiveNumberResults);
 }
 
 // After CSV and window.filteredDrawRows are ready, render the full combo table on the home page

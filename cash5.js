@@ -331,7 +331,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 renderCash5NewResults();
             }
             if (tabId === 'combo45') {
-                renderCash5Combo45Results();
+                initCash5Combo45Tab();
             }
         });
     });
@@ -698,6 +698,164 @@ function countCombinations(draws, comboSize) {
     return comboCounts;
 }
 
+// Global variables for Cash 5 combo tab
+window.cash5Combo45SelectedNumbers = [];
+window.cash5Combo45SearchQuery = '';
+
+// Initialize the Cash 5 4&5 Combo tab
+function initCash5Combo45Tab() {
+    // Initialize the ball panel
+    renderCash5Combo45BallPanel();
+    
+    // Set up event listeners
+    const searchInput = document.getElementById('cash5-combo45-search');
+    const searchButton = document.getElementById('cash5-combo45-search-btn');
+    const clearButton = document.getElementById('cash5-combo45-clear-btn');
+    
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            window.cash5Combo45SearchQuery = e.target.value.trim();
+            renderCash5Combo45Results();
+        });
+    }
+    
+    if (searchButton) {
+        searchButton.addEventListener('click', () => {
+            const searchInput = document.getElementById('cash5-combo45-search');
+            if (searchInput) {
+                window.cash5Combo45SearchQuery = searchInput.value.trim();
+                renderCash5Combo45Results();
+            }
+        });
+    }
+    
+    if (clearButton) {
+        clearButton.addEventListener('click', () => {
+            window.cash5Combo45SelectedNumbers = [];
+            window.cash5Combo45SearchQuery = '';
+            const searchInput = document.getElementById('cash5-combo45-search');
+            if (searchInput) searchInput.value = '';
+            updateCash5Combo45SelectedNumbersDisplay();
+            renderCash5Combo45Results();
+        });
+    }
+    
+    // Initial render
+    renderCash5Combo45Results();
+}
+
+// Render the ball panel for the 4&5 Combo tab
+function renderCash5Combo45BallPanel() {
+    const ballPanel = document.getElementById('cash5-combo45-ball-panel');
+    if (!ballPanel) return;
+    
+    ballPanel.innerHTML = '';
+    
+    // Create balls for numbers 1-38 (Cash 5 uses numbers 1-38)
+    for (let i = 1; i <= 38; i++) {
+        const ball = document.createElement('div');
+        ball.className = 'ball';
+        ball.textContent = i;
+        ball.style.margin = '2px';
+        ball.style.display = 'inline-flex';
+        ball.style.alignItems = 'center';
+        ball.style.justifyContent = 'center';
+        ball.style.width = '30px';
+        ball.style.height = '30px';
+        ball.style.borderRadius = '50%';
+        ball.style.backgroundColor = '#27ae60'; // Cash 5 green
+        ball.style.color = 'white';
+        ball.style.cursor = 'pointer';
+        ball.style.transition = 'all 0.2s';
+        
+        // Check if this number is selected
+        if (window.cash5Combo45SelectedNumbers.includes(i)) {
+            ball.style.backgroundColor = '#e74c3c';
+            ball.style.transform = 'scale(1.1)';
+            ball.style.boxShadow = '0 0 10px rgba(0,0,0,0.2)';
+        }
+        
+        // Add click handler
+        ball.addEventListener('click', () => {
+            const index = window.cash5Combo45SelectedNumbers.indexOf(i);
+            if (index === -1) {
+                // Add to selected numbers if not already selected
+                window.cash5Combo45SelectedNumbers.push(i);
+            } else {
+                // Remove from selected numbers if already selected
+                window.cash5Combo45SelectedNumbers.splice(index, 1);
+            }
+            
+            // Update the display and re-render results
+            updateCash5Combo45SelectedNumbersDisplay();
+            renderCash5Combo45Results();
+        });
+        
+        // Add hover effect
+        ball.addEventListener('mouseover', () => {
+            ball.style.transform = 'scale(1.1)';
+            ball.style.boxShadow = '0 0 10px rgba(0,0,0,0.2)';
+        });
+        
+        ball.addEventListener('mouseout', () => {
+            if (!window.cash5Combo45SelectedNumbers.includes(i)) {
+                ball.style.transform = 'scale(1)';
+                ball.style.boxShadow = 'none';
+            }
+        });
+        
+        ballPanel.appendChild(ball);
+    }
+}
+
+// Update the selected numbers display
+function updateCash5Combo45SelectedNumbersDisplay() {
+    const selectedNumbersContainer = document.getElementById('cash5-combo45-selected-numbers');
+    if (!selectedNumbersContainer) return;
+    
+    if (window.cash5Combo45SelectedNumbers.length === 0) {
+        selectedNumbersContainer.innerHTML = '<span style="color: #777; font-style: italic;">No numbers selected</span>';
+        return;
+    }
+    
+    selectedNumbersContainer.innerHTML = '';
+    
+    // Sort the selected numbers
+    const sortedNumbers = [...window.cash5Combo45SelectedNumbers].sort((a, b) => a - b);
+    
+    // Create balls for selected numbers
+    sortedNumbers.forEach(num => {
+        const ball = document.createElement('div');
+        ball.className = 'ball';
+        ball.textContent = num;
+        ball.style.margin = '2px';
+        ball.style.display = 'inline-flex';
+        ball.style.alignItems = 'center';
+        ball.style.justifyContent = 'center';
+        ball.style.width = '30px';
+        ball.style.height = '30px';
+        ball.style.borderRadius = '50%';
+        ball.style.backgroundColor = '#e74c3c';
+        ball.style.color = 'white';
+        ball.style.cursor = 'pointer';
+        
+        // Add click handler to remove the number
+        ball.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const index = window.cash5Combo45SelectedNumbers.indexOf(num);
+            if (index !== -1) {
+                window.cash5Combo45SelectedNumbers.splice(index, 1);
+                updateCash5Combo45SelectedNumbersDisplay();
+                renderCash5Combo45Results();
+                renderCash5Combo45BallPanel();
+            }
+        });
+        
+        selectedNumbersContainer.appendChild(ball);
+    });
+}
+
+// Render the 4&5 Combo results
 function renderCash5Combo45Results() {
     const resultsContainer = document.getElementById('cash5-combo45-results');
     if (!resultsContainer || !window.cash5DrawRows) return;
@@ -716,8 +874,29 @@ function renderCash5Combo45Results() {
         const combos = [];
         comboMap.forEach((count, comboStr) => {
             if (count >= 2) {
+                const numbers = comboStr.split(',').map(Number).sort((a, b) => a - b);
+                
+                // Filter by selected numbers
+                if (window.cash5Combo45SelectedNumbers.length > 0) {
+                    const hasAllSelected = window.cash5Combo45SelectedNumbers.every(num => 
+                        numbers.includes(num)
+                    );
+                    if (!hasAllSelected) return;
+                }
+                
+                // Filter by search query
+                if (window.cash5Combo45SearchQuery) {
+                    const searchNumbers = window.cash5Combo45SearchQuery.split(/\s+/).map(Number).filter(n => !isNaN(n) && n >= 1 && n <= 38);
+                    if (searchNumbers.length > 0) {
+                        const hasAllSearched = searchNumbers.every(num => 
+                            numbers.includes(num)
+                        );
+                        if (!hasAllSearched) return;
+                    }
+                }
+                
                 combos.push({
-                    numbers: comboStr.split(',').map(Number).sort((a, b) => a - b),
+                    numbers: numbers,
                     count,
                     type: `${comboSize}-number`
                 });
@@ -739,9 +918,25 @@ function renderCash5Combo45Results() {
         if (combos.length === 0) return '';
         
         const rows = combos.map(combo => {
-            const ballsHtml = combo.numbers.map(num => 
-                `<span class="ball" style="margin: 0 2px; display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; font-size: 14px; background: #4a90e2; color: white; border-radius: 50%;">${num}</span>`
-            ).join(' ');
+            const ballsHtml = combo.numbers.map(num => {
+                const isSelected = window.cash5Combo45SelectedNumbers.includes(num);
+                const isSearched = window.cash5Combo45SearchQuery.split(/\s+/).map(Number).includes(num);
+                
+                let ballClass = 'ball';
+                let ballStyle = 'margin: 0 2px; display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; font-size: 14px;';
+                
+                if (isSelected) {
+                    ballClass += ' selected';
+                    ballStyle += ' background: #e74c3c; color: white; border-radius: 50%; transform: scale(1.1); box-shadow: 0 0 5px rgba(0,0,0,0.2);';
+                } else if (isSearched) {
+                    ballClass += ' searched';
+                    ballStyle += ' background: #f39c12; color: white; border-radius: 50%;';
+                } else {
+                    ballStyle += ' background: #27ae60; color: white; border-radius: 50%;';
+                }
+                
+                return `<span class="${ballClass}" style="${ballStyle}" data-number="${num}">${num}</span>`;
+            }).join(' ');
             
             return `
                 <tr>
@@ -768,7 +963,29 @@ function renderCash5Combo45Results() {
     };
     
     // Generate the final HTML with both tables side by side
-    let html = `
+    let html = '';
+    
+    // Show filter info if any filters are active
+    if (window.cash5Combo45SelectedNumbers.length > 0 || window.cash5Combo45SearchQuery) {
+        let filterText = 'Filtering by: ';
+        const filters = [];
+        
+        if (window.cash5Combo45SelectedNumbers.length > 0) {
+            filters.push(`selected numbers: ${window.cash5Combo45SelectedNumbers.sort((a, b) => a - b).join(', ')}`);
+        }
+        
+        if (window.cash5Combo45SearchQuery) {
+            filters.push(`search: "${window.cash5Combo45SearchQuery}"`);
+        }
+        
+        filterText += filters.join(' and ');
+        
+        html += `<div style="margin-bottom: 15px; padding: 10px; background: #f8f9fa; border-radius: 4px; font-size: 0.95em; color: #555;">
+                    ${filterText}
+                </div>`;
+    }
+    
+    html += `
         <div style="display: flex; gap: 30px; margin-top: 20px;">
             <div style="flex: 1;">
                 ${generateComboTable(fourNumberResults, '4-Number Combinations')}
@@ -780,10 +997,33 @@ function renderCash5Combo45Results() {
     `;
     
     if (fourNumberResults.length === 0 && fiveNumberResults.length === 0) {
-        html = '<div style="text-align: center; padding: 30px; color: #666; font-size: 16px;">No combinations found that appear 2 or more times.</div>';
+        html = '<div style="text-align: center; padding: 30px; color: #666; font-size: 16px;">No combinations found matching the current filters.</div>';
     }
     
     resultsContainer.innerHTML = html;
+    
+    // Add click handlers to the balls in the results
+    resultsContainer.querySelectorAll('.ball').forEach(ball => {
+        ball.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const number = parseInt(ball.getAttribute('data-number'));
+            if (isNaN(number)) return;
+            
+            const index = window.cash5Combo45SelectedNumbers.indexOf(number);
+            if (index === -1) {
+                // Add to selected numbers if not already selected
+                window.cash5Combo45SelectedNumbers.push(number);
+            } else {
+                // Remove from selected numbers if already selected
+                window.cash5Combo45SelectedNumbers.splice(index, 1);
+            }
+            
+            // Update the display and re-render results
+            updateCash5Combo45SelectedNumbersDisplay();
+            renderCash5Combo45BallPanel();
+            renderCash5Combo45Results();
+        });
+    });
 }
 
 // --- New Tab: Ball Panel & Results ---
@@ -810,18 +1050,94 @@ function renderCash5Combinations(n) {
         <tr>
             <th style="text-align:left; padding:8px 0; border-bottom:1px solid #eee;">#</th>
             <th style="text-align:left; padding:8px 0; border-bottom:1px solid #eee;">Numbers</th>
+            <th style="text-align:left; padding:8px 0; border-bottom:1px solid #eee;">Matches</th>
         </tr>
     `;
+    
+    // Get all historical draws for matching
+    const allDraws = (window.cash5DrawRows || []).map(d => d.mainArr);
+    
     for (let i = 0; i < n; i++) {
         const mainNumbers = generateCash5UniqueNumbers(5, 1, 38);
+        
+        // Find all matching historical draws
+        const matches = [];
+        allDraws.forEach(draw => {
+            const matchedNumbers = draw.filter(num => mainNumbers.includes(num));
+            if (matchedNumbers.length >= 2) { // Only show matches of 2+ numbers
+                matches.push({
+                    date: draw.date,
+                    numbers: draw,
+                    matched: matchedNumbers,
+                    count: matchedNumbers.length
+                });
+            }
+        });
+        
         const tr = document.createElement('tr');
         tr.style.borderBottom = '1px solid #f5f5f5';
-        tr.innerHTML = `
-            <td style="padding:10px 0; color:#666;">${i + 1}.</td>
-            <td style="padding:10px 0; font-weight:bold; color:#27ae60;">
-                ${mainNumbers.map(num => `<span class='ball selected' style='margin:0 6px;font-size:1.3em;'>${num}</span>`).join('')}
-            </td>
-        `;
+        
+        // Create the numbers cell with highlighting for matched numbers
+        const numbersCell = document.createElement('td');
+        numbersCell.style.padding = '10px 0';
+        mainNumbers.sort((a, b) => a - b).forEach(num => {
+            const isMatched = matches.some(match => match.matched.includes(num));
+            const ball = document.createElement('span');
+            ball.className = 'ball' + (isMatched ? ' selected' : '');
+            ball.style.margin = '0 3px';
+            ball.style.fontSize = '1.1em';
+            ball.style.display = 'inline-flex';
+            ball.style.alignItems = 'center';
+            ball.style.justifyContent = 'center';
+            ball.style.width = '30px';
+            ball.style.height = '30px';
+            ball.style.borderRadius = '50%';
+            ball.style.backgroundColor = isMatched ? '#27ae60' : '#f0f0f0';
+            ball.style.color = isMatched ? 'white' : '#333';
+            ball.textContent = num;
+            numbersCell.appendChild(ball);
+        });
+        
+        // Create the matches cell
+        const matchesCell = document.createElement('td');
+        matchesCell.style.padding = '10px 0';
+        
+        if (matches.length > 0) {
+            // Group matches by count (2, 3, 4, 5)
+            const matchesByCount = {};
+            matches.forEach(match => {
+                if (!matchesByCount[match.count]) {
+                    matchesByCount[match.count] = [];
+                }
+                matchesByCount[match.count].push(match);
+            });
+            
+            // Create match summary
+            const summary = [];
+            Object.keys(matchesByCount).sort((a, b) => b - a).forEach(count => {
+                const matchCount = matchesByCount[count].length;
+                summary.push(`${matchCount}x${count}`);
+            });
+            
+            matchesCell.textContent = summary.join(', ');
+            matchesCell.style.color = '#e74c3c';
+            matchesCell.style.fontWeight = 'bold';
+        } else {
+            matchesCell.textContent = 'No matches';
+            matchesCell.style.color = '#999';
+        }
+        
+        // Create the row number cell
+        const numberCell = document.createElement('td');
+        numberCell.style.padding = '10px 0';
+        numberCell.style.color = '#666';
+        numberCell.textContent = `${i + 1}.`;
+        
+        // Append all cells to the row
+        tr.appendChild(numberCell);
+        tr.appendChild(numbersCell);
+        tr.appendChild(matchesCell);
+        
         table.appendChild(tr);
     }
     const container = document.getElementById('cash5-generated-table');
