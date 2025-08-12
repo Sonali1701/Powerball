@@ -923,28 +923,34 @@ function renderCash5Combo45Results() {
     
     // Generate HTML for a combo table
     const generateComboTable = (combos, title) => {
-        if (combos.length === 0) return '';
+        if (combos.length === 0) return document.createElement('div'); // Return empty div instead of empty string
         
         const rows = combos.map(combo => {
-            const ballsHtml = combo.numbers.map(num => {
-                const isSelected = window.cash5Combo45SelectedNumbers.includes(num);
-                const isSearched = window.cash5Combo45SearchQuery.split(/\s+/).map(Number).includes(num);
-                
-                let ballClass = 'ball';
-                let ballStyle = 'margin: 0 2px; display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; font-size: 14px;';
-                
-                if (isSelected) {
-                    ballClass += ' selected';
-                    ballStyle += ' background: #e74c3c; color: white; border-radius: 50%; transform: scale(1.1); box-shadow: 0 0 5px rgba(0,0,0,0.2);';
-                } else if (isSearched) {
-                    ballClass += ' searched';
-                    ballStyle += ' background: #f39c12; color: white; border-radius: 50%;';
-                } else {
-                    ballStyle += ' background: #27ae60; color: white; border-radius: 50%;';
-                }
-                
-                return `<span class="${ballClass}" style="${ballStyle}" data-number="${num}">${num}</span>`;
-            }).join(' ');
+            const ballsHtml = `
+                <div style="display: flex; align-items: center; gap: 4px; flex-wrap: nowrap;">
+                    ${combo.numbers.map(num => {
+                        const isSelected = window.cash5Combo45SelectedNumbers.includes(num);
+                        const isSearched = window.cash5Combo45SearchQuery.split(/\s+/).map(Number).includes(num);
+                        
+                        let ballClass = 'ball';
+                        let ballStyle = 'display: flex; align-items: center; justify-content: center;';
+                        ballStyle += ' width: 30px; height: 30px; border-radius: 50%; font-weight: bold;';
+                        ballStyle += ' transition: all 0.2s ease; flex-shrink: 0;';
+                        
+                        if (isSelected) {
+                            ballClass += ' selected';
+                            ballStyle += ' background: #e74c3c; color: white; transform: scale(1.1); box-shadow: 0 0 5px rgba(0,0,0,0.2);';
+                        } else if (isSearched) {
+                            ballClass += ' searched';
+                            ballStyle += ' background: #f39c12; color: white;';
+                        } else {
+                            ballStyle += ' background: #27ae60; color: white;';
+                        }
+                        
+                        return `<span class="${ballClass}" style="${ballStyle}" data-number="${num}">${num}</span>`;
+                    }).join('\n                    ')}
+                </div>
+            `;
             
             // Format dates for display (most recent 3 or all if <= 3)
             const maxDatesToShow = 3;
@@ -958,33 +964,77 @@ function renderCash5Combo45Results() {
             
             return `
                 <tr>
-                    <td style="padding: 8px; border-bottom: 1px solid #e0e0e0;">
-                        <div style="margin-bottom: 5px;">${ballsHtml}</div>
-                        <div style="font-size: 0.9em; color: #27ae60; font-weight: 500;">
-                            ${combo.count} occurrence${combo.count > 1 ? 's' : ''}
+                    <td style="padding: 12px; border-bottom: 1px solid #e0e0e0; vertical-align: middle;">
+                        <div style="display: flex; align-items: center; justify-content: space-between;">
+                            ${ballsHtml}
+                            <div style="font-size: 14px; color: #2c3e50; font-weight: 600; margin-left: 15px; white-space: nowrap;">
+                                ${combo.count}×
+                            </div>
                         </div>
                     </td>
-                    <td style="padding: 8px; border-bottom: 1px solid #e0e0e0; max-width: 150px; overflow: hidden;">
-                        ${datesHtml}
+                    <td style="padding: 12px; border-bottom: 1px solid #e0e0e0; max-width: 200px; overflow: hidden; vertical-align: middle;">
+                        <div style="display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: #7f8c8d;">
+                            ${datesHtml}
+                        </div>
                     </td>
                 </tr>
             `;
         }).join('');
         
-        return `
-            <div class="combo-table-container" style="margin-bottom: 30px;">
-                <h3 style="color: #2c3e50; margin-bottom: 10px; padding-bottom: 5px; border-bottom: 2px solid #e0e0e0;">${title} (${combos.length} combinations)</h3>
-                <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
-                    <thead>
-                        <tr>
-                            <th style="padding: 10px; text-align: left; background-color: #f5f7fa; border-bottom: 2px solid #e0e0e0;">Combination</th>
-                            <th style="padding: 10px; text-align: left; background-color: #f5f7fa; border-bottom: 2px solid #e0e0e0; width: 150px;">Draw Dates</th>
-                        </tr>
-                    </thead>
-                    <tbody>${rows}</tbody>
-                </table>
-            </div>
-        `;
+        const container = document.createElement('div');
+        container.className = 'combo-table-container';
+        container.style.marginBottom = '30px';
+        container.style.width = '100%';
+        
+        const titleEl = document.createElement('h3');
+        titleEl.textContent = `${title} (${combos.length} combinations)`;
+        titleEl.style.color = '#2c3e50';
+        titleEl.style.margin = '0 0 15px 0';
+        titleEl.style.padding = '0 0 8px 0';
+        titleEl.style.borderBottom = '2px solid #e0e0e0';
+        
+        const tableContainer = document.createElement('div');
+        tableContainer.style.width = '100%';
+        tableContainer.style.overflowX = 'auto';
+        
+        const table = document.createElement('table');
+        table.style.width = '100%';
+        table.style.borderCollapse = 'collapse';
+        table.style.tableLayout = 'fixed';
+        
+        const thead = document.createElement('thead');
+        const headerRow = document.createElement('tr');
+        
+        const th1 = document.createElement('th');
+        th1.textContent = 'Combination';
+        th1.style.padding = '10px';
+        th1.style.textAlign = 'left';
+        th1.style.backgroundColor = '#f5f7fa';
+        th1.style.borderBottom = '2px solid #e0e0e0';
+        
+        const th2 = document.createElement('th');
+        th2.textContent = 'Draw Dates';
+        th2.style.padding = '10px';
+        th2.style.textAlign = 'left';
+        th2.style.backgroundColor = '#f5f7fa';
+        th2.style.borderBottom = '2px solid #e0e0e0';
+        th2.style.width = '200px';
+        
+        headerRow.appendChild(th1);
+        headerRow.appendChild(th2);
+        thead.appendChild(headerRow);
+        
+        const tbody = document.createElement('tbody');
+        tbody.innerHTML = rows;
+        
+        table.appendChild(thead);
+        table.appendChild(tbody);
+        tableContainer.appendChild(table);
+        
+        container.appendChild(titleEl);
+        container.appendChild(tableContainer);
+        
+        return container;
     };
     
     // Generate the final HTML with both tables side by side
@@ -1010,165 +1060,87 @@ function renderCash5Combo45Results() {
                 </div>`;
     }
     
-    html += `
-        <div style="display: flex; gap: 30px; margin-top: 20px;">
-            <div style="flex: 1;">
-                ${generateComboTable(fourNumberResults, '4-Number Combinations')}
-            </div>
-            <div style="flex: 1;">
-                ${generateComboTable(fiveNumberResults, '5-Number Combinations')}
-            </div>
-        </div>
-    `;
+    // Generate HTML for the results
+    const generateResultsHtml = () => {
+        // Create a container for the tables
+        const container = document.createElement('div');
+        container.style.marginTop = '20px';
+        container.style.width = '100%';
+        container.style.maxWidth = '100%';
+        container.style.overflowX = 'auto';
+        
+        // Add the 4-number combos table
+        if (fourNumberResults.length > 0) {
+            const table1 = generateComboTable(fourNumberResults, '4-Number Combinations');
+            table1.style.marginBottom = '30px';
+            table1.style.width = '100%';
+            container.appendChild(table1);
+        }
+        
+        // Add the 5-number combos table
+        if (fiveNumberResults.length > 0) {
+            const table2 = generateComboTable(fiveNumberResults, '5-Number Combinations');
+            table2.style.width = '100%';
+            container.appendChild(table2);
+        }
+        
+        return container;
+    };
     
     if (fourNumberResults.length === 0 && fiveNumberResults.length === 0) {
         html = '<div style="text-align: center; padding: 30px; color: #666; font-size: 16px;">No combinations found matching the current filters.</div>';
     }
     
-    resultsContainer.innerHTML = html;
+    // Clear previous content and add the new tables
+    resultsContainer.innerHTML = '';
     
-    // Add click handlers to the balls in the results
-    resultsContainer.querySelectorAll('.ball').forEach(ball => {
-        ball.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const number = parseInt(ball.getAttribute('data-number'));
-            if (isNaN(number)) return;
-            
-            const index = window.cash5Combo45SelectedNumbers.indexOf(number);
-            if (index === -1) {
-                // Add to selected numbers if not already selected
-                window.cash5Combo45SelectedNumbers.push(number);
-            } else {
-                // Remove from selected numbers if already selected
-                window.cash5Combo45SelectedNumbers.splice(index, 1);
-            }
-            
-            // Update the display and re-render results
-            updateCash5Combo45SelectedNumbersDisplay();
-            renderCash5Combo45BallPanel();
+    // Add the ball panel
+    const ballPanelContainer = document.createElement('div');
+    ballPanelContainer.style.marginBottom = '20px';
+    ballPanelContainer.style.width = '100%';
+    renderCash5Combo45BallPanel(ballPanelContainer);
+    resultsContainer.appendChild(ballPanelContainer);
+    
+    // Add the search container
+    const searchContainer = document.createElement('div');
+    searchContainer.style.marginBottom = '20px';
+    searchContainer.style.width = '100%';
+    searchContainer.innerHTML = `
+        <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+            <input type="text" id="cash5-combo45-search" 
+                   placeholder="Search numbers..." 
+                   style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px; flex-grow: 1;"
+                   value="${window.cash5Combo45SearchQuery || ''}">
+            <button id="cash5-combo45-clear" 
+                    style="padding: 8px 16px; background-color: #e74c3c; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                Clear
+            </button>
+        </div>
+        <div id="cash5-combo45-selected-numbers" style="display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px;"></div>
+    `;
+    resultsContainer.appendChild(searchContainer);
+    
+    // Add the results container
+    resultsContainer.appendChild(generateResultsHtml());
+    
+    // Set up event listeners
+    const searchInput = document.getElementById('cash5-combo45-search');
+    const clearButton = document.getElementById('cash5-combo45-clear');
+    
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            window.cash5Combo45SearchQuery = e.target.value.trim();
             renderCash5Combo45Results();
         });
-    });
-}
-
-// --- New Tab: Ball Panel & Results ---
-window.cash5SelectedNew = [];
-
-// --- Cash 5 Random Tab: Generator Features ---
-function generateCash5UniqueNumbers(count, min, max, exclude=[]) {
-    const nums = [];
-    while (nums.length < count) {
-        const num = Math.floor(Math.random() * (max - min + 1)) + min;
-        if (!nums.includes(num) && !exclude.includes(num)) {
-            nums.push(num);
-        }
     }
-    return nums.sort((a, b) => a - b);
-}
-
-function renderCash5Combinations(n) {
-    const table = document.createElement('table');
-    table.style.width = '100%';
-    table.style.borderCollapse = 'collapse';
-    table.style.marginTop = '12px';
-    table.innerHTML = `
-        <tr>
-            <th style="text-align:left; padding:8px 0; border-bottom:1px solid #eee;">#</th>
-            <th style="text-align:left; padding:8px 0; border-bottom:1px solid #eee;">Numbers</th>
-            <th style="text-align:left; padding:8px 0; border-bottom:1px solid #eee;">Matches</th>
-        </tr>
-    `;
     
-    // Get all historical draws for matching
-    const allDraws = (window.cash5DrawRows || []).map(d => d.mainArr);
-    
-    for (let i = 0; i < n; i++) {
-        const mainNumbers = generateCash5UniqueNumbers(5, 1, 42);
-        
-        // Find all matching historical draws
-        const matches = [];
-        allDraws.forEach(draw => {
-            const matchedNumbers = draw.filter(num => mainNumbers.includes(num));
-            if (matchedNumbers.length >= 2) { // Only show matches of 2+ numbers
-                matches.push({
-                    date: draw.date,
-                    numbers: draw,
-                    matched: matchedNumbers,
-                    count: matchedNumbers.length
-                });
-            }
+    if (clearButton) {
+        clearButton.addEventListener('click', () => {
+            window.cash5Combo45SelectedNumbers = [];
+            window.cash5Combo45SearchQuery = '';
+            if (searchInput) searchInput.value = '';
+            renderCash5Combo45Results();
         });
-        
-        const tr = document.createElement('tr');
-        tr.style.borderBottom = '1px solid #f5f5f5';
-        
-        // Create the numbers cell with highlighting for matched numbers
-        const numbersCell = document.createElement('td');
-        numbersCell.style.padding = '10px 0';
-        mainNumbers.sort((a, b) => a - b).forEach(num => {
-            const isMatched = matches.some(match => match.matched.includes(num));
-            const ball = document.createElement('span');
-            ball.className = 'ball' + (isMatched ? ' selected' : '');
-            ball.style.margin = '0 3px';
-            ball.style.fontSize = '1.1em';
-            ball.style.display = 'inline-flex';
-            ball.style.alignItems = 'center';
-            ball.style.justifyContent = 'center';
-            ball.style.width = '30px';
-            ball.style.height = '30px';
-            ball.style.borderRadius = '50%';
-            ball.style.backgroundColor = isMatched ? '#27ae60' : '#f0f0f0';
-            ball.style.color = isMatched ? 'white' : '#333';
-            ball.textContent = num;
-            numbersCell.appendChild(ball);
-        });
-        
-        // Create the matches cell
-        const matchesCell = document.createElement('td');
-        matchesCell.style.padding = '10px 0';
-        
-        if (matches.length > 0) {
-            // Group matches by count (2, 3, 4, 5)
-            const matchesByCount = {};
-            matches.forEach(match => {
-                if (!matchesByCount[match.count]) {
-                    matchesByCount[match.count] = [];
-                }
-                matchesByCount[match.count].push(match);
-            });
-            
-            // Create match summary
-            const summary = [];
-            Object.keys(matchesByCount).sort((a, b) => b - a).forEach(count => {
-                const matchCount = matchesByCount[count].length;
-                summary.push(`${matchCount}x${count}`);
-            });
-            
-            matchesCell.textContent = summary.join(', ');
-            matchesCell.style.color = '#e74c3c';
-            matchesCell.style.fontWeight = 'bold';
-        } else {
-            matchesCell.textContent = 'No matches';
-            matchesCell.style.color = '#999';
-        }
-        
-        // Create the row number cell
-        const numberCell = document.createElement('td');
-        numberCell.style.padding = '10px 0';
-        numberCell.style.color = '#666';
-        numberCell.textContent = `${i + 1}.`;
-        
-        // Append all cells to the row
-        tr.appendChild(numberCell);
-        tr.appendChild(numbersCell);
-        tr.appendChild(matchesCell);
-        
-        table.appendChild(tr);
-    }
-    const container = document.getElementById('cash5-generated-table');
-    if (container) {
-        container.innerHTML = '';
-        container.appendChild(table);
     }
 }
 

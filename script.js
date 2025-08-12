@@ -1043,24 +1043,26 @@ function generateCombinations(numbers, size) {
     return result;
 }
 
-// Function to count occurrences of combinations in the draw history
+// Function to count occurrences of combinations in the draw history and track draw dates
 function countPowerballCombinations(draws, comboSize) {
-    const comboCounts = new Map();
+    const comboMap = new Map();
     
     draws.forEach(draw => {
-        if (!draw.mainArr || draw.mainArr.length < comboSize) return;
-        
-        // Sort numbers to ensure consistent ordering
-        const sortedNumbers = [...draw.mainArr].sort((a, b) => a - b);
-        const combinations = generateCombinations(sortedNumbers, comboSize);
+        const numbers = [...draw.mainArr].sort((a, b) => a - b);
+        const drawDate = draw.date || 'Unknown date';
+        const combinations = generateCombinations(numbers, comboSize);
         
         combinations.forEach(combo => {
-            const comboKey = combo.join(',');
-            comboCounts.set(comboKey, (comboCounts.get(comboKey) || 0) + 1);
+            const key = combo.join(',');
+            const existing = comboMap.get(key) || { count: 0, dates: [] };
+            comboMap.set(key, {
+                count: existing.count + 1,
+                dates: [...existing.dates, drawDate].sort().reverse()
+            });
         });
     });
     
-    return comboCounts;
+    return comboMap;
 }
 
 // Function to render the ball panel for Combo45 tab
@@ -1102,31 +1104,88 @@ function renderPowerballCombo45BallPanel() {
 
 // Toggle number selection in Combo45 tab
 function togglePowerballCombo45Selection(number, element) {
-    if (!window.powerballCombo45Selected) {
-        window.powerballCombo45Selected = [];
+    console.log('togglePowerballCombo45Selection called with:', number, element);
+    
+    // Initialize if not exists
+    if (!window.powerballCombo45SelectedNumbers) {
+        console.log('Initializing powerballCombo45SelectedNumbers array');
+        window.powerballCombo45SelectedNumbers = [];
     }
     
-    const index = window.powerballCombo45Selected.indexOf(number);
+    const index = window.powerballCombo45SelectedNumbers.indexOf(number);
     if (index === -1) {
-        window.powerballCombo45Selected.push(number);
-        element.classList.add('selected');
+        // Add number to selection
+        console.log('Adding number to selection:', number);
+        window.powerballCombo45SelectedNumbers.push(number);
+        if (element) {
+            console.log('Updating element visual state: selected');
+            element.classList.add('selected');
+            element.style.backgroundColor = '#e74c3c';
+            element.style.color = 'white';
+        }
     } else {
-        window.powerballCombo45Selected.splice(index, 1);
-        element.classList.remove('selected');
+        // Remove number from selection
+        console.log('Removing number from selection:', number);
+        window.powerballCombo45SelectedNumbers.splice(index, 1);
+        if (element) {
+            console.log('Updating element visual state: deselected');
+            element.classList.remove('selected');
+            element.style.backgroundColor = '#f0f0f0';
+            element.style.color = '#333';
+        }
     }
     
+    console.log('Current selected numbers:', window.powerballCombo45SelectedNumbers);
+    
+    // Update the display
     updatePowerballCombo45SelectedNumbers();
-    filterPowerballCombo45Results();
+    
+    // Only filter if we have the data loaded
+    if (window.powerballCombo45Data) {
+        console.log('Filtering results with current selection');
+        filterPowerballCombo45Results();
+    } else {
+        console.log('No data loaded yet, triggering full render');
+        // If no data yet, trigger a full render
+        renderPowerballCombo45Results();
+    }
 }
 
 // Clear all selected numbers in Combo45 tab
 function clearPowerballCombo45Selection() {
-    window.powerballCombo45Selected = [];
-    document.querySelectorAll('#combo45-ball-panel .ball').forEach(ball => {
+    console.log('clearPowerballCombo45Selection called');
+    
+    // Clear the selected numbers array
+    window.powerballCombo45SelectedNumbers = [];
+    console.log('Cleared selected numbers array');
+    
+    // Clear selected state from all balls
+    const balls = document.querySelectorAll('#combo45-ball-panel .ball, .combo-table-container .ball');
+    console.log('Found', balls.length, 'balls to clear');
+    
+    balls.forEach((ball, index) => {
+        console.log(`Clearing ball ${index + 1}/${balls.length}`);
         ball.classList.remove('selected');
+        ball.style.backgroundColor = '#f0f0f0';
+        ball.style.color = '#333';
+        ball.style.transform = 'scale(1)';
+        ball.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
     });
-    updatePowerballCombo45SelectedNumbers();
-    filterPowerballCombo45Results();
+    
+    // Clear search input
+    const searchInput = document.getElementById('powerball-combo45-search');
+    if (searchInput) {
+        console.log('Clearing search input');
+        searchInput.value = '';
+        window.powerballCombo45SearchQuery = '';
+    }
+    
+    console.log('Triggering full re-render of results');
+    // Force re-render the results
+    renderPowerballCombo45Results();
+    
+    // Double-check the selected numbers after render
+    console.log('After clear - selected numbers:', window.powerballCombo45SelectedNumbers);
 }
 
 // Update the selected numbers display
@@ -1134,34 +1193,83 @@ function updatePowerballCombo45SelectedNumbers() {
     const container = document.getElementById('combo45-selected-numbers');
     if (!container) return;
     
-    container.innerHTML = window.powerballCombo45Selected && window.powerballCombo45Selected.length > 0
-        ? window.powerballCombo45Selected.map(num => 
-            `<span class="ball" style="background: #e74c3c; margin: 0 2px;">${num}</span>`
+    // Make sure we're using the correct variable name
+    const selectedNumbers = window.powerballCombo45SelectedNumbers || [];
+    
+    container.innerHTML = selectedNumbers.length > 0
+        ? selectedNumbers.map(num => 
+            `<span class="ball" 
+                  style="background: #e74c3c; margin: 0 2px; padding: 2px 8px; border-radius: 50%; color: white;
+                         display: inline-flex; align-items: center; justify-content: center;
+                         width: 24px; height: 24px; font-size: 14px;"
+                  onclick="togglePowerballCombo45Selection(${num}, this)">${num}</span>`
           ).join('')
         : '<span style="color: #777;">No numbers selected</span>';
+        
+    console.log('Updated selected numbers display:', selectedNumbers);
 }
 
 // Filter results based on search and selected numbers
 function filterPowerballCombo45Results() {
-    const searchTerm = document.getElementById('combo45-search')?.value.toLowerCase() || '';
+    console.log('=== filterPowerballCombo45Results called ===');
+    const searchInput = document.getElementById('powerball-combo45-search');
+    const searchTerm = searchInput ? searchInput.value.trim().toLowerCase() : '';
     const resultsContainer = document.getElementById('combo45-results');
-    if (!resultsContainer || !window.powerballCombo45Data) return;
+    
+    console.log('Search term:', searchTerm);
+    console.log('Selected numbers:', window.powerballCombo45SelectedNumbers);
+    
+    if (!resultsContainer || !window.powerballCombo45Data) {
+        console.log('Missing container or data:', { 
+            hasContainer: !!resultsContainer, 
+            hasData: !!window.powerballCombo45Data 
+        });
+        return;
+    }
     
     const { fourNumberResults, fiveNumberResults } = window.powerballCombo45Data;
+    console.log('Total combos before filtering:', {
+        fourNumber: fourNumberResults.length,
+        fiveNumber: fiveNumberResults.length
+    });
     
     const filterFn = (combo) => {
-        // Filter by selected numbers if any
-        if (window.powerballCombo45Selected && window.powerballCombo45Selected.length > 0) {
-            const hasAllSelected = window.powerballCombo45Selected.every(num => 
-                combo.numbers.includes(num)
-            );
-            if (!hasAllSelected) return false;
+        // Debug: Log the current combo being checked
+        console.log('Checking combo:', combo);
+        
+        // If no numbers selected, show all combos
+        if (!window.powerballCombo45SelectedNumbers || window.powerballCombo45SelectedNumbers.length === 0) {
+            console.log('No numbers selected, showing all combos');
+            return true;
         }
         
-        // Filter by search term
+        console.log('Selected numbers to filter by:', window.powerballCombo45SelectedNumbers);
+        
+        // Convert combo numbers to numbers for comparison
+        const comboNumbers = combo.numbers.map(n => Number(n));
+        console.log('Combo numbers (as numbers):', comboNumbers);
+        
+        // Check if the combo includes ALL selected numbers
+        const hasAllSelected = window.powerballCombo45SelectedNumbers.every(num => {
+            const searchNum = Number(num);
+            const included = comboNumbers.includes(searchNum);
+            console.log(`  - Looking for ${searchNum} in [${comboNumbers.join(',')}]: ${included ? 'FOUND' : 'not found'}`);
+            return included;
+        });
+        
+        console.log(`Combo [${comboNumbers.join(',')}] ${hasAllSelected ? 'includes ALL' : 'does NOT include all'} selected numbers`);
+        
+        return hasAllSelected;
+        
+        // Filter by search term if provided
         if (searchTerm) {
-            const numbersStr = combo.numbers.join(' ');
-            return numbersStr.includes(searchTerm);
+            const searchNumbers = searchTerm.split(/\s+/).filter(n => n.length > 0);
+            if (searchNumbers.length > 0) {
+                const hasAllSearched = searchNumbers.every(term => 
+                    combo.numbers.some(num => num.toString() === term)
+                );
+                if (!hasAllSearched) return false;
+            }
         }
         
         return true;
@@ -1174,63 +1282,96 @@ function filterPowerballCombo45Results() {
     updatePowerballCombo45Display(filteredFourNumber, filteredFiveNumber);
 }
 
-// Update the display with filtered results
-function updatePowerballCombo45Display(fourNumberResults, fiveNumberResults) {
-    const resultsContainer = document.getElementById('combo45-results');
-    if (!resultsContainer) return;
+// Generate HTML for a combo table (moved to global scope)
+function generateComboTable(combos, title) {
+    if (combos.length === 0) {
+        console.log(`No ${title.toLowerCase()} combinations to display`);
+        return '';
+    }
     
-    // Generate HTML for a combo table
-    const generateComboTable = (combos, title) => {
-        if (combos.length === 0) return '';
+    console.log(`Rendering ${combos.length} ${title.toLowerCase()} combinations`);
+    
+    const rows = combos.map(combo => {
+        const ballsHtml = combo.numbers.map(num => {
+            const isSelected = window.powerballCombo45SelectedNumbers && 
+                             window.powerballCombo45SelectedNumbers.includes(num);
+            return `<span class="ball" 
+                       style="margin: 2px; display: inline-flex; align-items: center; justify-content: center; 
+                              width: 30px; height: 30px; font-size: 14px; 
+                              background: ${isSelected ? '#e74c3c' : '#3498db'}; 
+                              color: white; border-radius: 50%;
+                              cursor: pointer;
+                              box-shadow: ${isSelected ? '0 0 0 2px #000' : 'none'};"
+                       onclick="togglePowerballCombo45Selection(${num}, this)">${num}</span>`;
+        }).join('\n');
         
-        const rows = combos.map(combo => {
-            const ballsHtml = combo.numbers.map(num => {
-                const isSelected = window.powerballCombo45Selected && window.powerballCombo45Selected.includes(num);
-                return `<span class="ball" 
-                           style="margin: 0 2px; display: inline-flex; align-items: center; justify-content: center; 
-                                  width: 30px; height: 30px; font-size: 14px; 
-                                  background: ${isSelected ? '#e74c3c' : '#e74c3c'}; 
-                                  color: white; border-radius: 50%;
-                                  cursor: pointer;
-                                  box-shadow: ${isSelected ? '0 0 0 2px #000' : 'none'};"
-                           onclick="togglePowerballCombo45Selection(${num}, this)">${num}</span>`;
-            }).join(' ');
-            
-            return `
-                <tr>
-                    <td style="padding: 8px; border-bottom: 1px solid #e0e0e0;">${ballsHtml}</td>
-                    <td style="padding: 8px; text-align: center; border-bottom: 1px solid #e0e0e0; font-weight: bold;">${combo.count}x</td>
-                </tr>
-            `;
+        // Format dates for display (show most recent 3 or all if <= 3)
+        const maxDatesToShow = 3;
+        const datesToShow = combo.dates.length > maxDatesToShow 
+            ? [...combo.dates.slice(0, maxDatesToShow), `+${combo.dates.length - maxDatesToShow} more`]
+            : combo.dates;
+        
+        const datesHtml = datesToShow.map((date, i) => {
+            if (typeof date === 'string' && date.startsWith('+')) {
+                return `<div style="color: #7f8c8d; font-style: italic;">${date}</div>`;
+            }
+            return `<div>${date}${i < datesToShow.length - 1 ? ',' : ''}</div>`;
         }).join('');
         
         return `
-            <div class="combo-table-container" style="margin-bottom: 30px;">
-                <h3 style="color: #2c3e50; margin-bottom: 10px; padding-bottom: 5px; border-bottom: 2px solid #e0e0e0;">
-                    ${title} (${combos.length} combinations)
-                </h3>
-                <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+            <tr style="border-bottom: 1px solid #e0e0e0;">
+                <td style="padding: 12px; vertical-align: middle;">
+                    <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 4px;">
+                        ${ballsHtml}
+                    </div>
+                    <div style="font-size: 12px; color: #7f8c8d; margin-top: 6px;">
+                        <strong>Appeared on:</strong>
+                        <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 2px;">
+                            ${datesHtml}
+                        </div>
+                    </div>
+                </td>
+                <td style="padding: 12px; text-align: center; font-weight: bold; vertical-align: middle;">
+                    ${combo.count}x
+                </td>
+            </tr>
+        `;
+    }).join('');
+    
+    return `
+        <div class="combo-table-container" style="margin-bottom: 40px;">
+            <h3 style="color: #2c3e50; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid #e0e0e0;">
+                ${title} (${combos.length} combinations)
+            </h3>
+            <div style="border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;">
+                <table style="width: 100%; border-collapse: collapse; background: white;">
                     <thead>
-                        <tr>
-                            <th style="padding: 10px; text-align: left; background-color: #f5f7fa; border-bottom: 2px solid #e0e0e0;">Numbers</th>
-                            <th style="padding: 10px; text-align: center; background-color: #f5f7fa; border-bottom: 2px solid #e0e0e0; width: 80px;">Frequency</th>
+                        <tr style="background-color: #f5f7fa;">
+                            <th style="padding: 12px; text-align: left; border-bottom: 2px solid #e0e0e0;">
+                                Numbers & Draw Dates
+                            </th>
+                            <th style="padding: 12px; text-align: center; border-bottom: 2px solid #e0e0e0; width: 80px;">
+                                Frequency
+                            </th>
                         </tr>
                     </thead>
                     <tbody>${rows}</tbody>
                 </table>
             </div>
-        `;
-    };
+        </div>
+    `;
+}
+
+// Update the display with filtered results
+function updatePowerballCombo45Display(fourNumberResults, fiveNumberResults) {
+    const resultsContainer = document.getElementById('combo45-results');
+    if (!resultsContainer) return;
     
-    // Generate the final HTML with both tables side by side
+    // Generate the final HTML with both tables stacked vertically
     let html = `
-        <div style="display: flex; gap: 30px; margin-top: 20px;">
-            <div style="flex: 1;">
-                ${generateComboTable(fourNumberResults, '4-Number Combinations')}
-            </div>
-            <div style="flex: 1;">
-                ${generateComboTable(fiveNumberResults, '5-Number Combinations')}
-            </div>
+        <div style="margin-top: 20px;">
+            ${generateComboTable(fourNumberResults, '4-Number Combinations')}
+            ${generateComboTable(fiveNumberResults, '5-Number Combinations')}
         </div>
     `;
     
@@ -1246,28 +1387,36 @@ function updatePowerballCombo45Display(fourNumberResults, fiveNumberResults) {
     resultsContainer.innerHTML = html;
 }
 
-// Function to render the 4&5 Combo tab results
+// Function to render the 4&5 Combo tab results with enhanced features
 function renderPowerballCombo45Results() {
     const resultsContainer = document.getElementById('combo45-results');
     if (!resultsContainer || !window.filteredDrawRows) return;
     
-    // Filter valid draws (only main numbers, no Powerball)
-    const validDraws = window.filteredDrawRows.filter(draw => 
-        draw && Array.isArray(draw.mainArr) && draw.mainArr.length === 5
-    );
+    // Filter valid draws (only main numbers, no Powerball) and filter by date range (2016-2025)
+    const validDraws = window.filteredDrawRows.filter(draw => {
+        if (!draw || !Array.isArray(draw.mainArr) || draw.mainArr.length !== 5) return false;
+        
+        // Check if the draw is within the date range (2016-2025)
+        if (draw.date) {
+            const year = new Date(draw.date).getFullYear();
+            return year >= 2016 && year <= 2025;
+        }
+        return true; // Include if date is not available
+    });
     
-    // Count 4-number and 5-number combinations
+    // Count 4-number and 5-number combinations with dates
     const fourNumberCombos = countPowerballCombinations(validDraws, 4);
     const fiveNumberCombos = countPowerballCombinations(validDraws, 5);
     
     // Process and filter combinations
     const processCombos = (comboMap, comboSize) => {
         const combos = [];
-        comboMap.forEach((count, comboStr) => {
-            if (count >= 2) {
+        comboMap.forEach((comboData, comboStr) => {
+            if (comboData.count >= 2) {
                 combos.push({
                     numbers: comboStr.split(',').map(Number).sort((a, b) => a - b),
-                    count,
+                    count: comboData.count,
+                    dates: comboData.dates || [],
                     type: `${comboSize}-number`
                 });
             }
@@ -1283,53 +1432,629 @@ function renderPowerballCombo45Results() {
     const fourNumberResults = processCombos(fourNumberCombos, 4);
     const fiveNumberResults = processCombos(fiveNumberCombos, 5);
     
-    // Generate HTML for a combo table
+    // Generate HTML for a combo table with enhanced features
     const generateComboTable = (combos, title) => {
-        if (combos.length === 0) return '';
+        if (combos.length === 0) return document.createElement('div');
         
-        const rows = combos.map(combo => {
-            const ballsHtml = combo.numbers.map(num => 
-                `<span class="ball" style="margin: 0 2px; display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; font-size: 14px; background: #e74c3c; color: white; border-radius: 50%;">${num}</span>`
-            ).join(' ');
+        const container = document.createElement('div');
+        container.className = 'combo-table-container';
+        container.style.marginBottom = '40px';
+        container.style.width = '100%';
+        container.style.maxWidth = '1000px';
+        container.style.marginLeft = 'auto';
+        container.style.marginRight = 'auto';
+        
+        const titleEl = document.createElement('h3');
+        titleEl.textContent = `${title} (${combos.length} combinations)`;
+        titleEl.style.color = '#2c3e50';
+        titleEl.style.margin = '0 0 20px 0';
+        titleEl.style.padding = '0 0 10px 0';
+        titleEl.style.borderBottom = '2px solid #dee2e6';
+        titleEl.style.fontSize = '1.25rem';
+        titleEl.style.fontWeight = '600';
+        
+        const tableContainer = document.createElement('div');
+        tableContainer.style.width = '100%';
+        tableContainer.style.overflowX = 'auto';
+        tableContainer.style.boxShadow = '0 0.5rem 1rem rgba(0, 0, 0, 0.05)';
+        tableContainer.style.borderRadius = '8px';
+        tableContainer.style.border = '1px solid #e9ecef';
+        
+        const table = document.createElement('table');
+        table.style.width = '100%';
+        table.style.borderCollapse = 'separate';
+        table.style.borderSpacing = '0';
+        table.style.tableLayout = 'fixed';
+        table.style.backgroundColor = 'white';
+        
+        const thead = document.createElement('thead');
+        const headerRow = document.createElement('tr');
+        
+        const th1 = document.createElement('th');
+        th1.textContent = 'Combination';
+        th1.style.padding = '12px 16px';
+        th1.style.textAlign = 'left';
+        th1.style.backgroundColor = '#f8f9fa';
+        th1.style.borderBottom = '2px solid #dee2e6';
+        th1.style.fontWeight = '600';
+        th1.style.color = '#495057';
+        th1.style.position = 'sticky';
+        th1.style.top = '0';
+        th1.style.zIndex = '10';
+        
+        const th2 = document.createElement('th');
+        th2.textContent = 'Frequency';
+        th2.style.padding = '12px 16px';
+        th2.style.textAlign = 'center';
+        th2.style.backgroundColor = '#f8f9fa';
+        th2.style.borderBottom = '2px solid #dee2e6';
+        th2.style.width = '120px';
+        th2.style.fontWeight = '600';
+        th2.style.color = '#495057';
+        th2.style.position = 'sticky';
+        th2.style.top = '0';
+        th2.style.zIndex = '10';
+        
+        const th3 = document.createElement('th');
+        th3.textContent = 'Draw Dates';
+        th3.style.padding = '12px 16px';
+        th3.style.textAlign = 'left';
+        th3.style.backgroundColor = '#f8f9fa';
+        th3.style.borderBottom = '2px solid #dee2e6';
+        th3.style.width = '300px';
+        th3.style.fontWeight = '600';
+        th3.style.color = '#495057';
+        th3.style.position = 'sticky';
+        th3.style.top = '0';
+        th3.style.zIndex = '10';
+        
+        headerRow.appendChild(th1);
+        headerRow.appendChild(th2);
+        headerRow.appendChild(th3);
+        thead.appendChild(headerRow);
+        
+        const tbody = document.createElement('tbody');
+        
+        combos.forEach(combo => {
+            const row = document.createElement('tr');
             
-            return `
-                <tr>
-                    <td style="padding: 8px; border-bottom: 1px solid #e0e0e0;">${ballsHtml}</td>
-                    <td style="padding: 8px; text-align: center; border-bottom: 1px solid #e0e0e0; font-weight: bold;">${combo.count}x</td>
-                </tr>
-            `;
-        }).join('');
+            // Create balls cell
+            const ballsCell = document.createElement('td');
+            ballsCell.style.padding = '16px';
+            ballsCell.style.borderBottom = '1px solid #e9ecef';
+            ballsCell.style.verticalAlign = 'middle';
+            ballsCell.style.transition = 'background-color 0.15s ease';
+            
+            // Add hover effect to row
+            row.addEventListener('mouseenter', () => {
+                ballsCell.style.backgroundColor = '#f8f9fa';
+            });
+            
+            row.addEventListener('mouseleave', () => {
+                ballsCell.style.backgroundColor = '';
+            });
+            
+            const ballsContainer = document.createElement('div');
+            ballsContainer.style.display = 'flex';
+            ballsContainer.style.gap = '6px';
+            ballsContainer.style.flexWrap = 'wrap';
+            ballsContainer.style.alignItems = 'center';
+            
+            combo.numbers.forEach(num => {
+                const isSelected = window.powerballCombo45SelectedNumbers && 
+                                 window.powerballCombo45SelectedNumbers.includes(num);
+                const isInSearch = window.powerballCombo45SearchQuery && 
+                                 window.powerballCombo45SearchQuery.includes(num.toString());
+                
+                const ball = document.createElement('span');
+                ball.className = 'ball';
+                ball.textContent = num;
+                ball.dataset.number = num;
+                ball.style.cursor = 'pointer';
+                ball.style.display = 'inline-flex';
+                ball.style.alignItems = 'center';
+                ball.style.justifyContent = 'center';
+                ball.style.width = '32px';
+                ball.style.height = '32px';
+                ball.style.borderRadius = '50%';
+                ball.style.fontSize = '14px';
+                ball.style.fontWeight = 'bold';
+                ball.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+                ball.style.transition = 'all 0.2s ease';
+                
+                if (isSelected) {
+                    ball.style.backgroundColor = '#e74c3c';
+                    ball.style.color = 'white';
+                    ball.style.transform = 'scale(1.1)';
+                    ball.style.boxShadow = '0 4px 8px rgba(231, 76, 60, 0.3)';
+                } else if (isInSearch) {
+                    ball.style.backgroundColor = '#f39c12';
+                    ball.style.color = 'white';
+                    ball.style.boxShadow = '0 2px 6px rgba(243, 156, 18, 0.3)';
+                } else {
+                    ball.style.backgroundColor = '#f0f0f0';
+                    ball.style.color = '#333';
+                    ball.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+                }
+                
+                ball.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    togglePowerballCombo45Selection(num, ball);
+                });
+                
+                ballsContainer.appendChild(ball);
+            });
+            
+            ballsCell.appendChild(ballsContainer);
+            
+            // Create count cell
+            const countCell = document.createElement('td');
+            countCell.textContent = combo.count + '×';
+            countCell.style.padding = '16px';
+            countCell.style.textAlign = 'center';
+            countCell.style.borderBottom = '1px solid #e9ecef';
+            countCell.style.fontWeight = 'bold';
+            countCell.style.verticalAlign = 'middle';
+            countCell.style.color = '#2c3e50';
+            countCell.style.fontSize = '1.05em';
+            countCell.style.transition = 'background-color 0.15s ease';
+            
+            // Create dates cell
+            const datesCell = document.createElement('td');
+            datesCell.style.padding = '16px';
+            datesCell.style.borderBottom = '1px solid #e9ecef';
+            datesCell.style.verticalAlign = 'middle';
+            datesCell.style.transition = 'background-color 0.15s ease';
+            
+            // Create dates cell content
+            const maxDatesToShow = 3;
+            const datesToShow = combo.dates.length > maxDatesToShow 
+                ? [...combo.dates.slice(0, maxDatesToShow), `+${combo.dates.length - maxDatesToShow} more`]
+                : combo.dates;
+            
+            const datesContainer = document.createElement('div');
+            datesContainer.style.display = 'flex';
+            datesContainer.style.flexDirection = 'column';
+            datesContainer.style.gap = '6px';
+            datesContainer.style.fontSize = '0.9em';
+            datesContainer.style.color = '#6c757d';
+            
+            datesToShow.forEach((date) => {
+                const dateEl = document.createElement('div');
+                dateEl.textContent = date;
+                dateEl.style.whiteSpace = 'nowrap';
+                dateEl.style.overflow = 'hidden';
+                dateEl.style.textOverflow = 'ellipsis';
+                dateEl.style.padding = '2px 0';
+                dateEl.style.transition = 'color 0.2s ease';
+                datesContainer.appendChild(dateEl);
+            });
+            
+            datesCell.appendChild(datesContainer);
+            
+            // Append cells to row
+            row.appendChild(ballsCell);
+            row.appendChild(countCell);
+            row.appendChild(datesCell);
+            
+            tbody.appendChild(row);
+        });
         
-        return `
-            <div class="combo-table-container" style="margin-bottom: 30px;">
-                <h3 style="color: #2c3e50; margin-bottom: 10px; padding-bottom: 5px; border-bottom: 2px solid #e0e0e0;">${title} (${combos.length} combinations)</h3>
-                <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
-                    <thead>
-                        <tr>
-                            <th style="padding: 10px; text-align: left; background-color: #f5f7fa; border-bottom: 2px solid #e0e0e0;">Numbers</th>
-                            <th style="padding: 10px; text-align: center; background-color: #f5f7fa; border-bottom: 2px solid #e0e0e0; width: 80px;">Frequency</th>
-                        </tr>
-                    </thead>
-                    <tbody>${rows}</tbody>
-                </table>
-            </div>
-        `;
+        table.appendChild(thead);
+        table.appendChild(tbody);
+        tableContainer.appendChild(table);
+        
+        container.appendChild(titleEl);
+        container.appendChild(tableContainer);
+        
+        return container;
     };
     
     // Store the results for filtering
     window.powerballCombo45Data = { fourNumberResults, fiveNumberResults };
     
     // Initialize the ball panel if not already done
-    if (!document.getElementById('combo45-ball-panel').hasChildNodes()) {
+    const ballPanel = document.getElementById('combo45-ball-panel');
+    if (ballPanel && !ballPanel.hasChildNodes()) {
         renderPowerballCombo45BallPanel();
     }
     
-    // Display the results
-    updatePowerballCombo45Display(fourNumberResults, fiveNumberResults);
+    // Clear previous content
+    resultsContainer.innerHTML = '';
+    
+    // Add the ball panel
+    if (ballPanel) {
+        const ballPanelContainer = document.createElement('div');
+        ballPanelContainer.style.marginBottom = '20px';
+        ballPanelContainer.style.width = '100%';
+        ballPanelContainer.appendChild(ballPanel);
+        resultsContainer.appendChild(ballPanelContainer);
+    }
+    
+    // Add search container
+    const searchContainer = document.createElement('div');
+    searchContainer.style.marginBottom = '24px';
+    searchContainer.style.width = '100%';
+    searchContainer.style.maxWidth = '800px';
+    searchContainer.style.margin = '0 auto 24px';
+    
+    const searchBoxContainer = document.createElement('div');
+    searchBoxContainer.style.display = 'flex';
+    searchBoxContainer.style.gap = '10px';
+    searchBoxContainer.style.marginBottom = '15px';
+    searchBoxContainer.style.alignItems = 'center';
+    
+    const searchInput = document.createElement('input');
+    searchInput.type = 'text';
+    searchInput.id = 'powerball-combo45-search';
+    searchInput.placeholder = 'Search numbers (e.g., 5 10 15 or 5,10,15)';
+    searchInput.style.padding = '10px 14px';
+    searchInput.style.border = '1px solid #ced4da';
+    searchInput.style.borderRadius = '6px';
+    searchInput.style.flexGrow = '1';
+    searchInput.style.fontSize = '14px';
+    searchInput.style.boxShadow = 'inset 0 1px 2px rgba(0,0,0,0.05)';
+    searchInput.style.transition = 'border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out';
+    searchInput.value = window.powerballCombo45SearchQuery || '';
+    
+    // Add focus effect
+    searchInput.addEventListener('focus', () => {
+        searchInput.style.borderColor = '#80bdff';
+        searchInput.style.boxShadow = '0 0 0 0.2rem rgba(0,123,255,0.25)';
+        searchInput.style.outline = 'none';
+    });
+    
+    searchInput.addEventListener('blur', () => {
+        searchInput.style.borderColor = '#ced4da';
+        searchInput.style.boxShadow = 'inset 0 1px 2px rgba(0,0,0,0.05)';
+    });
+    
+    const clearButton = document.createElement('button');
+    clearButton.id = 'powerball-combo45-clear';
+    clearButton.textContent = 'Clear All';
+    clearButton.style.padding = '10px 20px';
+    clearButton.style.backgroundColor = '#6c757d';
+    clearButton.style.color = 'white';
+    clearButton.style.border = 'none';
+    clearButton.style.borderRadius = '6px';
+    clearButton.style.cursor = 'pointer';
+    clearButton.style.fontWeight = '500';
+    clearButton.style.transition = 'all 0.2s ease';
+    clearButton.style.whiteSpace = 'nowrap';
+    
+    // Add hover effect
+    clearButton.addEventListener('mouseover', () => {
+        clearButton.style.backgroundColor = '#5a6268';
+        clearButton.style.transform = 'translateY(-1px)';
+    });
+    
+    clearButton.addEventListener('mouseout', () => {
+        clearButton.style.backgroundColor = '#6c757d';
+        clearButton.style.transform = 'translateY(0)';
+    });
+    
+    // Add active effect
+    clearButton.addEventListener('mousedown', () => {
+        clearButton.style.transform = 'translateY(1px)';
+    });
+    
+    searchBoxContainer.appendChild(searchInput);
+    searchBoxContainer.appendChild(clearButton);
+    
+    // Create selected numbers container
+    const selectedNumbersContainer = document.createElement('div');
+    selectedNumbersContainer.id = 'powerball-combo45-selected-numbers';
+    selectedNumbersContainer.style.display = 'flex';
+    selectedNumbersContainer.style.flexWrap = 'wrap';
+    selectedNumbersContainer.style.gap = '6px';
+    selectedNumbersContainer.style.marginBottom = '10px';
+    selectedNumbersContainer.style.minHeight = '40px';
+    selectedNumbersContainer.style.padding = '8px';
+    selectedNumbersContainer.style.backgroundColor = '#f8f9fa';
+    selectedNumbersContainer.style.borderRadius = '6px';
+    selectedNumbersContainer.style.border = '1px solid #e9ecef';
+    
+    // Add help text
+    const helpText = document.createElement('div');
+    helpText.textContent = 'Tip: Click on numbers to select/deselect them. Use the search box to filter combinations.';
+    helpText.style.fontSize = '0.85em';
+    helpText.style.color = '#6c757d';
+    helpText.style.marginTop = '8px';
+    helpText.style.fontStyle = 'italic';
+    
+    searchContainer.appendChild(searchBoxContainer);
+    searchContainer.appendChild(selectedNumbersContainer);
+    searchContainer.appendChild(helpText);
+    resultsContainer.appendChild(searchContainer);
+    
+    // Add the results container
+    const resultsDiv = document.createElement('div');
+    resultsDiv.style.width = '100%';
+    
+    // Add 4-number combos table
+    if (fourNumberResults.length > 0) {
+        const table1 = generateComboTable(fourNumberResults, '4-Number Combinations');
+        table1.style.marginBottom = '30px';
+        resultsDiv.appendChild(table1);
+    } else {
+        const noResults = document.createElement('div');
+        noResults.textContent = 'No 4-number combinations found.';
+        noResults.style.padding = '20px';
+        noResults.style.textAlign = 'center';
+        noResults.style.color = '#666';
+        resultsDiv.appendChild(noResults);
+    }
+    
+    // Add 5-number combos table
+    if (fiveNumberResults.length > 0) {
+        const table2 = generateComboTable(fiveNumberResults, '5-Number Combinations');
+        resultsDiv.appendChild(table2);
+    } else {
+        const noResults = document.createElement('div');
+        noResults.textContent = 'No 5-number combinations found.';
+        noResults.style.padding = '20px';
+        noResults.style.textAlign = 'center';
+        noResults.style.color = '#666';
+        resultsDiv.appendChild(noResults);
+    }
+    
+    resultsContainer.appendChild(resultsDiv);
+    
+    // Initialize selected numbers array if not exists
+    if (!window.powerballCombo45SelectedNumbers) {
+        window.powerballCombo45SelectedNumbers = [];
+    }
+    
+    // Initialize search query if not exists
+    if (typeof window.powerballCombo45SearchQuery === 'undefined') {
+        window.powerballCombo45SearchQuery = '';
+    }
+    
+    // Set up event listeners for search and clear
+    searchInput.addEventListener('input', (e) => {
+        window.powerballCombo45SearchQuery = e.target.value.trim();
+        filterPowerballCombo45Results();
+    });
+    
+    // Add keyboard navigation for search
+    searchInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            filterPowerballCombo45Results();
+        } else if (e.key === 'Escape') {
+            searchInput.blur();
+        }
+    });
+    
+    clearButton.addEventListener('click', () => {
+        window.powerballCombo45SelectedNumbers = [];
+        window.powerballCombo45SearchQuery = '';
+        searchInput.value = '';
+        searchInput.focus();
+        filterPowerballCombo45Results();
+    });
+    
+    // Add debounce to search input for better performance
+    let searchTimeout;
+    searchInput.addEventListener('input', () => {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            filterPowerballCombo45Results();
+        }, 300);
+    });
+    
+    // Update the selected numbers display
+    updatePowerballCombo45SelectedNumbers();
+}
+
+// Function to filter results based on search and selected numbers
+function filterPowerballCombo45Results() {
+    const { fourNumberResults, fiveNumberResults } = window.powerballCombo45Data || { fourNumberResults: [], fiveNumberResults: [] };
+    
+    // Filter based on search query and selected numbers
+    const filterCombos = (combos) => {
+        return combos.filter(combo => {
+            // Filter by selected numbers
+            if (window.powerballCombo45SelectedNumbers && window.powerballCombo45SelectedNumbers.length > 0) {
+                const hasAllSelected = window.powerballCombo45SelectedNumbers.every(n => 
+                    combo.numbers.includes(n)
+                );
+                if (!hasAllSelected) return false;
+            }
+            
+            // Filter by search query
+            if (window.powerballCombo45SearchQuery) {
+                const searchNums = window.powerballCombo45SearchQuery
+                    .split(/[\s,]+/)
+                    .map(n => parseInt(n.trim(), 10))
+                    .filter(n => !isNaN(n) && n >= 1 && n <= 69);
+                
+                if (searchNums.length > 0) {
+                    const hasSearchNums = searchNums.every(n => 
+                        combo.numbers.includes(n)
+                    );
+                    if (!hasSearchNums) return false;
+                } else {
+                    // Search by string match if no valid numbers
+                    const searchLower = window.powerballCombo45SearchQuery.toLowerCase();
+                    const comboStr = combo.numbers.join(',');
+                    if (!comboStr.includes(searchLower)) {
+                        return false;
+                    }
+                }
+            }
+            
+            return true;
+        });
+    };
+    
+    const filteredFourNumberResults = filterCombos(fourNumberResults);
+    const filteredFiveNumberResults = filterCombos(fiveNumberResults);
+    
+    // Re-render with filtered results
+    const resultsContainer = document.getElementById('combo45-results');
+    if (resultsContainer) {
+        // Clear previous results but keep the search and ball panel
+        const searchContainer = resultsContainer.querySelector('div:first-child');
+        const ballPanelContainer = resultsContainer.querySelector('div:first-child + div');
+        
+        resultsContainer.innerHTML = '';
+        
+        // Re-add the search container and ball panel
+        if (searchContainer) resultsContainer.appendChild(searchContainer);
+        if (ballPanelContainer) resultsContainer.appendChild(ballPanelContainer);
+        
+        // Add the results container
+        const resultsDiv = document.createElement('div');
+        resultsDiv.style.width = '100%';
+        
+        // Add 4-number combos table
+        if (filteredFourNumberResults.length > 0) {
+            const table1Html = generateComboTable(filteredFourNumberResults, '4-Number Combinations');
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = table1Html;
+            const table1 = tempDiv.firstElementChild;
+            if (table1) {
+                table1.style.marginBottom = '30px';
+                resultsDiv.appendChild(table1);
+            }
+        } else if (fourNumberResults.length > 0) {
+            const noResults = document.createElement('div');
+            noResults.textContent = 'No 4-number combinations match the current filters.';
+            noResults.style.padding = '20px';
+            noResults.style.textAlign = 'center';
+            noResults.style.color = '#666';
+            resultsDiv.appendChild(noResults);
+        }
+        
+        // Add 5-number combos table
+        if (filteredFiveNumberResults.length > 0) {
+            const table2Html = generateComboTable(filteredFiveNumberResults, '5-Number Combinations');
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = table2Html;
+            const table2 = tempDiv.firstElementChild;
+            if (table2) {
+                table2.style.marginBottom = '30px';
+                resultsDiv.appendChild(table2);
+            }
+        } else if (fiveNumberResults.length > 0) {
+            const noResults = document.createElement('div');
+            noResults.textContent = 'No 5-number combinations match the current filters.';
+            noResults.style.padding = '20px';
+            noResults.style.textAlign = 'center';
+            noResults.style.color = '#666';
+            resultsDiv.appendChild(noResults);
+        }
+        
+        resultsContainer.appendChild(resultsDiv);
+        
+        // Update the selected numbers display
+        updatePowerballCombo45SelectedNumbers();
+    }
+}
+
+// Function to update the selected numbers display
+function updatePowerballCombo45SelectedNumbers() {
+    const selectedNumbersContainer = document.getElementById('powerball-combo45-selected-numbers');
+    if (!selectedNumbersContainer) return;
+    
+    selectedNumbersContainer.innerHTML = '';
+    
+    if (!window.powerballCombo45SelectedNumbers || window.powerballCombo45SelectedNumbers.length === 0) {
+        const noSelection = document.createElement('div');
+        noSelection.textContent = 'No numbers selected. Click on balls to select numbers.';
+        noSelection.style.color = '#999';
+        noSelection.style.fontStyle = 'italic';
+        selectedNumbersContainer.appendChild(noSelection);
+        return;
+    }
+    
+    const selectedLabel = document.createElement('div');
+    selectedLabel.textContent = 'Selected: ';
+    selectedLabel.style.marginRight = '8px';
+    selectedLabel.style.color = '#666';
+    selectedNumbersContainer.appendChild(selectedLabel);
+    
+    window.powerballCombo45SelectedNumbers.forEach((num, index) => {
+        const ball = document.createElement('span');
+        ball.className = 'ball';
+        ball.textContent = num;
+        ball.style.display = 'inline-flex';
+        ball.style.alignItems = 'center';
+        ball.style.justifyContent = 'center';
+        ball.style.width = '30px';
+        ball.style.height = '30px';
+        ball.style.borderRadius = '50%';
+        ball.style.backgroundColor = '#e74c3c';
+        ball.style.color = 'white';
+        ball.style.fontWeight = 'bold';
+        ball.style.cursor = 'pointer';
+        ball.style.margin = '0 2px';
+        
+        ball.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const index = window.powerballCombo45SelectedNumbers.indexOf(num);
+            if (index > -1) {
+                window.powerballCombo45SelectedNumbers.splice(index, 1);
+                updatePowerballCombo45SelectedNumbers();
+                filterPowerballCombo45Results();
+            }
+        });
+        
+        selectedNumbersContainer.appendChild(ball);
+        
+        // Add comma separator if not the last element
+        if (index < window.powerballCombo45SelectedNumbers.length - 1) {
+            const comma = document.createElement('span');
+            comma.textContent = ', ';
+            selectedNumbersContainer.appendChild(comma);
+        }
+    });
+    
+    // Add clear all button
+    const clearAll = document.createElement('button');
+    clearAll.textContent = 'Clear All';
+    clearAll.style.marginLeft = '10px';
+    clearAll.style.padding = '2px 8px';
+    clearAll.style.background = 'none';
+    clearAll.style.border = '1px solid #e74c3c';
+    clearAll.style.borderRadius = '4px';
+    clearAll.style.color = '#e74c3c';
+    clearAll.style.cursor = 'pointer';
+    clearAll.style.fontSize = '0.8em';
+    
+    clearAll.addEventListener('click', () => {
+        window.powerballCombo45SelectedNumbers = [];
+        updatePowerballCombo45SelectedNumbers();
+        filterPowerballCombo45Results();
+    });
+    
+    selectedNumbersContainer.appendChild(clearAll);
+}
+
+// Function to toggle number selection
+function togglePowerballCombo45Selection(number, element) {
+    if (!window.powerballCombo45SelectedNumbers) {
+        window.powerballCombo45SelectedNumbers = [];
+    }
+    
+    const index = window.powerballCombo45SelectedNumbers.indexOf(number);
+    if (index > -1) {
+        window.powerballCombo45SelectedNumbers.splice(index, 1);
+        element.style.backgroundColor = '#f0f0f0';
+        element.style.color = '#333';
+    } else {
+        window.powerballCombo45SelectedNumbers.push(number);
+        element.style.backgroundColor = '#e74c3c';
+        element.style.color = 'white';
+    }
+    
+    // Update the display and filter results
+    updatePowerballCombo45SelectedNumbers();
+    filterPowerballCombo45Results();
 }
 
 // After CSV and window.filteredDrawRows are ready, render the full combo table on the home page
-
 
 // --- FREQUENT PAIRS & TRIOS (ALWAYS VISIBLE TABLES) ---
 function getAllCombos(arr, k) {
@@ -1346,9 +2071,10 @@ function getAllCombos(arr, k) {
     helper(0, []);
     return results;
 }
+
 function renderFrequentPairsTriosTables() {
     // Analyze all pairs/trios for main and double play
-    if (!window.window.filteredDrawRows) return;
+    if (!window.filteredDrawRows) return;
     const pairCounts = new Map();
     const trioCounts = new Map();
     const pairDraws = new Map();
