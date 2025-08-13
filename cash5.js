@@ -317,8 +317,46 @@ document.addEventListener('DOMContentLoaded', function() {
             document.querySelectorAll('.tab-content').forEach(tab => tab.style.display = 'none');
             const tabId = btn.getAttribute('data-tab');
             const tabContent = document.getElementById('tab-' + tabId);
-            if (tabContent) tabContent.style.display = 'block';
+            if (tabContent) {
+                tabContent.style.display = 'block';
+                
+                // If switching to combo45 tab, check for URL parameters
+                if (tabId === 'combo45') {
+                    checkUrlForPreselectedNumbers();
+                    renderCash5Combo45Results();
+                }
+            }
             if (tabId === 'combo') {
+                // Check for pre-selected numbers from 4&5 Combo tab
+                const storedData = sessionStorage.getItem('cash5ComboPreselectedNumbers');
+                if (storedData) {
+                    try {
+                        const { numbers, frequency } = JSON.parse(storedData);
+                        if (Array.isArray(numbers) && numbers.length > 0) {
+                            // Set the selected numbers
+                            window.cash5SelectedCombo = [...numbers];
+                            
+                            // Clear the stored data to prevent re-selection on page refresh
+                            sessionStorage.removeItem('cash5ComboPreselectedNumbers');
+                            
+                            // Update the UI
+                            updateCash5ComboSelectedNumbersDisplay();
+                            
+                            // Render the ball panel and results
+                            renderCash5ComboBallPanel();
+                            renderCash5ComboResults();
+                            
+
+                            
+                            return; // Skip the default render below
+                        }
+                    } catch (e) {
+                        console.error('Error parsing stored combo data:', e);
+                        sessionStorage.removeItem('cash5ComboPreselectedNumbers');
+                    }
+                }
+                
+                // Default render if no pre-selected numbers
                 renderCash5ComboBallPanel();
                 renderCash5ComboResults();
             }
@@ -358,12 +396,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     const trimmedData = results.data.map(trimObj);
                     window.cash5Results = trimmedData;
                     window.cash5DrawRows = trimmedData.map(row => {
-                        // Handle different number formats (with en dash, hyphen, or space as separators)
-                        let numbersStr = (row["Winning Numbers"] || "").replace(/[–—]/g, '-'); // Replace en/em dashes with hyphens
-                        let arr = numbersStr.split(/[-,\s]+/)
-                            .map(x => parseInt(x.trim(), 10))
-                            .filter(x => !isNaN(x) && x >= 1 && x <= 42);
-                            
+                        let arr = (row["Winning Numbers"]||"").split(/[-,\s]+/).map(x=>parseInt(x,10)).filter(x=>!isNaN(x));
                         return {
                             date: row["Date"],
                             mainArr: arr,
@@ -723,6 +756,45 @@ function countCombinations(draws, comboSize) {
 window.cash5Combo45SelectedNumbers = [];
 window.cash5Combo45SearchQuery = '';
 
+// Check URL for pre-selected numbers
+function checkUrlForPreselectedNumbers() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const numbersParam = urlParams.get('numbers');
+    
+    if (numbersParam) {
+        window.cash5Combo45SelectedNumbers = numbersParam.split(',').map(Number);
+        updateCash5Combo45SelectedNumbersDisplay();
+        renderCash5Combo45BallPanel();
+    }
+}
+
+// Removed frequency filter functionality
+
+// Helper function to redirect to combo page with selected numbers
+function redirectToComboWithNumbers(numbers) {
+    if (!Array.isArray(numbers) || numbers.length === 0) return;
+    
+    const numbersParam = numbers.join(',');
+    const currentUrl = new URL(window.location.href);
+    currentUrl.searchParams.set('numbers', numbersParam);
+    
+    // If already on the combo page, just update the URL and refresh the view
+    if (window.location.pathname.endsWith('cash5.html') && 
+        document.querySelector('#tab-combo45.tab-content[style*="display: block"]')) {
+        window.history.pushState({}, '', currentUrl);
+        window.cash5Combo45SelectedNumbers = [...numbers];
+        updateCash5Combo45SelectedNumbersDisplay();
+        renderCash5Combo45BallPanel();
+        renderCash5Combo45Results();
+    } else {
+        // Otherwise, navigate to the combo tab with the numbers
+        const tabUrl = new URL('cash5.html', window.location.href);
+        tabUrl.searchParams.set('numbers', numbersParam);
+        tabUrl.hash = 'tab-combo45';
+        window.location.href = tabUrl.toString();
+    }
+}
+
 // Initialize the Cash 5 4&5 Combo tab
 function initCash5Combo45Tab() {
     // Initialize the ball panel
@@ -732,6 +804,8 @@ function initCash5Combo45Tab() {
     const searchInput = document.getElementById('cash5-combo45-search');
     const searchButton = document.getElementById('cash5-combo45-search-btn');
     const clearButton = document.getElementById('cash5-combo45-clear-btn');
+    
+
     
     if (searchInput) {
         searchInput.addEventListener('input', (e) => {
@@ -761,8 +835,34 @@ function initCash5Combo45Tab() {
         });
     }
     
+    // Check for pre-selected numbers in URL
+    checkUrlForPreselectedNumbers();
+    
     // Initial render
     renderCash5Combo45Results();
+    
+    // Add click handlers for frequency indicators
+    document.addEventListener('click', function(e) {
+        // Check if the click is on a frequency indicator
+        const freqIndicator = e.target.closest('[data-numbers]');
+        if (freqIndicator && freqIndicator.hasAttribute('data-count')) {
+            e.preventDefault();
+            const numbers = freqIndicator.getAttribute('data-numbers').split(',').map(Number);
+            
+            // Store the selected numbers in session storage
+            sessionStorage.setItem('cash5ComboPreselectedNumbers', JSON.stringify({
+                numbers: numbers
+            }));
+            
+            // Switch to the Combo tab
+            const comboBtn = document.querySelector('[data-tab="combo"]');
+            if (comboBtn) {
+                comboBtn.click();
+            }
+        }
+    });
+    
+
 }
 
 // Render the ball panel for the 4&5 Combo tab
@@ -898,8 +998,24 @@ function renderCash5Combo45Results() {
             if (count >= 2) {
                 const numbers = comboStr.split(',').map(Number).sort((a, b) => a - b);
                 
-                // Highlight selected and searched numbers instead of filtering
-                // All combinations are shown, but selected and searched numbers will be highlighted
+                // Filter by selected numbers
+                if (window.cash5Combo45SelectedNumbers.length > 0) {
+                    const hasAllSelected = window.cash5Combo45SelectedNumbers.every(num => 
+                        numbers.includes(num)
+                    );
+                    if (!hasAllSelected) return;
+                }
+                
+                // Filter by search query
+                if (window.cash5Combo45SearchQuery) {
+                    const searchNumbers = window.cash5Combo45SearchQuery.split(/\s+/).map(Number).filter(n => !isNaN(n) && n >= 1 && n <= 42);
+                    if (searchNumbers.length > 0) {
+                        const hasAllSearched = searchNumbers.every(num => 
+                            numbers.includes(num)
+                        );
+                        if (!hasAllSearched) return;
+                    }
+                }
                 
                 combos.push({
                     numbers: numbers,
@@ -929,9 +1045,7 @@ function renderCash5Combo45Results() {
                 <div style="display: flex; align-items: center; gap: 4px; flex-wrap: nowrap;">
                     ${combo.numbers.map(num => {
                         const isSelected = window.cash5Combo45SelectedNumbers.includes(num);
-                        const isSearched = window.cash5Combo45SearchQuery 
-                            ? window.cash5Combo45SearchQuery.split(/\s+/).map(Number).includes(num)
-                            : false;
+                        const isSearched = window.cash5Combo45SearchQuery.split(/\s+/).map(Number).includes(num);
                         
                         let ballClass = 'ball';
                         let ballStyle = 'display: flex; align-items: center; justify-content: center;';
@@ -940,7 +1054,7 @@ function renderCash5Combo45Results() {
                         
                         if (isSelected) {
                             ballClass += ' selected';
-                            ballStyle += ' background: #3498db; color: white; border: 2px solid #2980b9;';
+                            ballStyle += ' background: #e74c3c; color: white; transform: scale(1.1); box-shadow: 0 0 5px rgba(0,0,0,0.2);';
                         } else if (isSearched) {
                             ballClass += ' searched';
                             ballStyle += ' background: #f39c12; color: white;';
@@ -948,7 +1062,7 @@ function renderCash5Combo45Results() {
                             ballStyle += ' background: #27ae60; color: white;';
                         }
                         
-                        return `<span class="${ballClass}" style="${ballStyle}">${num}</span>`;
+                        return `<span class="${ballClass}" style="${ballStyle}" data-number="${num}">${num}</span>`;
                     }).join('\n                    ')}
                 </div>
             `;
@@ -968,7 +1082,12 @@ function renderCash5Combo45Results() {
                     <td style="padding: 12px; border-bottom: 1px solid #e0e0e0; vertical-align: middle;">
                         <div style="display: flex; align-items: center; justify-content: space-between;">
                             ${ballsHtml}
-                            <div style="font-size: 14px; color: #2c3e50; font-weight: 600; margin-left: 15px; white-space: nowrap;">
+                            <div style="font-size: 14px; color: #2c3e50; font-weight: 600; margin-left: 15px; white-space: nowrap;
+                                      padding: 4px 8px; border-radius: 4px; cursor: pointer; transition: all 0.2s;"
+                                 data-count="${combo.count}"
+                                 data-numbers="${combo.numbers.join(',')}"
+                                 onmouseover="this.style.backgroundColor='#f0f0f0'"
+                                 onmouseout="this.style.backgroundColor='transparent'">
                                 ${combo.count}×
                             </div>
                         </div>

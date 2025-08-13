@@ -222,6 +222,30 @@ button[id^='cash5-download-note-btn-']:hover, #cash5-download-combo-csv-btn:hove
     width: 100%;
 }
 
+/* Frequency buttons */
+.freq-btn {
+    padding: 8px 15px;
+    background-color: #f8f9fa;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    color: #2c3e50;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.freq-btn:hover {
+    background-color: #e9ecef;
+    transform: translateY(-2px);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.freq-btn.active {
+    background-color: #27ae60;
+    color: white;
+    border-color: #219653;
+}
+
 /* Base Button Style */
 .download-btn {
     display: inline-flex;
