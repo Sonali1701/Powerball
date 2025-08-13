@@ -333,6 +333,9 @@ document.addEventListener('DOMContentLoaded', function() {
             if (tabId === 'combo45') {
                 initCash5Combo45Tab();
             }
+            if (tabId === 'random' && typeof window.initCash5RandomTab === 'function') {
+                window.initCash5RandomTab();
+            }
         });
     });
 
@@ -363,6 +366,13 @@ document.addEventListener('DOMContentLoaded', function() {
                             row: row
                         };
                     });
+                    
+                    // Debug: Log first few draws to verify data
+                    console.log('First 3 draws from CSV:');
+                    window.cash5DrawRows.slice(0, 3).forEach((draw, i) => {
+                        console.log(`Draw ${i + 1} (${draw.date}):`, draw.mainArr.join(','));
+                    });
+                    console.log('Total draws loaded:', window.cash5DrawRows.length);
                     renderCash5ComboBallPanel();
                     renderCash5TwoxBallPanel();
                     renderCash5NewBallPanel();
@@ -1213,6 +1223,168 @@ function populateCash5DuoTrioDropdowns(draws) {
     }
 }
 
+// Function to generate random unique numbers
+function generateCash5UniqueNumbers(count, min, max, exclude = []) {
+    const nums = new Set();
+    const excludeSet = new Set(exclude);
+    
+    while (nums.size < count) {
+        const num = Math.floor(Math.random() * (max - min + 1)) + min;
+        if (!excludeSet.has(num) && !nums.has(num)) {
+            nums.add(num);
+        }
+    }
+    return Array.from(nums).sort((a, b) => a - b);
+}
+
+// Function to generate all possible subsets of a given size from an array
+function getSubsets(numbers, size) {
+    const result = [];
+    const generate = (start, current) => {
+        if (current.length === size) {
+            result.push([...current].sort((a, b) => a - b));
+            return;
+        }
+        for (let i = start; i < numbers.length; i++) {
+            current.push(numbers[i]);
+            generate(i + 1, current);
+            current.pop();
+        }
+    };
+    generate(0, []);
+    return result;
+}
+
+// Function to count how many times a subset appears in the historical data
+function countSubsetOccurrences(subset, historicalData) {
+    if (!historicalData || !Array.isArray(historicalData) || !subset || !Array.isArray(subset)) {
+        console.error('Invalid input to countSubsetOccurrences', {subset, historicalData});
+        return 0;
+    }
+    
+    const count = historicalData.reduce((total, draw) => {
+        if (!draw || !draw.mainArr || !Array.isArray(draw.mainArr)) return total;
+        return total + (subset.every(num => draw.mainArr.includes(num)) ? 1 : 0);
+    }, 0);
+    
+    return count;
+}
+
+// Function to render the generated combinations with subset occurrences
+function renderCash5Combinations(count) {
+    const container = document.getElementById('cash5-generated-table');
+    if (!container || !window.cash5DrawRows) return;
+    
+    container.innerHTML = '<div style="margin-bottom: 10px; font-weight: bold;">Generating ' + count + ' combinations...</div>';
+    
+    // Generate combinations
+    const combinations = [];
+    for (let i = 0; i < count; i++) {
+        const nums = generateCash5UniqueNumbers(5, 1, 42);
+        combinations.push({
+            numbers: nums,
+            subsets: {
+                pairs: getSubsets(nums, 2),
+                trios: getSubsets(nums, 3),
+                quads: getSubsets(nums, 4),
+                full: [nums]
+            }
+        });
+    }
+    
+    // Create table
+    let table = '<table class="results-table" style="width:100%; border-collapse: collapse; font-size: 14px;">';
+    table += '<tr><th style="width:50px; text-align:left;">#</th><th style="text-align:left;">Numbers</th><th style="text-align:left;">Subset Occurrences</th></tr>';
+    
+    combinations.forEach((combo, index) => {
+        const nums = combo.numbers.sort((a, b) => a - b);
+        
+        // Count occurrences for each subset size
+        const subsetCounts = {};
+        
+        // Count pairs (2-number combinations)
+        const pairCounts = combo.subsets.pairs.map(pair => ({
+            subset: pair,
+            count: countSubsetOccurrences(pair, window.cash5DrawRows)
+        })).filter(item => item.count > 0);
+        
+        // Count trios (3-number combinations)
+        const trioCounts = combo.subsets.trios.map(trio => ({
+            subset: trio,
+            count: countSubsetOccurrences(trio, window.cash5DrawRows)
+        })).filter(item => item.count > 1); // Only show if occurred more than once
+        
+        // Count quads (4-number combinations)
+        const quadCounts = combo.subsets.quads.map(quad => ({
+            subset: quad,
+            count: countSubsetOccurrences(quad, window.cash5DrawRows)
+        })).filter(item => item.count > 0);
+        
+        // Count full set (5-number combination)
+        const fullCount = countSubsetOccurrences(nums, window.cash5DrawRows);
+        
+        // Format subset strings
+        const formatSubsets = (items) => {
+            return items.map(item => ({
+                text: item.subset.join('-'),
+                count: item.count
+            })).sort((a, b) => b.count - a.count);
+        };
+        
+        const pairStrings = formatSubsets(pairCounts);
+        const trioStrings = formatSubsets(trioCounts);
+        const quadStrings = formatSubsets(quadCounts);
+        
+        // Build the subsets display
+        let subsetsHtml = '<div style="line-height: 1.6;">';
+        
+        if (fullCount > 0) {
+            subsetsHtml += `<div><strong>Full Set (5):</strong> ${nums.join('-')} (${fullCount}x)</div>`;
+        }
+        
+        if (quadStrings.length > 0) {
+            subsetsHtml += `<div><strong>4-number:</strong> ${quadStrings.map(s => `${s.text}(${s.count}x)`).join(', ')}</div>`;
+        }
+        
+        if (trioStrings.length > 0) {
+            subsetsHtml += `<div><strong>3-number:</strong> ${trioStrings.map(s => `${s.text}(${s.count}x)`).join(', ')}</div>`;
+        }
+        
+        if (pairStrings.length > 0) {
+            subsetsHtml += `<div><strong>2-number:</strong> ${pairStrings.map(s => `${s.text}(${s.count}x)`).join(', ')}</div>`;
+        }
+        
+        subsetsHtml += '</div>';
+        
+        table += `
+        <tr>
+            <td style="text-align:left; padding:8px; border:1px solid #ddd; vertical-align:top;">${index + 1}</td>
+            <td style="padding:8px; border:1px solid #ddd; vertical-align:top;">
+                <div style="margin-bottom: 5px;">${nums.map(n => 
+                    `<span class="ball" style="
+                        display:inline-block; 
+                        width:28px; 
+                        height:28px; 
+                        line-height:28px; 
+                        text-align:center; 
+                        border-radius:50%; 
+                        background:#27ae60; 
+                        color:white; 
+                        margin:2px;
+                        font-size: 0.9em;
+                    ">${n}</span>`
+                ).join(' ')}</div>
+            </td>
+            <td style="padding:8px; border:1px solid #ddd; vertical-align:top;">
+                ${subsetsHtml}
+            </td>
+        </tr>`;
+    });
+    
+    table += '</table>';
+    container.innerHTML = table;
+}
+
 // --- Cash 5 Random Tab Event Handlers ---
 // All event handlers for the Random tab are now set up ONLY inside window.initCash5RandomTab, which is called after CSV load.
 // This avoids duplicate/conflicting event handlers and ensures all elements exist.
@@ -1415,25 +1587,32 @@ function renderCash5TwoxBallPanel() {
 }
 
 function renderCash5NewBallPanel() {
-    const panel = document.getElementById('cash5-new-ball-panel');
-    if (!panel) return;
-    let html = '<div class="powerball-selection"><div class="powerball-label">Select numbers</div><div class="powerball-grid">';
+    const container = document.getElementById('cash5-new-ball-panel');
+    if (!container) return;
+    
+    // Initialize if not exists
+    window.cash5NewSelected = window.cash5NewSelected || [];
+    
+    let html = '';
     for (let i = 1; i <= 42; i++) {
-        html += `<span class="ball${window.cash5SelectedNew.includes(i)?' selected':''}" data-ball="${i}">${i}</span>`;
+        const isSelected = window.cash5NewSelected.includes(i);
+        html += `<div class="ball ${isSelected ? 'selected' : ''}" data-number="${i}">${i}</div>`;
     }
-    html += '</div></div>';
-    panel.innerHTML = html;
-    panel.querySelectorAll('.ball').forEach(ball => {
-        ball.onclick = function() {
-            const n = parseInt(ball.getAttribute('data-ball'));
-            if (window.cash5SelectedNew.includes(n)) {
-                window.cash5SelectedNew = window.cash5SelectedNew.filter(x=>x!==n);
+    container.innerHTML = html;
+    
+    // Add click handlers
+    container.querySelectorAll('.ball').forEach(ball => {
+        ball.addEventListener('click', function() {
+            const number = parseInt(this.getAttribute('data-number'));
+            const index = window.cash5NewSelected.indexOf(number);
+            if (index === -1) {
+                window.cash5NewSelected.push(number);
             } else {
-                window.cash5SelectedNew.push(n);
-            } // No selection limit
+                window.cash5NewSelected.splice(index, 1);
+            }
             renderCash5NewBallPanel();
             renderCash5NewResults();
-        };
+        });
     });
 }
 
