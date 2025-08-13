@@ -358,7 +358,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     const trimmedData = results.data.map(trimObj);
                     window.cash5Results = trimmedData;
                     window.cash5DrawRows = trimmedData.map(row => {
-                        let arr = (row["Winning Numbers"]||"").split(/[-,\s]+/).map(x=>parseInt(x,10)).filter(x=>!isNaN(x));
+                        // Handle different number formats (with en dash, hyphen, or space as separators)
+                        let numbersStr = (row["Winning Numbers"] || "").replace(/[–—]/g, '-'); // Replace en/em dashes with hyphens
+                        let arr = numbersStr.split(/[-,\s]+/)
+                            .map(x => parseInt(x.trim(), 10))
+                            .filter(x => !isNaN(x) && x >= 1 && x <= 42);
+                            
                         return {
                             date: row["Date"],
                             mainArr: arr,
@@ -893,24 +898,8 @@ function renderCash5Combo45Results() {
             if (count >= 2) {
                 const numbers = comboStr.split(',').map(Number).sort((a, b) => a - b);
                 
-                // Filter by selected numbers
-                if (window.cash5Combo45SelectedNumbers.length > 0) {
-                    const hasAllSelected = window.cash5Combo45SelectedNumbers.every(num => 
-                        numbers.includes(num)
-                    );
-                    if (!hasAllSelected) return;
-                }
-                
-                // Filter by search query
-                if (window.cash5Combo45SearchQuery) {
-                    const searchNumbers = window.cash5Combo45SearchQuery.split(/\s+/).map(Number).filter(n => !isNaN(n) && n >= 1 && n <= 42);
-                    if (searchNumbers.length > 0) {
-                        const hasAllSearched = searchNumbers.every(num => 
-                            numbers.includes(num)
-                        );
-                        if (!hasAllSearched) return;
-                    }
-                }
+                // Highlight selected and searched numbers instead of filtering
+                // All combinations are shown, but selected and searched numbers will be highlighted
                 
                 combos.push({
                     numbers: numbers,
@@ -940,7 +929,9 @@ function renderCash5Combo45Results() {
                 <div style="display: flex; align-items: center; gap: 4px; flex-wrap: nowrap;">
                     ${combo.numbers.map(num => {
                         const isSelected = window.cash5Combo45SelectedNumbers.includes(num);
-                        const isSearched = window.cash5Combo45SearchQuery.split(/\s+/).map(Number).includes(num);
+                        const isSearched = window.cash5Combo45SearchQuery 
+                            ? window.cash5Combo45SearchQuery.split(/\s+/).map(Number).includes(num)
+                            : false;
                         
                         let ballClass = 'ball';
                         let ballStyle = 'display: flex; align-items: center; justify-content: center;';
@@ -949,7 +940,7 @@ function renderCash5Combo45Results() {
                         
                         if (isSelected) {
                             ballClass += ' selected';
-                            ballStyle += ' background: #e74c3c; color: white; transform: scale(1.1); box-shadow: 0 0 5px rgba(0,0,0,0.2);';
+                            ballStyle += ' background: #3498db; color: white; border: 2px solid #2980b9;';
                         } else if (isSearched) {
                             ballClass += ' searched';
                             ballStyle += ' background: #f39c12; color: white;';
@@ -957,7 +948,7 @@ function renderCash5Combo45Results() {
                             ballStyle += ' background: #27ae60; color: white;';
                         }
                         
-                        return `<span class="${ballClass}" style="${ballStyle}" data-number="${num}">${num}</span>`;
+                        return `<span class="${ballClass}" style="${ballStyle}">${num}</span>`;
                     }).join('\n                    ')}
                 </div>
             `;
