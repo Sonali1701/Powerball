@@ -830,7 +830,17 @@ function initCash5Combo45Tab() {
             window.cash5Combo45SearchQuery = '';
             const searchInput = document.getElementById('cash5-combo45-search');
             if (searchInput) searchInput.value = '';
+            
+            // Clear and hide the 5th numbers panel
+            const fifthNumbersList = document.getElementById('cash5-combo45-fifth-numbers-list');
+            const fifthNumbersContainer = document.getElementById('cash5-combo45-fifth-numbers');
+            if (fifthNumbersList && fifthNumbersContainer) {
+                fifthNumbersList.innerHTML = '';
+                fifthNumbersContainer.style.display = 'none';
+            }
+            
             updateCash5Combo45SelectedNumbersDisplay();
+            renderCash5Combo45BallPanel();
             renderCash5Combo45Results();
         });
     }
@@ -841,15 +851,309 @@ function initCash5Combo45Tab() {
     // Initial render
     renderCash5Combo45Results();
     
-    // Add click handlers for frequency indicators
-    document.addEventListener('click', function(e) {
-        // Check if the click is on a frequency indicator
-        const freqIndicator = e.target.closest('[data-numbers]');
-        if (freqIndicator && freqIndicator.hasAttribute('data-count')) {
-            e.preventDefault();
-            const numbers = freqIndicator.getAttribute('data-numbers').split(',').map(Number);
+    // Add click handlers for frequency indicators using event delegation
+    document.addEventListener('click', (e) => {
+        console.log('Click event triggered');
+        
+        // Try to find the frequency indicator element
+        let freqIndicator = e.target.closest('.frequency-indicator');
+        
+        // If not found, check if we clicked on the '×' character inside the indicator
+        if (!freqIndicator) {
+            // Check if we clicked on a text node inside the frequency indicator
+            if (e.target.parentNode && e.target.parentNode.classList && 
+                e.target.parentNode.classList.contains('frequency-indicator')) {
+                freqIndicator = e.target.parentNode;
+            }
+            // Check if we clicked on the '×' character
+            else if (e.target.nodeName === 'DIV' && e.target.textContent && 
+                    e.target.textContent.toString().includes('×')) {
+                freqIndicator = e.target;
+            }
+            // Check if we clicked on a span inside the frequency indicator
+            else if (e.target.parentNode && e.target.parentNode.classList && 
+                    e.target.parentNode.classList.contains('frequency-indicator')) {
+                freqIndicator = e.target.parentNode;
+            }
+        }
+        
+        console.log('Frequency indicator element:', freqIndicator);
+        
+        // Verify we have a valid frequency indicator with required attributes
+        if (!freqIndicator || !freqIndicator.getAttribute('data-count') || !freqIndicator.getAttribute('data-numbers')) {
+            console.log('No valid frequency indicator found');
+            console.log('Element has data-count:', freqIndicator && freqIndicator.getAttribute('data-count'));
+            console.log('Element has data-numbers:', freqIndicator && freqIndicator.getAttribute('data-numbers'));
+            return;
+        }
+        
+        const numbers = freqIndicator.getAttribute('data-numbers').split(',').map(Number);
+        const comboSize = numbers.length;
+        console.log('Clicked on combo size:', comboSize, 'Numbers:', numbers);
+        
+        // For 4-number combos, show the 5th numbers in the left panel
+        if (comboSize === 4) {
+            console.log('Processing 4-number combo');
+            const fifthNumbers = [];
+            const fifthNumbersList = document.getElementById('cash5-combo45-fifth-numbers-list');
+            const fifthNumbersContainer = document.getElementById('cash5-combo45-fifth-numbers');
             
-            // Store the selected numbers in session storage
+            console.log('Fifth numbers container:', fifthNumbersContainer);
+            console.log('Fifth numbers list:', fifthNumbersList);
+            
+            if (!fifthNumbersList || !fifthNumbersContainer) {
+                console.error('Could not find fifth numbers container or list');
+                return;
+            }
+            
+            // Clear previous results and hide the container
+            fifthNumbersList.innerHTML = '';
+            fifthNumbersContainer.style.display = 'none';
+            
+            // Find all draws that contain these 4 numbers and get the 5th number
+            console.log('Searching for draws containing numbers:', numbers, 'Type of numbers:', numbers.map(n => typeof n));
+            console.log('First draw numbers:', [
+                window.cash5DrawRows[0]['Number 1'],
+                window.cash5DrawRows[0]['Number 2'],
+                window.cash5DrawRows[0]['Number 3'],
+                window.cash5DrawRows[0]['Number 4'],
+                window.cash5DrawRows[0]['Number 5']
+            ], 'Type of first draw numbers:', [
+                typeof window.cash5DrawRows[0]['Number 1'],
+                typeof window.cash5DrawRows[0]['Number 2'],
+                typeof window.cash5DrawRows[0]['Number 3'],
+                typeof window.cash5DrawRows[0]['Number 4'],
+                typeof window.cash5DrawRows[0]['Number 5']
+            ]);
+            
+            // Object to track fifth numbers with their counts and dates
+            const fifthNumberStats = {};
+            
+            window.cash5DrawRows.forEach((draw, index) => {
+                try {
+                    // Try to get numbers from mainArr first
+                    let drawNumbers = [];
+                    if (draw.mainArr && Array.isArray(draw.mainArr)) {
+                        drawNumbers = draw.mainArr.map(Number).filter(n => !isNaN(n));
+                    } 
+                    
+                    // If mainArr doesn't have valid numbers, try to get from Number 1-5 properties
+                    if (drawNumbers.length !== 5) {
+                        drawNumbers = [];
+                        for (let i = 1; i <= 5; i++) {
+                            const num = parseInt(draw[`Number ${i}`] || (draw[i-1] && draw[i-1].toString()), 10);
+                            if (!isNaN(num)) drawNumbers.push(num);
+                        }
+                    }
+                    
+                    console.log(`Draw ${index + 1} numbers:`, drawNumbers, 'Full draw object:', draw);
+                    
+                    // Check if this draw contains all 4 numbers
+                    const hasAllNumbers = numbers.every(num => {
+                        // Convert both to strings for comparison to handle type mismatches
+                        const numStr = String(num);
+                        const includes = drawNumbers.some(drawNum => String(drawNum) === numStr);
+                        
+                        if (!includes) {
+                            console.log(`Draw ${index + 1} is missing number:`, num, 'Draw numbers:', drawNumbers);
+                        } else {
+                            console.log(`Draw ${index + 1} has number ${num} at position ${drawNumbers.findIndex(n => String(n) === numStr)}`);
+                        }
+                        return includes;
+                    });
+                    
+                    console.log(`Draw ${index + 1} has all numbers:`, hasAllNumbers);
+                    
+                    if (hasAllNumbers) {
+                        // Find the 5th number (the one not in the selected 4)
+                        const fifthNumber = drawNumbers.find(num => !numbers.includes(num));
+                        console.log(`Found 5th number ${fifthNumber} in draw`, drawNumbers);
+                        
+                        if (fifthNumber !== undefined) {
+                            // Initialize the stats for this fifth number if it doesn't exist
+                            if (!fifthNumberStats[fifthNumber]) {
+                                fifthNumberStats[fifthNumber] = {
+                                    count: 0,
+                                    dates: []
+                                };
+                            }
+                            
+                            // Update the stats
+                            fifthNumberStats[fifthNumber].count++;
+                            fifthNumberStats[fifthNumber].dates.push(draw.date || 'Unknown date');
+                            
+                            // Keep track of unique fifth numbers
+                            if (!fifthNumbers.includes(fifthNumber)) {
+                                fifthNumbers.push(fifthNumber);
+                            }
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error processing draw:', draw, error);
+                }
+            });
+            
+            // Display the 5th numbers with counts and dates
+            console.log('Found fifth numbers with stats:', fifthNumberStats);
+            if (fifthNumbers.length > 0) {
+                // Sort by frequency (descending) then by number (ascending)
+                fifthNumbers.sort((a, b) => {
+                    const countDiff = fifthNumberStats[b].count - fifthNumberStats[a].count;
+                    return countDiff !== 0 ? countDiff : a - b;
+                });
+
+                // Add a title above the 5th numbers list
+                const title = document.createElement('h3');
+                title.textContent = `5th Numbers for ${numbers.join(', ')}`;
+                title.style.margin = '0 0 10px 0';
+                title.style.padding = '0 0 5px 0';
+                title.style.borderBottom = '1px solid #eee';
+                title.style.color = '#333';
+                title.style.fontSize = '1.1em';
+                
+                // Insert the title at the beginning of the container
+                fifthNumbersContainer.insertBefore(title, fifthNumbersList);
+                
+                fifthNumbers.forEach(num => {
+                    const stats = fifthNumberStats[num];
+                    const container = document.createElement('div');
+                    container.style.margin = '10px 0';
+                    container.style.padding = '12px';
+                    container.style.border = '1px solid #e0e0e0';
+                    container.style.borderRadius = '8px';
+                    container.style.backgroundColor = '#f9f9f9';
+                    container.style.transition = 'all 0.2s';
+                    
+                    // Create header with ball and count
+                    const header = document.createElement('div');
+                    header.style.display = 'flex';
+                    header.style.alignItems = 'center';
+                    header.style.marginBottom = '8px';
+                    header.style.cursor = 'pointer';
+                    
+                    // Create the ball
+                    const ball = document.createElement('div');
+                    ball.className = 'ball';
+                    ball.textContent = num;
+                    ball.style.margin = '0 10px 0 0';
+                    ball.style.display = 'inline-flex';
+                    ball.style.alignItems = 'center';
+                    ball.style.justifyContent = 'center';
+                    ball.style.width = '32px';
+                    ball.style.height = '32px';
+                    ball.style.borderRadius = '50%';
+                    ball.style.backgroundColor = '#3498db';
+                    ball.style.color = 'white';
+                    ball.style.fontWeight = 'bold';
+                    ball.style.cursor = 'pointer';
+                    ball.style.transition = 'all 0.2s';
+                    ball.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+                    
+                    // Add count badge
+                    const countBadge = document.createElement('span');
+                    countBadge.textContent = `${stats.count}×`;
+                    countBadge.style.marginLeft = '12px';
+                    countBadge.style.padding = '4px 10px';
+                    countBadge.style.backgroundColor = '#2ecc71';
+                    countBadge.style.color = 'white';
+                    countBadge.style.borderRadius = '12px';
+                    countBadge.style.fontSize = '0.9em';
+                    countBadge.style.fontWeight = 'bold';
+                    countBadge.style.boxShadow = '0 1px 2px rgba(0,0,0,0.1)';
+                    
+                    // Add dates list
+                    const datesList = document.createElement('div');
+                    datesList.style.marginTop = '10px';
+                    datesList.style.padding = '8px';
+                    datesList.style.fontSize = '0.85em';
+                    datesList.style.color = '#555';
+                    datesList.style.backgroundColor = '#fff';
+                    datesList.style.borderRadius = '4px';
+                    datesList.style.border = '1px solid #e0e0e0';
+                    datesList.style.display = 'block'; // Show by default
+                    
+                    // Show first 3 dates by default, with option to show more
+                    const maxVisibleDates = 3;
+                    const visibleDates = stats.dates.slice(0, maxVisibleDates);
+                    const hasMoreDates = stats.dates.length > maxVisibleDates;
+                    
+                    const datesText = document.createElement('div');
+                    datesText.textContent = `Appeared on: ${visibleDates.join(', ')}`;
+                    
+                    // Add show more/less toggle if there are more dates
+                    if (hasMoreDates) {
+                        const toggleLink = document.createElement('a');
+                        toggleLink.textContent = ' (show more)';
+                        toggleLink.style.cursor = 'pointer';
+                        toggleLink.style.color = '#3498db';
+                        toggleLink.style.marginLeft = '5px';
+                        toggleLink.style.fontWeight = '500';
+                        
+                        toggleLink.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            if (toggleLink.textContent.includes('show more')) {
+                                datesText.textContent = `Appeared on: ${stats.dates.join(', ')}`;
+                                toggleLink.textContent = ' (show less)';
+                            } else {
+                                datesText.textContent = `Appeared on: ${visibleDates.join(', ')}`;
+                                toggleLink.textContent = ' (show more)';
+                            }
+                        });
+                        
+                        datesText.appendChild(toggleLink);
+                    }
+                    
+                    // Toggle dates visibility when clicking the header
+                    header.addEventListener('click', (e) => {
+                        // Don't toggle if clicking on the ball or count badge
+                        if (e.target === ball || e.target === countBadge) {
+                            return;
+                        }
+                        
+                        if (datesList.style.display === 'none') {
+                            datesList.style.display = 'block';
+                            container.style.backgroundColor = '#f0f8ff';
+                        } else {
+                            datesList.style.display = 'none';
+                            container.style.backgroundColor = '#f9f9f9';
+                        }
+                    });
+                    
+                    // Add click handler to select this number (when clicking the ball)
+                    ball.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        window.cash5Combo45SelectedNumbers = [...numbers, num];
+                        renderCash5Combo45BallPanel();
+                        updateCash5Combo45SelectedNumbersDisplay();
+                        renderCash5Combo45Results();
+                        
+                        // Highlight the selected container
+                        document.querySelectorAll('#cash5-combo45-fifth-numbers-list > div').forEach(el => {
+                            el.style.backgroundColor = el === container ? '#e6f3ff' : '#f9f9f9';
+                        });
+                    });
+                    
+                    // Add elements to the DOM
+                    header.appendChild(ball);
+                    header.appendChild(countBadge);
+                    datesList.appendChild(datesText);
+                    container.appendChild(header);
+                    container.appendChild(datesList);
+                    fifthNumbersList.appendChild(container);
+                });
+                
+                fifthNumbersContainer.style.display = 'block';
+            } else {
+                fifthNumbersContainer.style.display = 'none';
+            }
+            
+            // Highlight the selected 4-number combo
+            window.cash5Combo45SelectedNumbers = [...numbers];
+            renderCash5Combo45BallPanel();
+            updateCash5Combo45SelectedNumbersDisplay();
+            renderCash5Combo45Results();
+        } else {
+            // For other combo sizes, use the original behavior
             sessionStorage.setItem('cash5ComboPreselectedNumbers', JSON.stringify({
                 numbers: numbers
             }));
@@ -1044,8 +1348,10 @@ function renderCash5Combo45Results() {
             const ballsHtml = `
                 <div style="display: flex; align-items: center; gap: 4px; flex-wrap: nowrap;">
                     ${combo.numbers.map(num => {
-                        const isSelected = window.cash5Combo45SelectedNumbers.includes(num);
-                        const isSearched = window.cash5Combo45SearchQuery.split(/\s+/).map(Number).includes(num);
+                        const isSelected = window.cash5Combo45SelectedNumbers && 
+                                         window.cash5Combo45SelectedNumbers.includes(parseInt(num));
+                        const isSearched = window.cash5Combo45SearchQuery && 
+                                         window.cash5Combo45SearchQuery.split(/\s+/).map(Number).includes(parseInt(num));
                         
                         let ballClass = 'ball';
                         let ballStyle = 'display: flex; align-items: center; justify-content: center;';
@@ -1053,8 +1359,9 @@ function renderCash5Combo45Results() {
                         ballStyle += ' transition: all 0.2s ease; flex-shrink: 0;';
                         
                         if (isSelected) {
+                            // Highlight selected numbers in red without changing size
                             ballClass += ' selected';
-                            ballStyle += ' background: #e74c3c; color: white; transform: scale(1.1); box-shadow: 0 0 5px rgba(0,0,0,0.2);';
+                            ballStyle += ' background: #e74c3c !important; color: white !important;';
                         } else if (isSearched) {
                             ballClass += ' searched';
                             ballStyle += ' background: #f39c12; color: white;';
@@ -1087,7 +1394,8 @@ function renderCash5Combo45Results() {
                                  data-count="${combo.count}"
                                  data-numbers="${combo.numbers.join(',')}"
                                  onmouseover="this.style.backgroundColor='#f0f0f0'"
-                                 onmouseout="this.style.backgroundColor='transparent'">
+                                 onmouseout="this.style.backgroundColor='transparent'"
+                                 class="frequency-indicator">
                                 ${combo.count}×
                             </div>
                         </div>
