@@ -612,6 +612,55 @@ document.addEventListener('DOMContentLoaded', function() {
             div.innerHTML = html;
             return;
         }
+        
+        // --- Single Number Frequencies ---
+        if (selected.length > 0) {
+            html += '<h3 style="margin-top:18px;">Single Number Frequencies</h3>';
+            
+            // Sort numbers by frequency (descending)
+            const numbersWithFreq = selected.map(num => {
+                const draws = (window.cash5DrawRows || []).filter(draw => draw.mainArr.includes(num));
+                return { num, count: draws.length, draws };
+            }).sort((a, b) => b.count - a.count);
+            
+            // Create a table for single number frequencies
+            html += `
+                <table class='results-table' style='margin-bottom: 20px;'>
+                    <thead>
+                        <tr>
+                            <th>Number</th>
+                            <th>Frequency</th>
+                            <th>Last 5 Draw Dates</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            numbersWithFreq.forEach(({num, count, draws}) => {
+                // Sort draws by date (newest first)
+                const sortedDraws = [...draws].sort((a, b) => {
+                    const da = a.date ? a.date.split('/').reverse().join('') : '';
+                    const db = b.date ? b.date.split('/').reverse().join('') : '';
+                    return db.localeCompare(da);
+                });
+                
+                const recentDraws = sortedDraws.slice(0, 5);
+                const drawDates = recentDraws.map(d => d.date || 'N/A').join('<br>');
+                
+                html += `
+                    <tr>
+                        <td><span class='ball' style='background:#e74c3c;color:#fff;'>${num}</span></td>
+                        <td>${count} ${count === 1 ? 'time' : 'times'}</td>
+                        <td>${drawDates}</td>
+                    </tr>
+                `;
+            });
+            
+            html += `
+                    </tbody>
+                </table>
+            `;
+        }
         // Helper to get all unique k-combinations from arr
         function getCombinations(arr, k) {
             const results = [];
@@ -629,6 +678,11 @@ document.addEventListener('DOMContentLoaded', function() {
             helper(0, []);
             return results;
         }
+        // Add some spacing after single number frequencies
+        if (selected.length > 0) {
+            html += '<div style="margin: 20px 0; border-top: 1px solid #eee;"></div>';
+        }
+        
         let groupSizes = [2, 3, 4, 5];
         let foundAny = false;
         for (let k of groupSizes) {

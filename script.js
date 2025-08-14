@@ -1,3 +1,11 @@
+// Document click handler for debugging - modified to not interfere with ball clicks
+document.addEventListener('click', function(e) {
+    // Skip if the click is on a ball (ball has its own handler)
+    if (e.target.closest('.ball')) {
+        return;
+    }
+}, true);
+
 document.addEventListener('DOMContentLoaded', function() {
     // --- Auto-save notes logic ---
     const noteConfigs = [
@@ -52,6 +60,64 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (tabId === 'combo45') {
                     renderPowerballCombo45Results();
                 }
+                if (tabId === '2x') {
+                    console.log('2x tab activated - START');
+                    // Initialize selectedBalls if it doesn't exist
+                    window.selectedBalls = window.selectedBalls || [];
+                    console.log('Current selectedBalls:', window.selectedBalls);
+                    
+                    // Clear any existing results
+                    let resultsDiv = document.getElementById('twox-results');
+                    
+                    // If results div doesn't exist, create it
+                    if (!resultsDiv) {
+                        console.log('Creating twox-results div...');
+                        const centerCol = document.querySelector('#tab-2x .center-col');
+                        if (centerCol) {
+                            resultsDiv = document.createElement('div');
+                            resultsDiv.id = 'twox-results';
+                            resultsDiv.style.width = '100%';
+                            centerCol.prepend(resultsDiv);
+                            console.log('Created twox-results div');
+                        } else {
+                            console.error('Could not find center column to add results div');
+                        }
+                    } else {
+                        resultsDiv.innerHTML = '';
+                        console.log('Cleared existing results div');
+                    }
+                    
+                    // Make sure we have draw data
+                    if (!window.filteredDrawRows || window.filteredDrawRows.length === 0) {
+                        console.error('No draw data available in filteredDrawRows');
+                        if (resultsDiv) {
+                            resultsDiv.innerHTML = '<div style="color:#e74c3c; margin:18px 0;">Loading draw data... Please wait.</div>';
+                        }
+                        // Try to re-render after a short delay in case data is still loading
+                        setTimeout(() => {
+                            if (window.filteredDrawRows && window.filteredDrawRows.length > 0) {
+                                console.log('Draw data loaded, rendering ball panel');
+                                renderTwoXBallPanel();
+                                if (window.selectedBalls.length > 0) {
+                                    render2xResultsForSelectedBalls(window.selectedBalls);
+                                } else if (resultsDiv) {
+                                    resultsDiv.innerHTML = '<div style="color:#888; margin:18px 0; text-align: center;">Select numbers to see their frequencies and draw dates.</div>';
+                                }
+                            }
+                        }, 1000);
+                    } else {
+                        // We have draw data, render the ball panel
+                        console.log('Rendering 2x ball panel with', window.filteredDrawRows.length, 'draws');
+                        renderTwoXBallPanel();
+                        
+                        // Show results if we have selected balls
+                        if (window.selectedBalls.length > 0) {
+                            render2xResultsForSelectedBalls(window.selectedBalls);
+                        } else if (resultsDiv) {
+                            resultsDiv.innerHTML = '<div style="color:#888; margin:18px 0; text-align: center;">Select numbers to see their frequencies and draw dates.</div>';
+                        }
+                    }
+                }
             }
         });
     });
@@ -80,8 +146,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     for (let n = 1; n <= 69; n++) {
                         numberStats[n] = { count: 0, dates: [] };
                     }
-                    // Store draw rows for highlighting
+                    // Store draw rows for highlighting and filtering
                     const drawRows = [];
+                    window.filteredDrawRows = []; // Initialize the global filteredDrawRows array
                     for (let i = 0; i < data.length; i++) {
                         const row = data[i];
                         // Get the raw winning numbers without modifying the case
@@ -151,17 +218,18 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <td>${doublePlayPowerball}</td>
                             `;
                             // tbody.appendChild(tr); // This line is removed
-                            drawRows.push({
-                                tr,
-                                mainArr,
-                                doublePlayArr,
+                            const drawObj = {
                                 date: row.Date,
-                                mainNumbers,
-                                doublePlayNumbers,
-                                powerball,
-                                doublePlayPowerball,
-                                powerplay
-                            });
+                                mainArr: mainArr.map(Number),
+                                powerball: powerball,
+                                doublePlayArr: doublePlayArr ? doublePlayArr.map(Number) : null,
+                                doublePlayPowerball: doublePlayPowerball
+                            };
+                            
+                            // Add to draw rows for highlighting
+                            drawRows.push(drawObj);
+                            // Also add to filteredDrawRows for the 2x tab
+                            window.filteredDrawRows.push(drawObj);
                         }
                     }
                     // 1. Filter out draws before 2024 (fix: extract year from MM/DD/YYYY format)
@@ -417,26 +485,70 @@ document.addEventListener('DOMContentLoaded', function() {
                         if (!panel) return;
                         panel.innerHTML = '';
                         const selectedBalls = new Set();
-                        for (let n = 1; n <= 69; n++) {
-                            const ball = document.createElement('span');
+                        console.log('[2x] Creating ball elements...');
+                        for (let i = 1; i <= 69; i++) {
+                            const ball = document.createElement('div');
                             ball.className = 'ball';
-                            ball.textContent = n;
-                            ball.style.background = '#fff';
-                            ball.style.color = '#222';
-                            ball.style.border = '2px solid #888';
-                            // Tooltip
-                            ball.onclick = function() {
-                                if (selectedBalls.has(n)) {
-                                    selectedBalls.delete(n);
-                                    ball.classList.remove('selected');
+                            ball.textContent = i;
+                            ball.dataset.number = i; // Add data attribute for easier debugging
+                            
+                            // Set initial selection state
+                            const isSelected = window.selectedBalls && window.selectedBalls.includes(i);
+                            if (isSelected) {
+                                ball.classList.add('selected');
+                            }
+                            console.log(`[2x] Created ball ${i}, selected: ${isSelected}`);
+                            
+                            // Add click handler with event delegation check
+                            ball.addEventListener('click', function ballClickHandler(e) {
+                                console.log(`[2x] Ball ${i} clicked!`);
+                                console.log('Event target:', e.target);
+                                console.log('Current target:', e.currentTarget);
+                                
+                                e.preventDefault();
+                                e.stopPropagation();
+                                
+                                const ballNumber = parseInt(this.textContent);
+                                console.log('[2x] Parsed ball number:', ballNumber);
+                                
+                                // Initialize selectedBalls if needed
+                                window.selectedBalls = window.selectedBalls || [];
+                                console.log('[2x] Current selectedBalls:', [...window.selectedBalls]);
+                                
+                                const index = window.selectedBalls.indexOf(ballNumber);
+                                
+                                if (index === -1) {
+                                    window.selectedBalls.push(ballNumber);
+                                    this.classList.add('selected');
+                                    console.log('[2x] Added to selection');
                                 } else {
-                                    selectedBalls.add(n);
-                                    ball.classList.add('selected');
-                                    ball.style.animation = 'popin 0.3s';
-                                    setTimeout(() => { ball.style.animation = ''; }, 300);
+                                    window.selectedBalls.splice(index, 1);
+                                    this.classList.remove('selected');
+                                    console.log('[2x] Removed from selection');
                                 }
-                                render2xCombinations(Array.from(selectedBalls).sort((a,b)=>a-b));
-                            };
+                                
+                                console.log('[2x] Updated selectedBalls:', window.selectedBalls);
+                                
+                                // Force a re-render
+                                try {
+                                    console.log('[2x] Calling render2xResultsForSelectedBalls...');
+                                    render2xResultsForSelectedBalls(window.selectedBalls);
+                                    console.log('[2x] render2xResultsForSelectedBalls completed');
+                                } catch (error) {
+                                    console.error('[2x] Error in render2xResultsForSelectedBalls:', error);
+                                }
+                            });
+                            
+                            // Add mouseover/mouseout for visual feedback
+                            ball.addEventListener('mouseover', function() {
+                                this.style.transform = 'scale(1.1)';
+                                this.style.transition = 'transform 0.2s';
+                            });
+                            
+                            ball.addEventListener('mouseout', function() {
+                                this.style.transform = 'scale(1)';
+                            });
+                            
                             panel.appendChild(ball);
                         }
                         // Attach event to Check My Numbers button (now in left-col)
@@ -1633,6 +1745,199 @@ function renderPowerballCombo45Results() {
             datesCell.appendChild(datesContainer);
             
             // Append cells to row
+            // Add click handler for 4-number combos to show 5th number and dates in the right panel
+            if (combo.numbers.length === 4) {
+                // Make the frequency count clickable
+                countCell.style.cursor = 'pointer';
+                countCell.style.color = '#3498db';
+                countCell.style.textDecoration = 'underline';
+                countCell.title = 'Click to see 5th number and draw dates';
+                
+                // Add hover effect for better UX
+                const highlightRow = () => {
+                    row.style.backgroundColor = '#f0f7ff';
+                    countCell.style.color = '#1a73e8';
+                };
+                
+                const unhighlightRow = () => {
+                    row.style.backgroundColor = '';
+                    countCell.style.color = '#3498db';
+                };
+                
+                countCell.addEventListener('mouseenter', highlightRow);
+                row.addEventListener('mouseenter', highlightRow);
+                
+                countCell.addEventListener('mouseleave', unhighlightRow);
+                row.addEventListener('mouseleave', unhighlightRow);
+                
+                // Handle click on frequency count
+                const handleFrequencyClick = () => {
+                    // Find all 5-number combos that include this 4-number combo
+                    const matchingCombos = fiveNumberResults.filter(fiveCombo => {
+                        return combo.numbers.every(num => fiveCombo.numbers.includes(num));
+                    });
+                    
+                    // Update the right panel with the details
+                    const detailsPanel = document.getElementById('combo45-details-content');
+                    if (!detailsPanel) return;
+                    
+                    detailsPanel.innerHTML = ''; // Clear previous content
+                    
+                    if (matchingCombos.length === 0) {
+                        detailsPanel.innerHTML = `
+                            <div style="text-align: center; color: #6c757d; font-style: italic;">
+                                No matching 5-number combinations found for this set.
+                            </div>
+                        `;
+                        return;
+                    }
+                    
+                    // Create header
+                    const header = document.createElement('div');
+                    header.style.fontWeight = 'bold';
+                    header.style.marginBottom = '12px';
+                    header.style.color = '#2c3e50';
+                    header.style.borderBottom = '1px solid #eee';
+                    header.style.paddingBottom = '8px';
+                    header.textContent = `5th Number Details for: ${combo.numbers.join(', ')}`;
+                    
+                    detailsPanel.appendChild(header);
+                    
+                    // Group by the 5th number
+                    const combosByFifthNumber = {};
+                    matchingCombos.forEach(match => {
+                        const fifthNumber = match.numbers.find(n => !combo.numbers.includes(n));
+                        if (!combosByFifthNumber[fifthNumber]) {
+                            combosByFifthNumber[fifthNumber] = [];
+                        }
+                        combosByFifthNumber[fifthNumber].push(match);
+                    });
+                    
+                    // Create a section for each 5th number
+                    Object.entries(combosByFifthNumber).forEach(([fifthNumber, combos]) => {
+                        const section = document.createElement('div');
+                        section.style.marginBottom = '16px';
+                        section.style.paddingBottom = '12px';
+                        section.style.borderBottom = '1px solid #f0f0f0';
+                        
+                        // 5th number display
+                        const fifthNumberDiv = document.createElement('div');
+                        fifthNumberDiv.style.display = 'flex';
+                        fifthNumberDiv.style.alignItems = 'center';
+                        fifthNumberDiv.style.marginBottom = '10px';
+                        
+                        const label = document.createElement('span');
+                        label.textContent = '5th Number: ';
+                        label.style.marginRight = '8px';
+                        label.style.fontWeight = '500';
+                        
+                        const ball = document.createElement('span');
+                        ball.className = 'ball';
+                        ball.textContent = fifthNumber;
+                        ball.style.width = '32px';
+                        ball.style.height = '32px';
+                        ball.style.display = 'inline-flex';
+                        ball.style.alignItems = 'center';
+                        ball.style.justifyContent = 'center';
+                        ball.style.borderRadius = '50%';
+                        ball.style.fontWeight = 'bold';
+                        ball.style.backgroundColor = '#e74c3c';
+                        ball.style.color = 'white';
+                        ball.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
+                        
+                        fifthNumberDiv.appendChild(label);
+                        fifthNumberDiv.appendChild(ball);
+                        
+                        // Occurrences count
+                        const totalOccurrences = combos.reduce((sum, c) => sum + c.dates.length, 0);
+                        const occurrencesText = document.createElement('div');
+                        occurrencesText.textContent = `Appears in ${totalOccurrences} draw${totalOccurrences !== 1 ? 's' : ''}`;
+                        occurrencesText.style.fontSize = '0.9em';
+                        occurrencesText.style.color = '#6c757d';
+                        occurrencesText.style.marginBottom = '8px';
+                        
+                        // Draw dates
+                        const datesTitle = document.createElement('div');
+                        datesTitle.textContent = 'Draw Dates:';
+                        datesTitle.style.fontWeight = '500';
+                        datesTitle.style.marginBottom = '6px';
+                        
+                        const datesList = document.createElement('div');
+                        datesList.style.maxHeight = '150px';
+                        datesList.style.overflowY = 'auto';
+                        datesList.style.padding = '6px';
+                        datesList.style.background = '#f8f9fa';
+                        datesList.style.borderRadius = '4px';
+                        datesList.style.fontSize = '0.85em';
+                        
+                        // Get all unique dates and sort them
+                        const allDates = [];
+                        combos.forEach(c => {
+                            c.dates.forEach(date => {
+                                if (!allDates.includes(date)) allDates.push(date);
+                            });
+                        });
+                        
+                        allDates.sort((a, b) => new Date(b) - new Date(a)); // Newest first
+                        
+                        allDates.forEach(date => {
+                            const dateItem = document.createElement('div');
+                            dateItem.textContent = date;
+                            dateItem.style.padding = '4px 0';
+                            dateItem.style.borderBottom = '1px solid #eee';
+                            dateItem.style.display = 'flex';
+                            dateItem.style.justifyContent = 'space-between';
+                            
+                            // Add draw type indicator if available (Main/Double Play)
+                            const drawType = combos.find(c => c.dates.includes(date))?.type || '';
+                            if (drawType) {
+                                const typeBadge = document.createElement('span');
+                                typeBadge.textContent = drawType === 'Main' ? 'M' : 'DP';
+                                typeBadge.style.fontSize = '0.8em';
+                                typeBadge.style.padding = '1px 6px';
+                                typeBadge.style.borderRadius = '10px';
+                                typeBadge.style.background = drawType === 'Main' ? '#e3f2fd' : '#e8f5e9';
+                                typeBadge.style.color = drawType === 'Main' ? '#1976d2' : '#2e7d32';
+                                typeBadge.style.fontWeight = '500';
+                                
+                                dateItem.appendChild(typeBadge);
+                            }
+                            
+                            datesList.appendChild(dateItem);
+                        });
+                        
+                        section.appendChild(fifthNumberDiv);
+                        section.appendChild(occurrencesText);
+                        section.appendChild(datesTitle);
+                        section.appendChild(datesList);
+                        
+                        detailsPanel.appendChild(section);
+                    });
+                    
+                    // Scroll the details panel into view if it's not fully visible
+                    detailsPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                };
+                
+                // Add click handler to the frequency count with capture phase
+                countCell.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    e.stopImmediatePropagation();
+                    handleFrequencyClick();
+                    return false;
+                }, true); // Use capture phase to ensure we get the event first
+                
+                // Also allow clicking anywhere on the row (except the balls which have their own handlers)
+                row.addEventListener('click', function(e) {
+                    if (!e.target.closest('.ball') && e.target !== countCell) {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        handleFrequencyClick();
+                        return false;
+                    }
+                }, true); // Use capture phase
+            }
+            
             row.appendChild(ballsCell);
             row.appendChild(countCell);
             row.appendChild(datesCell);
@@ -1669,6 +1974,19 @@ function renderPowerballCombo45Results() {
         ballPanelContainer.style.width = '100%';
         ballPanelContainer.appendChild(ballPanel);
         resultsContainer.appendChild(ballPanelContainer);
+        
+        // Add help text for the 4&5 combo feature
+        const helpText = document.createElement('div');
+        helpText.style.marginBottom = '20px';
+        helpText.style.padding = '12px';
+        helpText.style.backgroundColor = '#e9f7fe';
+        helpText.style.borderLeft = '4px solid #3498db';
+        helpText.style.borderRadius = '4px';
+        helpText.style.fontSize = '0.9em';
+        helpText.style.color = '#2c3e50';
+        helpText.innerHTML = '💡 <strong>Tip:</strong> Click on any 4-number combination\'s frequency count to see the 5th number and draw dates in the right panel.';
+        
+        resultsContainer.appendChild(helpText);
     }
     
     // Add search container
@@ -2054,6 +2372,427 @@ function togglePowerballCombo45Selection(number, element) {
     filterPowerballCombo45Results();
 }
 
+function renderTwoXBallPanel() {
+    console.log('[2x] Rendering ball panel...');
+    const panel = document.getElementById('twox-ball-panel');
+    if (!panel) {
+        console.error('[2x] Could not find twox-ball-panel element');
+        return;
+    }
+    
+    // Clear the panel first
+    panel.innerHTML = '';
+    
+    // Initialize selectedBalls if it doesn't exist
+    window.selectedBalls = window.selectedBalls || [];
+    console.log('[2x] Current selectedBalls:', window.selectedBalls);
+    
+    // Debug: Log the current state of filteredDrawRows when panel is rendered
+    console.log('[2x] filteredDrawRows on panel render:', 
+        window.filteredDrawRows ? `Array(${window.filteredDrawRows.length})` : 'undefined');
+    
+    if (window.filteredDrawRows && window.filteredDrawRows.length > 0) {
+        console.log('[2x] First draw row sample:', {
+            date: window.filteredDrawRows[0].date,
+            mainArr: window.filteredDrawRows[0].mainArr,
+            hasDoublePlay: !!window.filteredDrawRows[0].doublePlayArr
+        });
+    }
+    
+    // Create container for the ball grid
+    const container = document.createElement('div');
+    container.style.maxWidth = '800px';
+    container.style.margin = '0 auto';
+    container.style.padding = '20px';
+    
+    // Add a title
+    const title = document.createElement('div');
+    title.textContent = 'Select Numbers';
+    title.style.fontSize = '18px';
+    title.style.fontWeight = 'bold';
+    title.style.marginBottom = '15px';
+    title.style.textAlign = 'center';
+    container.appendChild(title);
+    
+    // Create the ball grid
+    const ballGrid = document.createElement('div');
+    ballGrid.id = 'ball-grid';
+    ballGrid.style.display = 'grid';
+    ballGrid.style.gridTemplateColumns = 'repeat(10, 1fr)';
+    ballGrid.style.gap = '8px';
+    ballGrid.style.marginBottom = '20px';
+    
+    // Generate ball elements
+    for (let i = 1; i <= 69; i++) {
+        const isSelected = window.selectedBalls.includes(i);
+        const ball = document.createElement('div');
+        // Set class and attributes
+        ball.className = 'ball' + (isSelected ? ' selected' : '');
+        ball.setAttribute('data-ball', i);
+        ball.textContent = i;
+        
+        // Add robust click handler with better debugging
+        const handleBallClick = (e) => {
+            console.log('[2x] Ball click event triggered');
+            console.log('[2x] Event target:', e.target);
+            console.log('[2x] Current target:', e.currentTarget);
+            
+            // Prevent any default behavior and stop propagation
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            
+            // Get the ball element (handle event delegation)
+            const ball = e.target.closest('.ball');
+            if (!ball) {
+                console.error('[2x] No ball element found for click');
+                return;
+            }
+            
+            console.log('[2x] Ball element found:', ball);
+            
+            // Get the ball number
+            const number = parseInt(ball.getAttribute('data-ball') || ball.textContent.trim());
+            if (isNaN(number)) {
+                console.error('[2x] Invalid ball number:', ball.getAttribute('data-ball'), 'Text content:', ball.textContent);
+                return;
+            }
+            
+            console.log(`[2x] Processing click for ball ${number}`);
+            
+            // Toggle selection
+            const index = window.selectedBalls.indexOf(number);
+            
+            if (index === -1) {
+                // Add to selection
+                window.selectedBalls.push(number);
+                ball.classList.add('selected');
+                applyBallStyles(ball, true);
+                console.log(`[2x] Added ball ${number} to selection`);
+            } else {
+                // Remove from selection
+                window.selectedBalls.splice(index, 1);
+                ball.classList.remove('selected');
+                applyBallStyles(ball, false);
+                console.log(`[2x] Removed ball ${number} from selection`);
+            }
+            
+            console.log('[2x] Updated selectedBalls:', window.selectedBalls);
+            
+            // Update results
+            const resultsDiv = document.getElementById('twox-results');
+            if (!resultsDiv) {
+                console.error('[2x] Could not find results div');
+                return;
+            }
+            
+            if (window.selectedBalls.length > 0) {
+                console.log('[2x] Updating results with selected balls:', window.selectedBalls);
+                
+                // Check if we have draw data
+                if (!window.filteredDrawRows || window.filteredDrawRows.length === 0) {
+                    console.error('[2x] No draw data available');
+                    resultsDiv.innerHTML = `
+                        <div style="color:#e74c3c; margin:18px 0; padding:10px; background:#fde8e8; border-radius:4px;">
+                            <strong>Error:</strong> No draw data available. Please try refreshing the page.
+                            ${!window.filteredDrawRows ? '(filteredDrawRows is undefined)' : '(No draw records found)'}
+                        </div>`;
+                    return;
+                }
+                
+                // Force a reflow to ensure the DOM is updated
+                void resultsDiv.offsetHeight;
+                
+                render2xResultsForSelectedBalls(window.selectedBalls);
+            } else {
+                resultsDiv.innerHTML = '<div style="color:#888; margin:18px 0; text-align: center;">Select balls to see their frequencies and draw dates.</div>';
+            }
+        };
+        
+        // Set initial ball styles
+        const applyBallStyles = (element, selected) => {
+            element.style.cssText = `
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                width: 40px !important;
+                height: 40px !important;
+                border-radius: 50% !important;
+                background: ${selected ? '#e74c3c' : '#f0f0f0'} !important;
+                color: ${selected ? 'white' : '#333'} !important;
+                border: ${selected ? '2px solid #c0392b' : '2px solid #ddd'} !important;
+                cursor: pointer !important;
+                font-weight: bold !important;
+                transition: all 0.2s ease !important;
+                user-select: none !important;
+                margin: 0 auto !important;
+                font-size: 16px !important;
+                line-height: 1 !important;
+                box-sizing: border-box !important;
+            `;
+        };
+        
+        // Apply initial styles
+        applyBallStyles(ball, window.selectedBalls && window.selectedBalls.includes(parseInt(ball.textContent)));
+        
+        // Add click handler
+        ball.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const number = parseInt(this.textContent.trim());
+            const isSelected = this.classList.contains('selected');
+            
+            if (!isSelected) {
+                // Add to selection
+                window.selectedBalls = window.selectedBalls || [];
+                window.selectedBalls.push(number);
+                this.classList.add('selected');
+                applyBallStyles(this, true);
+            } else {
+                // Remove from selection
+                window.selectedBalls = window.selectedBalls || [];
+                const index = window.selectedBalls.indexOf(number);
+                if (index > -1) {
+                    window.selectedBalls.splice(index, 1);
+                }
+                this.classList.remove('selected');
+                applyBallStyles(this, false);
+            }
+            
+            // Update results
+            let resultsDiv = document.getElementById('twox-results');
+            if (!resultsDiv) {
+                const centerCol = document.querySelector('#tab-2x .center-col');
+                if (centerCol) {
+                    resultsDiv = document.createElement('div');
+                    resultsDiv.id = 'twox-results';
+                    resultsDiv.style.cssText = 'width: 100%; display: block; visibility: visible; opacity: 1; position: relative; z-index: 1000;';
+                    centerCol.prepend(resultsDiv);
+                }
+            }
+            
+            // Show results or message
+            if (window.selectedBalls.length > 0) {
+                render2xResultsForSelectedBalls(window.selectedBalls);
+            } else if (resultsDiv) {
+                resultsDiv.innerHTML = '<div style="color:#888; margin:18px 0; text-align: center;">Select numbers to see their frequencies and draw dates.</div>';
+            }
+        });
+        
+        // Prevent text selection on mousedown
+        ball.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+        });
+        
+        // Apply initial styles
+        applyBallStyles(ball, isSelected);
+        
+        // Add hover effect with better visibility
+        ball.addEventListener('mouseover', function() {
+            if (!this.classList.contains('selected')) {
+                this.style.transform = 'scale(1.1) !important';
+                this.style.boxShadow = '0 0 10px rgba(0,0,0,0.3) !important';
+                this.style.zIndex = '10 !important';
+            }
+        });
+        
+        ball.addEventListener('mouseout', function() {
+            if (!this.classList.contains('selected')) {
+                this.style.transform = 'scale(1) !important';
+                this.style.boxShadow = 'none !important';
+                this.style.zIndex = '1 !important';
+            }
+        });
+        
+        ballGrid.appendChild(ball);
+    }
+    
+    // Create clear button
+    const clearBtn = document.createElement('button');
+    clearBtn.id = 'clear-selection';
+    clearBtn.textContent = 'Clear Selection';
+    Object.assign(clearBtn.style, {
+        padding: '8px 16px',
+        background: '#e74c3c',
+        color: 'white',
+        border: 'none',
+        borderRadius: '4px',
+        cursor: 'pointer',
+        fontWeight: '500',
+        marginTop: '15px',
+        transition: 'all 0.2s'
+    });
+    
+    // Add hover effect to clear button
+    clearBtn.addEventListener('mouseover', () => {
+        clearBtn.style.background = '#c0392b';
+    });
+    
+    clearBtn.addEventListener('mouseout', () => {
+        clearBtn.style.background = '#e74c3c';
+    });
+    
+    // Assemble the panel
+    const label = document.createElement('div');
+    label.className = 'powerball-label';
+    label.textContent = 'Select numbers (1-69)';
+    Object.assign(label.style, {
+        fontSize: '1.1em',
+        fontWeight: '500',
+        marginBottom: '10px',
+        color: '#2c3e50'
+    });
+    
+    container.appendChild(label);
+    container.appendChild(ballGrid);
+    container.appendChild(clearBtn);
+    
+    // Add a clear button
+    const clearButton = document.createElement('button');
+    clearButton.textContent = 'Clear Selection';
+    clearButton.style.display = 'block';
+    clearButton.style.margin = '0 auto 20px';
+    clearButton.style.padding = '8px 16px';
+    clearButton.style.background = '#e74c3c';
+    clearButton.style.color = 'white';
+    clearButton.style.border = 'none';
+    clearButton.style.borderRadius = '4px';
+    clearButton.style.cursor = 'pointer';
+    clearButton.addEventListener('click', function() {
+        window.selectedBalls = [];
+        renderTwoXBallPanel();
+        const resultsDiv = document.getElementById('twox-results');
+        if (resultsDiv) {
+            resultsDiv.innerHTML = '<div style="color:#888; margin:18px 0;">Select balls to see their frequencies and draw dates.</div>';
+        }
+    });
+    
+    // Assemble the panel
+    container.appendChild(ballGrid);
+    container.appendChild(clearButton);
+    panel.appendChild(container);
+    
+    // Add click handler using event delegation
+    ballGrid.addEventListener('click', function(e) {
+        
+        // Try multiple ways to find the ball element
+        let ball = e.target.closest('.ball');
+        if (!ball && e.target.classList.contains('ball')) {
+            ball = e.target;
+        }
+        
+        console.log('[2x] Found ball element:', ball);
+        if (!ball) {
+            console.log('[2x] Clicked element is not a ball. Element:', e.target);
+            console.log('[2x] Element classList:', e.target.classList);
+            console.log('[2x] Element HTML:', e.target.outerHTML);
+            return;
+        }
+        
+        const number = parseInt(ball.getAttribute('data-ball'));
+        console.log(`[2x] Ball ${number} clicked`);
+        
+        const index = window.selectedBalls.indexOf(number);
+        
+        if (index === -1) {
+            // Add to selection
+            window.selectedBalls.push(number);
+            ball.style.background = '#e74c3c';
+            ball.style.color = 'white';
+            ball.classList.add('selected');
+            console.log(`[2x] Added ball ${number} to selection`);
+        } else {
+            // Remove from selection
+            window.selectedBalls.splice(index, 1);
+            ball.style.background = '#f0f0f0';
+            ball.style.color = '#333';
+            ball.classList.remove('selected');
+            console.log(`[2x] Removed ball ${number} from selection`);
+        }
+        
+        // Update results
+        update2xResults();
+    });
+    
+    // Clear selection handler
+    clearBtn.addEventListener('click', function() {
+        console.log('[2x] Clearing selection');
+        window.selectedBalls = [];
+        
+        // Update UI
+        const balls = ballGrid.querySelectorAll('.ball');
+        balls.forEach(ball => {
+            ball.style.background = '#f0f0f0';
+            ball.style.color = '#333';
+            ball.classList.remove('selected');
+        });
+        
+        update2xResults();
+    });
+    
+    console.log('[2x] Ball panel rendered with', window.selectedBalls.length, 'selected balls');
+    
+    // Helper function to update results
+    function update2xResults() {
+        const resultsDiv = document.getElementById('twox-results');
+        if (!resultsDiv) {
+            console.error('[2x] Results container not found');
+            return;
+        }
+        
+        if (window.selectedBalls.length > 0) {
+            console.log('[2x] Updating results for selected balls:', window.selectedBalls);
+            render2xResultsForSelectedBalls(window.selectedBalls);
+        } else {
+            resultsDiv.innerHTML = `
+                <div style="
+                    color: #888; 
+                    margin: 18px 0; 
+                    padding: 15px; 
+                    background: #f9f9f9; 
+                    border-radius: 4px; 
+                    text-align: center;
+                    font-size: 14px;
+                ">
+                    Select balls to see their frequencies and draw dates.
+                </div>`;
+        }
+    }
+    
+    // Clear selection handler
+    document.getElementById('clear-selection')?.addEventListener('click', function() {
+        console.log('[2x] Clearing selection');
+        window.selectedBalls = [];
+        
+        // Update UI
+        const balls = document.querySelectorAll('#ball-grid .ball');
+        balls.forEach(ball => {
+            ball.style.background = '#f0f0f0';
+            ball.style.color = '#333';
+            ball.classList.remove('selected');
+        });
+        
+        // Clear results
+        const resultsDiv = document.getElementById('twox-results');
+        if (resultsDiv) {
+            resultsDiv.innerHTML = `
+                <div style="
+                    color: #888; 
+                    margin: 18px 0; 
+                    padding: 15px; 
+                    background: #f9f9f9; 
+                    border-radius: 4px; 
+                    text-align: center;
+                    font-size: 14px;
+                ">
+                    Select balls to see their frequencies and draw dates.
+                </div>`;
+        }
+    });
+}
+
 // After CSV and window.filteredDrawRows are ready, render the full combo table on the home page
 
 // --- FREQUENT PAIRS & TRIOS (ALWAYS VISIBLE TABLES) ---
@@ -2236,95 +2975,402 @@ if (searchBox) {
     });
 } 
 
-// Update 2x Check My Numbers logic: show all draws (main and double play) where any selected ball appears, with date and type. Remove group size logic.
+// Simplified 2x Check My Numbers logic
 function render2xResultsForSelectedBalls(selected) {
-    const resultsDiv = document.getElementById('twox-results');
-    if (!resultsDiv) return;
-    if (!selected || selected.length === 0) {
-        resultsDiv.innerHTML = '<div style="color:#888; margin:18px 0;">Select balls and click "Check My Numbers" to see combinations.</div>';
+    console.log('[2x] ===== SIMPLIFIED render2xResultsForSelectedBalls =====');
+    console.log('[2x] Selected balls:', selected);
+    console.log('[2x] filteredDrawRows exists:', !!window.filteredDrawRows);
+    if (window.filteredDrawRows) {
+        console.log('[2x] filteredDrawRows length:', window.filteredDrawRows.length);
+        console.log('[2x] First draw row sample:', window.filteredDrawRows[0]);
+    }
+    
+    // Get or create results div
+    let resultsDiv = document.getElementById('twox-results');
+    if (!resultsDiv) {
+        console.log('[2x] Creating results div...');
+        const centerCol = document.querySelector('#tab-2x .center-col');
+        if (!centerCol) {
+            console.error('[2x] Could not find center column');
+            return;
+        }
+        resultsDiv = document.createElement('div');
+        resultsDiv.id = 'twox-results';
+        resultsDiv.style.width = '100%';
+        centerCol.prepend(resultsDiv);
+        console.log('[2x] Created results div:', resultsDiv);
+    }
+    
+    // Clear previous results
+    resultsDiv.innerHTML = '';
+    
+    // Check if we have draw data
+    if (!window.filteredDrawRows || window.filteredDrawRows.length === 0) {
+        resultsDiv.innerHTML = '<div style="color:#e74c3c; padding:20px; text-align:center;">No draw data available. Please try again later.</div>';
+        console.error('[2x] No draw data available');
         return;
     }
-    // Helper to get all unique combinations of k from arr
-    function getCombinations(arr, k) {
-        const results = [];
-        function helper(start, combo) {
-            if (combo.length === k) {
-                results.push(combo.slice().sort((a,b)=>a-b));
-                return;
-            }
-            for (let i = start; i < arr.length; i++) {
-                combo.push(arr[i]);
-                helper(i+1, combo);
-                combo.pop();
-            }
-        }
-        helper(0, []);
-        return results;
-    }
-    // Gather all combinations of size 2 up to selected.length
-    let allCombos = [];
-    for (let k = 2; k <= selected.length; k++) {
-        allCombos = allCombos.concat(getCombinations(selected, k));
-    }
-    // Sort allCombos lexicographically
-    allCombos.sort((a, b) => {
-        for (let i = 0; i < Math.min(a.length, b.length); i++) {
-            if (a[i] !== b[i]) return a[i] - b[i];
-        }
-        return a.length - b.length;
-    });
-    let html = `<div><h3>Combinations from your selected balls</h3>`;
-    if (allCombos.length === 0) {
-        html += `<div style='color:#aaa; margin-bottom:12px;'>No combinations found. Select at least 2 balls.</div>`;
-    } else {
-        html += `<div class='twox-combo-results-list'>`;
-        allCombos.forEach((combo, idx) => {
-            html += `<div class='twox-combo-row'><span class='twox-combo-label'>Combination ${idx+1}:</span> ` +
-                combo.map(num => `<span class='twox-red-ball'>${num}</span>`).join(' ') +
-                `</div>`;
-        });
-        html += `</div>`;
-    }
-    html += '</div>';
-    resultsDiv.innerHTML = html;
-
-    // Filter for combinations that appear 2+ times
-    const filteredCombos = Array.from(comboCounts.entries())
-        .filter(([_, count]) => count >= 2)
-        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
-
-    // Build CSV
-    const csvRows = [['Combo', 'Count', 'Dates']];
-    filteredCombos.forEach(([combo, count]) => {
-        const draws = comboDraws.get(combo) || [];
-        const datesStr = draws.map(d => `${d.date} (${d.type})`).join('; ');
-        csvRows.push([combo.replace(/-/g, '-'), count, datesStr]);
-    });
-
-    const csvContent = csvRows.map(row => 
-        row.map(val => {
-            const str = String(val);
-            if (str.includes('"')) return '"' + str.replace(/"/g, '""') + '"';
-            if (str.includes(',') || str.includes('\n') || str.includes('\r') || str.includes(';')) {
-                return '"' + str + '"';
-            }
-            return str;
-        }).join(',')
-    ).join('\r\n');
-
-    // Create and trigger download
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `powerball_${comboType}_2plus.csv`;
-    document.body.appendChild(link);
-    link.click();
+    
+    // Show loading message
+    resultsDiv.innerHTML = '<div style="padding:20px; text-align:center;">Loading results...</div>';
+    
+    // Process in the next tick to ensure UI updates
     setTimeout(() => {
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-    }, 100);
+        try {
+            // Count frequencies for individual numbers
+            const freq = {};
+            selected.forEach(num => freq[num] = { count: 0, dates: [] });
+            
+            // Track combinations (pairs, trios, etc.)
+            const combinations = {
+                2: {},
+                3: {},
+                4: {},
+                5: {}
+            };
+            
+            // Count occurrences in draw data
+            window.filteredDrawRows.forEach(draw => {
+                const allNumbers = [...(draw.mainArr || []), ...(draw.doublePlayArr || [])];
+                const drawType = draw.doublePlayArr ? 'DP' : 'Main';
+                
+                // Count individual numbers
+                selected.forEach(num => {
+                    if (allNumbers.includes(num)) {
+                        freq[num].count++;
+                        if (freq[num].dates.length < 5) {
+                            freq[num].dates.push({
+                                date: draw.date,
+                                type: drawType
+                            });
+                        }
+                    }
+                });
+                
+                // Generate and count combinations
+                for (let size = 2; size <= Math.min(5, selected.length); size++) {
+                    const combos = generateCombinations(selected, size);
+                    combos.forEach(combo => {
+                        const key = combo.join(',');
+                        if (combo.every(num => allNumbers.includes(num))) {
+                            if (!combinations[size][key]) {
+                                combinations[size][key] = { count: 0, dates: [] };
+                            }
+                            combinations[size][key].count++;
+                            if (combinations[size][key].dates.length < 5) {
+                                combinations[size][key].dates.push({
+                                    date: draw.date,
+                                    type: drawType
+                                });
+                            }
+                        }
+                    });
+                }
+            });
+            
+            // Generate results HTML
+            let html = '<div style="margin:20px 0;">';
+            
+            // Show individual numbers
+            if (selected.length > 0) {
+                html += '<h3>Individual Number Frequencies</h3>';
+                html += '<table style="width:100%; border-collapse:collapse; margin-top:10px; margin-bottom:30px;">';
+                html += '<tr style="background:#f5f5f5;"><th>Number</th><th>Frequency</th><th>Last 5 Draws</th></tr>';
+                
+                // Sort by frequency (descending)
+                const sorted = Object.entries(freq).sort((a, b) => b[1].count - a[1].count);
+                
+                sorted.forEach(([num, data]) => {
+                    const datesHtml = data.dates.map(d => 
+                        `${d.date} <span style="color:#e74c3c;">(${d.type})</span>`
+                    ).join('<br>');
+                    
+                    html += `
+                        <tr style="border-bottom:1px solid #eee;">
+                            <td style="padding:10px; text-align:center;">${num}</td>
+                            <td style="padding:10px; text-align:center;">${data.count}</td>
+                            <td style="padding:10px;">${datesHtml || 'N/A'}</td>
+                        </tr>
+                    `;
+                });
+                
+                html += '</table>';
+            }
+            
+            // Show combinations
+            for (let size = 2; size <= Math.min(5, selected.length); size++) {
+                const comboData = combinations[size];
+                const comboKeys = Object.keys(comboData);
+                
+                if (comboKeys.length > 0) {
+                    html += `<h3>${size}-Number Combinations</h3>`;
+                    html += '<table style="width:100%; border-collapse:collapse; margin-top:10px; margin-bottom:30px;">';
+                    html += `<tr style="background:#f5f5f5;"><th>Numbers</th><th>Frequency</th><th>Last 5 Draws</th></tr>`;
+                    
+                    // Sort combinations by frequency (descending)
+                    const sortedCombos = comboKeys.sort((a, b) => comboData[b].count - comboData[a].count);
+                    
+                    sortedCombos.forEach(key => {
+                        const data = comboData[key];
+                        const datesHtml = data.dates.map(d => 
+                            `${d.date} <span style="color:#e74c3c;">(${d.type})</span>`
+                        ).join('<br>');
+                        
+                        html += `
+                            <tr style="border-bottom:1px solid #eee;">
+                                <td style="padding:10px; text-align:center;">${key.split(',').join(', ')}</td>
+                                <td style="padding:10px; text-align:center;">${data.count}</td>
+                                <td style="padding:10px;">${datesHtml || 'N/A'}</td>
+                            </tr>
+                        `;
+                    });
+                    
+                    html += '</table>';
+                }
+            }
+            
+            html += '</div>';
+            resultsDiv.innerHTML = html;
+            
+        } catch (error) {
+            console.error('[2x] Error rendering results:', error);
+            resultsDiv.innerHTML = `
+                <div style="color:#e74c3c; padding:20px; text-align:center;">
+                    Error loading results. Please try again.
+                    <div style="color:#888; font-size:0.9em; margin-top:10px;">${error.message}</div>
+                </div>
+            `;
+        }
+    }, 0);
+    
+    if (!selected || selected.length === 0) {
+        resultsDiv.innerHTML = '<div style="color:#888; margin:18px 0; font-size:14px;">Select balls to see their frequencies and draw dates.</div>';
+        return;
+    }
+    
+    // Ensure filteredDrawRows is available
+    if (!window.filteredDrawRows || window.filteredDrawRows.length === 0) {
+        console.error('[2x] Error: No draw data available. filteredDrawRows is empty or undefined');
+        resultsDiv.innerHTML = `
+            <div style="color:#e74c3c; margin:18px 0; padding:10px; background:#fde8e8; border-radius:4px;">
+                <strong>Error:</strong> No draw data available. Please try refreshing the page.
+                ${!window.filteredDrawRows ? '(filteredDrawRows is undefined)' : '(No draw records found)'}
+            </div>`;
+        return;
+    }
+    
+    console.log(`[2x] Processing ${window.filteredDrawRows.length} draw records`);
+    
+    // Track all draw dates for each selected number
+    const numberStats = new Map();
+    
+    // Convert all selected values to numbers and filter out any invalid ones
+    const selectedNumbers = selected.map(Number).filter(n => !isNaN(n) && n >= 1 && n <= 69);
+    
+    if (selectedNumbers.length === 0) {
+        console.error('[2x] No valid numbers selected');
+        resultsDiv.innerHTML = '<div style="color:#e74c3c; margin:18px 0;">Please select valid numbers between 1 and 69.</div>';
+        return;
+    }
+    
+    console.log(`[2x] Processing ${selectedNumbers.length} valid numbers`);
+    
+    // Process each selected number
+    selectedNumbers.forEach(num => {
+        const draws = window.filteredDrawRows.filter(draw => {
+            const inMain = Array.isArray(draw.mainArr) && draw.mainArr.includes(num);
+            const inDoublePlay = Array.isArray(draw.doublePlayArr) && draw.doublePlayArr.includes(num);
+            return inMain || inDoublePlay;
+        });
+        
+        console.log(`[2x] Number ${num} appears in ${draws.length} draws`);
+        
+        numberStats.set(num, {
+            count: draws.length,
+            draws: draws.map(draw => ({
+                date: draw.date || 'Unknown Date',
+                type: (Array.isArray(draw.doublePlayArr) && draw.doublePlayArr.includes(num)) ? 'Double Play' : 'Main',
+                timestamp: draw.date ? new Date(draw.date).getTime() : Date.now()
+            })).sort((a, b) => b.timestamp - a.timestamp) // Sort by date descending
+        });
+    });
+    
+    // Create single number frequency table
+    let html = `
+        <div class="single-number-section" style="margin-bottom: 30px;">
+            <h3 style="color: #2c3e50; margin: 0 0 15px 0; padding: 0; font-size: 18px;">
+                <i class="fas fa-chart-bar" style="margin-right: 8px;"></i>Single Number Frequencies
+            </h3>
+            <div style="overflow-x: auto;">
+                <table class="results-table" style="width:100%; margin-bottom:20px; border-collapse: collapse; font-size: 14px;">
+                    <thead>
+                        <tr style="background-color: #f8f9fa; border-bottom: 2px solid #e9ecef;">
+                            <th style="padding: 12px; text-align: left; border-bottom: 1px solid #dee2e6; min-width: 80px;">Number</th>
+                            <th style="padding: 12px; text-align: center; border-bottom: 1px solid #dee2e6; min-width: 100px;">Frequency</th>
+                            <th style="padding: 12px; text-align: left; border-bottom: 1px solid #dee2e6; min-width: 200px;">Last 5 Draws</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+    `;
+    
+    // Sort numbers by frequency (descending), then by number (ascending)
+    const sortedNumbers = Array.from(numberStats.entries())
+        .sort((a, b) => {
+            if (b[1].count !== a[1].count) return b[1].count - a[1].count;
+            return a[0] - b[0];
+        });
+    
+    if (sortedNumbers.length === 0) {
+        html += `
+            <tr>
+                <td colspan="3" style="padding: 20px; text-align: center; color: #6c757d; font-style: italic;">
+                    No draw history found for the selected numbers.
+                </td>
+            </tr>
+        `;
+    } else {
+        sortedNumbers.forEach(([num, {count, draws}]) => {
+            // Get the 5 most recent draws (already sorted by date descending)
+            const recentDraws = draws.slice(0, 5);
+            
+            // Format the draw dates with type indicators
+            const drawCells = recentDraws.length > 0 
+                ? recentDraws.map(d => `
+                    <div style="margin: 4px 0; padding: 4px 0; border-bottom: 1px solid #f0f0f0; font-size: 13px;">
+                        <span style="font-weight: 500; color: #2c3e50;">${d.date}</span> 
+                        <span style="color: ${d.type === 'Double Play' ? '#e67e22' : '#2ecc51'}; font-size: 12px; margin-left: 6px; padding: 2px 6px; background: ${d.type === 'Double Play' ? '#fef5eb' : '#f0faf4'}; border-radius: 3px;">
+                            ${d.type}
+                        </span>
+                    </div>`
+                ).join('')
+                : '<div style="color: #95a5a6; font-style: italic;">No draw history</div>';
+            
+            // Determine ball color based on number range (like Powerball)
+            const ballColor = num <= 35 ? '#ff6b6b' : 
+                             num <= 50 ? '#4ecdc4' : 
+                             num <= 65 ? '#45b7d1' : '#a55eea';
+            
+            html += `
+                <tr style="border-bottom: 1px solid #f0f0f0;" data-number="${num}">
+                    <td style="padding: 12px; vertical-align: middle;">
+                        <div class="ball" style="
+                            display: inline-flex;
+                            align-items: center;
+                            justify-content: center;
+                            width: 36px;
+                            height: 36px;
+                            border-radius: 50%;
+                            background: #e74c3c;
+                            color: white;
+                            font-weight: 500;
+                        ">${num}</span>
+                    </td>
+                    <td style="padding: 12px; vertical-align: top; font-weight: 500;">
+                        ${count} ${count === 1 ? 'time' : 'times'}
+                    </td>
+                    <td style="padding: 12px; vertical-align: top;">
+                        ${drawCells}
+                    </td>
+                </tr>
+            `;
+        });
+    }
+    
+    // Close the single number table
+    html += `
+                </tbody>
+            </table>
+        </div>
+    </div>`;
+    
+    // Add combinations section if more than one number is selected
+    if (selectedNumbers.length > 1) {
+        // Helper to get all unique combinations of k from arr
+        function getCombinations(arr, k) {
+            const results = [];
+            function helper(start, combo) {
+                if (combo.length === k) {
+                    results.push(combo.slice().sort((a,b) => a - b));
+                    return;
+                }
+                for (let i = start; i < arr.length; i++) {
+                    combo.push(arr[i]);
+                    helper(i + 1, combo);
+                    combo.pop();
+                }
+            }
+            helper(0, []);
+            return results;
+        }
+        
+        // Gather all combinations of size 2 up to selected.length
+        let allCombos = [];
+        for (let k = 2; k <= selectedNumbers.length; k++) {
+            allCombos = allCombos.concat(getCombinations(selectedNumbers, k));
+        }
+        
+        // Sort allCombos lexicographically
+        allCombos.sort((a, b) => {
+            for (let i = 0; i < Math.min(a.length, b.length); i++) {
+                if (a[i] !== b[i]) return a[i] - b[i];
+            }
+            return a.length - b.length;
+        });
+        
+        // Add combinations section
+        html += `
+        <div class="combinations-section" style="margin-top: 30px;">
+            <h3 style="color: #2c3e50; margin: 0 0 15px 0; padding: 0; font-size: 18px;">
+                <i class="fas fa-project-diagram" style="margin-right: 8px;"></i>Number Combinations
+            </h3>`;
+            
+        if (allCombos.length === 0) {
+            html += `<div style='color:#aaa; margin-bottom:12px;'>No combinations found. Select at least 2 balls.</div>`;
+        } else {
+            html += `
+            <div class='twox-combo-results-list' style="background: #f8f9fa; border-radius: 8px; padding: 15px; border: 1px solid #e9ecef;">
+                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px;">`;
+            
+            allCombos.forEach((combo, idx) => {
+                html += `
+                <div class='twox-combo-row' style="background: white; padding: 10px; border-radius: 6px; border: 1px solid #e9ecef;">
+                    <div style="font-weight: 600; color: #2c3e50; margin-bottom: 6px; font-size: 14px;">
+                        Combination ${idx + 1}:
+                    </div>
+                    <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                        ${combo.map(num => `
+                            <div class='twox-red-ball' style="
+                                display: inline-flex;
+                                align-items: center;
+                                justify-content: center;
+                                width: 30px;
+                                height: 30px;
+                                border-radius: 50%;
+                                background: #e74c3c;
+                                color: white;
+                                font-weight: 500;
+                                font-size: 14px;
+                            ">${num}</div>
+                        `).join('')}
+                    </div>
+                </div>`;
+            });
+            
+            html += `
+                </div>
+            </div>`;
+        }
+        
+        html += `
+        </div>`;
+    }
+    
+    // Set the HTML content
+    resultsDiv.innerHTML = html;
+    console.log('[2x] Results HTML updated');
 }
+
+// Clean and simple initialization for the 2x tab
 
 // --- Download Buttons Logic ---
 function initializeDownloadButtons() {
