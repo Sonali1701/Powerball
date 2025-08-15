@@ -744,34 +744,61 @@ document.addEventListener('DOMContentLoaded', function() {
                         if (!panel) return;
                         panel.innerHTML = '';
                         const selectedBalls = new Set();
+                        
+                        // Create a container for better organization
+                        const ballContainer = document.createElement('div');
+                        ballContainer.style.display = 'flex';
+                        ballContainer.style.flexWrap = 'wrap';
+                        ballContainer.style.gap = '8px';
+                        ballContainer.style.padding = '10px';
+                        ballContainer.style.justifyContent = 'center';
+                        
                         for (let n = 1; n <= 69; n++) {
                             const ball = document.createElement('span');
                             ball.className = 'ball';
                             ball.textContent = n;
-                            ball.style.background = selectedBalls.has(n) ? '#e74c3c' : '#fff';
-                            ball.style.color = selectedBalls.has(n) ? '#fff' : '#222';
-                            ball.style.border = selectedBalls.has(n) ? '2px solid #c0392b' : '2px solid #888';
-                            // Tooltip
+                            ball.setAttribute('data-ball-number', n);
+                            
+                            // Add hover effect
+                            ball.style.transition = 'all 0.2s ease';
+                            ball.style.cursor = 'pointer';
+                            
                             ball.onclick = function() {
                                 if (selectedBalls.has(n)) {
                                     selectedBalls.delete(n);
                                     ball.classList.remove('selected');
-                                    ball.style.background = '#fff';
-                                    ball.style.color = '#222';
-                                    ball.style.border = '2px solid #888';
+                                    ball.classList.add('deselected');
+                                    // Animation for deselection
+                                    ball.style.animation = 'popout 0.3s';
+                                    setTimeout(() => { ball.style.animation = ''; }, 300);
                                 } else {
                                     selectedBalls.add(n);
+                                    ball.classList.remove('deselected');
                                     ball.classList.add('selected');
-                                    ball.style.background = '#e74c3c';
-                                    ball.style.color = '#fff';
-                                    ball.style.border = '2px solid #c0392b';
+                                    // Animation for selection
                                     ball.style.animation = 'popin 0.3s';
                                     setTimeout(() => { ball.style.animation = ''; }, 300);
                                 }
                                 renderComboResults(Array.from(selectedBalls), 'combo-tab-results');
                             };
-                            panel.appendChild(ball);
+                            
+                            // Add hover effect
+                            ball.addEventListener('mouseover', function() {
+                                if (!ball.classList.contains('selected')) {
+                                    ball.style.transform = 'scale(1.1)';
+                                }
+                            });
+                            
+                            ball.addEventListener('mouseout', function() {
+                                if (!ball.classList.contains('selected')) {
+                                    ball.style.transform = 'scale(1)';
+                                }
+                            });
+                            
+                            ballContainer.appendChild(ball);
                         }
+                        
+                        panel.appendChild(ballContainer);
                     }
                     
                     // --- Combo tab: update result rendering for dash-separated bold balls ---
