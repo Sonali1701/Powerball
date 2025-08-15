@@ -2062,12 +2062,12 @@ function renderCash5NewBallPanel() {
     const container = document.getElementById('cash5-new-ball-panel');
     if (!container) return;
     
-    // Initialize if not exists
-    window.cash5NewSelected = window.cash5NewSelected || [];
+    // Initialize if not exists - using consistent name cash5SelectedNew
+    window.cash5SelectedNew = window.cash5SelectedNew || [];
     
     let html = '';
     for (let i = 1; i <= 42; i++) {
-        const isSelected = window.cash5NewSelected.includes(i);
+        const isSelected = window.cash5SelectedNew.includes(i);
         html += `<div class="ball ${isSelected ? 'selected' : ''}" data-number="${i}">${i}</div>`;
     }
     container.innerHTML = html;
@@ -2076,11 +2076,11 @@ function renderCash5NewBallPanel() {
     container.querySelectorAll('.ball').forEach(ball => {
         ball.addEventListener('click', function() {
             const number = parseInt(this.getAttribute('data-number'));
-            const index = window.cash5NewSelected.indexOf(number);
+            const index = window.cash5SelectedNew.indexOf(number);
             if (index === -1) {
-                window.cash5NewSelected.push(number);
+                window.cash5SelectedNew.push(number);
             } else {
-                window.cash5NewSelected.splice(index, 1);
+                window.cash5SelectedNew.splice(index, 1);
             }
             renderCash5NewBallPanel();
             renderCash5NewResults();

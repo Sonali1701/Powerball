@@ -11,30 +11,82 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            height: 90vh;
+            min-height: 90vh;
+            padding: 20px 15px;
+            box-sizing: border-box;
         }
+        
         .game-select-title {
             font-size: 2.2em;
             font-weight: bold;
             margin-bottom: 32px;
             color: #234;
+            text-align: center;
+            padding: 0 15px;
         }
+        
         .game-select-btn {
-            padding: 24px 48px;
-            font-size: 1.4em;
+            padding: 18px 36px;
+            font-size: 1.2em;
             font-weight: 600;
             border-radius: 12px;
             border: 2px solid #3498db;
             background: #f8faff;
             color: #3498db;
-            margin: 18px 0;
+            margin: 12px 0;
             cursor: pointer;
-            transition: background 0.2s, color 0.2s, border 0.2s;
+            transition: all 0.2s ease;
             box-shadow: 0 2px 12px rgba(44,62,80,0.08);
+            width: 100%;
+            max-width: 280px;
+            -webkit-tap-highlight-color: transparent;
         }
+        
+        .game-select-btn:active {
+            transform: scale(0.98);
+        }
+        
         .game-select-btn:hover {
             background: #3498db;
             color: #fff;
+        }
+        
+        /* Tablet styles */
+        @media (min-width: 601px) and (max-width: 1024px) {
+            .game-select-title {
+                font-size: 2.5em;
+                margin-bottom: 40px;
+            }
+            
+            .game-select-btn {
+                padding: 22px 44px;
+                font-size: 1.3em;
+                max-width: 320px;
+            }
+        }
+        
+        /* Desktop styles */
+        @media (min-width: 1025px) {
+            .game-select-btn {
+                padding: 24px 48px;
+                font-size: 1.4em;
+                max-width: none;
+                width: auto;
+            }
+        }
+        
+        /* Mobile-specific optimizations */
+        @media (max-width: 600px) {
+            .game-select-title {
+                font-size: 1.8em;
+                margin-bottom: 28px;
+            }
+            
+            .game-select-btn {
+                padding: 16px 32px;
+                font-size: 1.1em;
+                margin: 10px 0;
+            }
         }
     </style>
 </head>

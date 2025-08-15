@@ -51,18 +51,111 @@ body.cash5 {
     background: #fff;
 }
 .combo-gap { height: 32px; width: 100%; display: block; }
-@media (max-width: 900px) {
-    .center-col {
-        max-width: 100%;
-        margin-right: 0;
+/* Base responsive styles */
+@media (max-width: 1024px) {
+    .container.main-flex {
+        flex-direction: column;
+        padding: 0 15px;
     }
-    .results-table.cash5-wide {
+    
+    .center-col, .right-col {
+        width: 100%;
         max-width: 100%;
+        min-width: auto;
+        padding: 16px 0;
     }
+    
     .right-col {
         border-left: none;
-        margin-left: 0;
-        z-index: 2;
+        border-top: 2px solid #eafbe7;
+        margin-top: 20px;
+        padding-top: 25px;
+    }
+    
+    .results-table.cash5-wide {
+        max-width: 100%;
+        overflow-x: auto;
+        display: block;
+    }
+    
+    .ball-panel {
+        padding: 0 10px;
+    }
+    
+    .ball {
+        width: 40px;
+        height: 40px;
+        line-height: 36px;
+        font-size: 16px;
+        margin: 3px;
+    }
+    
+    .lottery-banner {
+        font-size: 1.5em;
+        padding: 12px 0;
+    }
+}
+
+/* Tablet specific styles */
+@media (min-width: 601px) and (max-width: 1024px) {
+    .container.main-flex {
+        padding: 0 20px;
+    }
+    
+    .ball {
+        width: 44px;
+        height: 44px;
+        line-height: 40px;
+        margin: 4px;
+    }
+}
+
+/* Mobile specific styles */
+@media (max-width: 600px) {
+    .container.main-flex {
+        margin-top: 15px;
+        padding: 0 10px;
+    }
+    
+    .lottery-banner {
+        font-size: 1.3em;
+        padding: 10px 0;
+        letter-spacing: 1px;
+    }
+    
+    .ball {
+        width: 38px;
+        height: 38px;
+        line-height: 34px;
+        font-size: 15px;
+        margin: 2px;
+    }
+    
+    .tab-button {
+        padding: 8px 12px;
+        font-size: 14px;
+        margin: 0 3px 5px 0;
+    }
+    
+    .generator-panel {
+        padding: 15px;
+    }
+    
+    .generator-panel select, 
+    .generator-panel button,
+    .generator-panel input {
+        width: 100%;
+        margin-bottom: 10px !important;
+    }
+    
+    .search-container {
+        flex-direction: column;
+    }
+    
+    .search-container input,
+    .search-container button {
+        width: 100%;
+        margin: 5px 0;
     }
 }
 .right-col {
