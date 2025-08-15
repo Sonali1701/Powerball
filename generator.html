@@ -461,8 +461,9 @@
                 <button class="multi-gen-btn" data-count="4">Generate 4</button>
                 <button class="multi-gen-btn" data-count="8">Generate 8</button>
                 <button class="multi-gen-btn" data-count="16">Generate 16</button>
+                <button id="generate-from-trios" class="multi-gen-btn" style="background: #9b59b6; color: white;">From Frequent Trios</button>
               </div>
-              <div id="generated-table" style="margin-top:18px;"></div>
+              <div id="generated-table" style="margin-top:18px; min-height: 200px; border: 1px solid #e0e0e0; border-radius: 8px; padding: 15px; background: white; box-shadow: 0 2px 8px rgba(0,0,0,0.05);"></div>
               <div id="csv-loading" style="margin-top:10px; color:#888; font-size:1.05em;"></div>
               <div style="margin-top:18px; color:#888; font-size:1.05em;">Each combination: 5 unique numbers (1-69).</div>
             </div>
@@ -551,11 +552,13 @@
                         }
                     }
                     csvLoading.textContent = '';
-                    
-                    // Now that we have the data, analyze frequent sets
-                    if (allMainDraws.length > 0) {
-                        analyzeFrequentSets();
-                    }
+                    console.log('CSV data loaded, analyzing frequent sets...');
+                    // Now analyze frequent sets
+                    analyzeFrequentSets();
+                    console.log('Frequent sets analysis complete');
+                },
+                error: function(error) {
+                    console.log('Error parsing CSV:', error);
                 }
             });
         });
@@ -581,40 +584,260 @@
         const key = whiteBalls.slice().sort((a,b)=>a-b).join('-');
         return historicalCombos.filter(h => h.combo === key).length;
     }
-    function renderCombinations(n) {
+    function generateFromFrequentTrios() {
+        console.log('generateFromFrequentTrios called');
+        console.log('window.sortedTriplets:', window.sortedTriplets);
+        
+        if (!window.sortedTriplets || window.sortedTriplets.length === 0) {
+            console.error('No sortedTriplets data available');
+            alert('Loading frequent trios data... Please try again in a moment.');
+            return [1, 2, 3, 4, 5]; // Return a default set for testing
+        }
+        
+        try {
+            // Get top 10 most frequent trios
+            const topTrios = window.sortedTriplets.slice(0, 10);
+            console.log('Top 10 trios:', topTrios);
+            
+            if (topTrios.length === 0) {
+                console.error('No trios available in topTrios');
+                return [1, 2, 3, 4, 5]; // Return a default set for testing
+            }
+            
+            const selectedTrio = topTrios[Math.floor(Math.random() * topTrios.length)];
+            console.log('Selected trio:', selectedTrio);
+            
+            if (!selectedTrio || !selectedTrio[0]) {
+                console.error('Invalid selectedTrio:', selectedTrio);
+                return [1, 2, 3, 4, 5]; // Return a default set for testing
+            }
+            
+            const [n1, n2, n3] = selectedTrio[0].split('-').map(Number);
+            
+            // Generate 2 more unique numbers not in the trio
+            const exclude = [n1, n2, n3];
+            const additionalNumbers = generateUniqueNumbers(2, 1, 69, exclude);
+            
+            const combination = [...[n1, n2, n3], ...additionalNumbers].sort((a, b) => a - b);
+            console.log('Generated combination:', combination);
+            return {
+                combination: combination,
+                basedOnTrio: `${n1}-${n2}-${n3}`
+            };
+        } catch (error) {
+            console.error('Error in generateFromFrequentTrios:', error);
+            return [1, 2, 3, 4, 5]; // Return a default set if there's an error
+        }
+    }
+    
+    function renderCombinations(n, useFrequentTrios = false) {
+        // Ensure n is a valid number
+        const count = parseInt(n, 10);
+        if (isNaN(count) || count <= 0) {
+            console.error('Invalid number of combinations to render:', n);
+            return;
+        }
+        
+        console.log(`Rendering ${count} combinations, useFrequentTrios: ${useFrequentTrios}`);
+        
+        const container = document.getElementById('generated-table');
+        if (!container) {
+            console.error('Could not find generated-table element');
+            return;
+        }
+        
+        // Ensure container is visible and cleared
+        container.style.display = 'block';
+        container.style.visibility = 'visible';
+        container.style.opacity = '1';
+        container.innerHTML = '';
+        
+        // Create table element
         const table = document.createElement('table');
         table.style.width = '100%';
-        table.style.borderCollapse = 'collapse';
-        table.style.marginTop = '12px';
-        table.innerHTML = `
-            <tr>
-                <th style="text-align:left; padding:8px 0; border-bottom:1px solid #eee;">#</th>
-                <th style="text-align:left; padding:8px 0; border-bottom:1px solid #eee;">Numbers</th>
-            </tr>
-        `;
-
-        for (let i = 0; i < n; i++) {
-            const { mainNumbers } = generateCombination();
-            const tr = document.createElement('tr');
-            tr.style.borderBottom = '1px solid #f5f5f5';
-            tr.innerHTML = `
-                <td style="padding:10px 0; color:#666;">${i + 1}.</td>
-                <td style="padding:10px 0; font-weight:bold; color:#2c3e50;">${mainNumbers.join(' - ')}</td>
-            `;
-            table.appendChild(tr);
+        table.style.borderCollapse = 'separate';
+        table.style.borderSpacing = '0 8px';
+        table.style.margin = '0';
+        table.style.tableLayout = 'fixed';
+        
+        // Create table header
+        const thead = document.createElement('thead');
+        const headerRow = document.createElement('tr');
+        headerRow.style.backgroundColor = '#f8f9fa';
+        
+        const th1 = document.createElement('th');
+        th1.textContent = '#';
+        th1.style.textAlign = 'center';
+        th1.style.padding = '12px 8px';
+        th1.style.border = 'none';
+        th1.style.borderRadius = '8px 0 0 8px';
+        headerRow.appendChild(th1);
+        
+        const th2 = document.createElement('th');
+        th2.textContent = 'Numbers';
+        th2.style.textAlign = 'left';
+        th2.style.padding = '12px 8px';
+        th2.style.border = 'none';
+        headerRow.appendChild(th2);
+        
+        if (useFrequentTrios) {
+            const th3 = document.createElement('th');
+            th3.textContent = 'Based On Trio';
+            th3.style.textAlign = 'left';
+            th3.style.padding = '12px 8px';
+            th3.style.border = 'none';
+            th3.style.borderRadius = '0 8px 8px 0';
+            headerRow.appendChild(th3);
         }
+        
+        thead.appendChild(headerRow);
+        table.appendChild(thead);
+        
+        // Create table body
+        const tbody = document.createElement('tbody');
 
-        const container = document.getElementById('generated-table');
+        for (let i = 0; i < count; i++) {
+            try {
+                // Create combination based on frequent trios
+                let mainNumbers, basedOnTrio = '';
+                if (useFrequentTrios) {
+                    const result = generateFromFrequentTrios();
+                    if (result && result.combination) {
+                        mainNumbers = result.combination;
+                        basedOnTrio = result.basedOnTrio || '';
+                        console.log(`Generated combo ${i+1}:`, mainNumbers, 'Based on trio:', basedOnTrio);
+                    } else {
+                        console.error('Failed to generate combination from trios, falling back to random');
+                        mainNumbers = generateCombination().mainNumbers;
+                    }
+                } else {
+                    mainNumbers = generateCombination().mainNumbers;
+                }
+                
+                if (!mainNumbers || !Array.isArray(mainNumbers)) {
+                    console.error('Invalid mainNumbers:', mainNumbers);
+                    continue;
+                }
+                
+                const tr = document.createElement('tr');
+                tr.style.borderBottom = '1px solid #f5f5f5';
+                
+                // Style the row
+                tr.style.backgroundColor = 'white';
+                tr.style.borderRadius = '8px';
+                tr.style.boxShadow = '0 2px 8px rgba(0,0,0,0.05)';
+                tr.style.margin = '0';
+                tr.style.display = 'table-row';
+                
+                // Add row number
+                const td1 = document.createElement('td');
+                td1.textContent = i + 1;
+                td1.style.padding = '12px 8px';
+                td1.style.textAlign = 'center';
+                td1.style.color = '#666';
+                td1.style.border = 'none';
+                td1.style.borderRight = '1px solid #eee';
+                td1.style.borderRadius = '8px 0 0 8px';
+                tr.appendChild(td1);
+                
+                // Add numbers
+                const td2 = document.createElement('td');
+                td2.textContent = mainNumbers.join(' - ');
+                td2.style.padding = '12px 8px';
+                td2.style.fontWeight = 'bold';
+                td2.style.color = '#2c3e50';
+                td2.style.border = 'none';
+                if (!useFrequentTrios) {
+                    td2.style.borderRadius = '0 8px 8px 0';
+                }
+                tr.appendChild(td2);
+                
+                // Add trio info if needed
+                if (useFrequentTrios) {
+                    const td3 = document.createElement('td');
+                    td3.textContent = basedOnTrio;
+                    td3.style.padding = '12px 8px';
+                    td3.style.color = '#9b59b6';
+                    td3.style.fontWeight = '500';
+                    td3.style.border = 'none';
+                    td3.style.borderRadius = '0 8px 8px 0';
+                    tr.appendChild(td3);
+                }
+                
+                tbody.appendChild(tr);
+                
+            } catch (error) {
+                console.error(`Error generating combination ${i+1}:`, error);
+            }
+        }
+        
+        table.appendChild(tbody);
+        
+        // Create a wrapper div for better control
+        const tableWrapper = document.createElement('div');
+        tableWrapper.style.overflowX = 'auto';
+        tableWrapper.style.width = '100%';
+        tableWrapper.appendChild(table);
+        
+        // Clear and append the table
         container.innerHTML = '';
-        container.appendChild(table);
+        container.appendChild(tableWrapper);
+        
+        // Force a reflow to ensure the table is rendered
+        void container.offsetHeight;
+        
+        console.log('Table rendered with', count, 'combinations');
+        console.log('Container dimensions:', container.offsetWidth, 'x', container.offsetHeight);
     }
-    document.querySelectorAll('.multi-gen-btn').forEach(btn => {
-        btn.onclick = function() {
-            renderCombinations(parseInt(btn.getAttribute('data-count')));
+    // Handle regular number generation buttons
+    document.querySelectorAll('.multi-gen-btn:not(#generate-from-trios)').forEach(btn => {
+        btn.onclick = () => {
+            renderCombinations(parseInt(btn.dataset.count), false);
         };
     });
-    // Initialize the page
+    
+    // Handle frequent trios button
+    function initializeTrioButton() {
+        const generateFromTriosBtn = document.getElementById('generate-from-trios');
+        console.log('Trio button element:', generateFromTriosBtn);
+        if (generateFromTriosBtn) {
+            // Remove any existing click handlers to prevent duplicates
+            const newBtn = generateFromTriosBtn.cloneNode(true);
+            generateFromTriosBtn.parentNode.replaceChild(newBtn, generateFromTriosBtn);
+            
+            console.log('Adding click handler to trio button');
+            newBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                console.log('Trio button clicked');
+                console.log('sortedTriplets available:', window.sortedTriplets ? 'Yes' : 'No');
+                if (window.sortedTriplets) {
+                    console.log('Number of available trios:', window.sortedTriplets.length);
+                    // Clear any previous error messages
+                    const container = document.getElementById('generated-table');
+                    if (container) {
+                        container.innerHTML = '';
+                    }
+                    // Render new combinations
+                    renderCombinations(5, true);
+                } else {
+                    console.error('No sortedTriplets data available');
+                    const container = document.getElementById('generated-table');
+                    if (container) {
+                        container.innerHTML = '<div style="color: #e74c3c; padding: 15px; text-align: center;">Loading data... Please try again in a moment.</div>';
+                    }
+                }
+            });
+        } else {
+            console.error('Could not find generate-from-trios button');
+        }
+    }
     document.addEventListener('DOMContentLoaded', function() {
+        console.log('DOM fully loaded');
+        // Initialize the trio button
+        initializeTrioButton();
+        
         // Show home tab by default (guard for missing elements)
         const homeTab = document.getElementById('home-tab');
         if (homeTab) homeTab.style.display = 'block';
@@ -762,9 +985,11 @@
 
     // Function to analyze frequent sets and populate dropdowns
     function analyzeFrequentSets() {
+        console.log('Starting analyzeFrequentSets...');
         // Analyze and count all pairs and triplets from historical data
         const pairCounts = new Map();
         const tripletCounts = new Map();
+        console.log('Number of draws to analyze:', allMainDraws.length);
         
         // Only use draws from 2024 and 2025
         const filteredDraws = allMainDraws.filter(d => d.year === 2024 || d.year === 2025);
@@ -797,9 +1022,11 @@
             .filter(([_, count]) => count >= 2)  // Only include pairs that appear 2+ times
             .sort((a, b) => b[1] - a[1]); // Show all pairs that appear 2+ times
             
-        const sortedTriplets = Array.from(tripletCounts.entries())
+        window.sortedTriplets = Array.from(tripletCounts.entries())
             .filter(([_, count]) => count >= 2)  // Only include triplets that appear 2+ times
             .sort((a, b) => b[1] - a[1]); // Show all triplets that appear 2+ times
+            
+        console.log('Found', sortedPairs.length, 'frequent pairs and', window.sortedTriplets.length, 'frequent trios');
         
         // Populate duo select dropdowns with improved UI
         const duo1Select = document.getElementById('duo1-select');
