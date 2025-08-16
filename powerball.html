@@ -17,6 +17,7 @@
         <button class="tab-btn" data-tab="new">History</button> <!--New tab-->
         <button class="tab-btn" data-tab="random">Random</button>
         <button class="tab-btn" data-tab="combo45">4&5 Combo</button>
+        <button class="tab-btn" data-tab="powerball">Powerball</button>
         <button class="tab-btn" onclick="window.location.href='home.html'">Back to Home</button>
     </nav>
     <!-- Main Content -->
@@ -127,6 +128,34 @@
             </div>
         </div>
     </div>
+    <!-- Powerball Tab Content -->
+    <div id="tab-powerball" class="tab-content" style="display: none;">
+        <div class="container main-flex">
+            <div class="left-col">
+                <!-- Left column for Powerball balls -->
+                <div id="powerball-balls" style="display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 20px;">
+                    <!-- Powerball balls will be inserted here by JavaScript -->
+                </div>
+            </div>
+            <div class="center-col">
+                <div id="powerball-stats" style="background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                    <h3 style="margin-top: 0; color: #2c3e50; border-bottom: 1px solid #eee; padding-bottom: 8px;">Powerball Frequency (2016-Now)</h3>
+                    <div id="powerball-frequency-table" style="margin-top: 15px;">
+                        <!-- Frequency table will be inserted here by JavaScript -->
+                        <div style="color: #888; text-align: center; padding: 20px 0;">Loading Powerball data...</div>
+                    </div>
+                </div>
+            </div>
+            <div class="right-col">
+                <!-- Notes for Powerball tab -->
+                <div id="custom-note-powerball" style="margin: 24px 0 18px 0; min-height: 80px; text-align: center; font-size: 1.13em; color: #555; width: 100%; background: #fff; border-radius: 10px; box-shadow: 0 2px 8px rgba(44,62,80,0.07); padding: 12px 8px;">
+                    <textarea id='note-textarea-powerball' placeholder='Write your note here...' style='width: 98%; min-height: 120px; font-size: 1.13em; border-radius: 8px; border: 1.5px solid #e0e0e0; padding: 8px; resize: vertical;'></textarea>
+                    <button id="download-note-btn-powerball" style="display: block; margin: 10px auto; font-size: 0.9em; padding: 8px 12px; border-radius: 6px; border: 1.5px solid #3498db; background: #fff; color: #3498db; cursor: pointer;">Download Notes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
     <!-- 2x Tab Content -->
     <div id="tab-2x" class="tab-content" style="display:none;">
         <div class="ball-panel" id="twox-ball-panel"></div>

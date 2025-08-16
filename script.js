@@ -3599,3 +3599,163 @@ function addToMap(map, combo, date, type) {
     if (!map.has(combo)) map.set(combo, []);
     map.get(combo).push({date, type});
 }
+
+// --- Powerball Tab Functionality ---
+function renderPowerballTab() {
+    // Check if we have the required elements and data
+    const powerballTab = document.getElementById('tab-powerball');
+    if (!powerballTab || !window.filteredDrawRows) return;
+    
+    const powerballBallsContainer = document.getElementById('powerball-balls');
+    const frequencyTable = document.getElementById('powerball-frequency-table');
+    
+    if (!powerballBallsContainer || !frequencyTable) return;
+    
+    // Initialize Powerball stats (1-26)
+    const powerballStats = {};
+    for (let i = 1; i <= 26; i++) {
+        powerballStats[i] = { count: 0, dates: [] };
+    }
+    
+    // Count Powerball occurrences
+    window.filteredDrawRows.forEach(draw => {
+        if (draw.powerball) {
+            const pb = parseInt(draw.powerball, 10);
+            if (pb >= 1 && pb <= 26) {
+                powerballStats[pb].count++;
+                powerballStats[pb].dates.push(draw.date + (draw.doublePlayArr ? ' (Main)' : ''));
+            }
+        }
+        
+        // Check Double Play Powerball if it exists
+        if (draw.doublePlayPowerball) {
+            const dpPb = parseInt(draw.doublePlayPowerball, 10);
+            if (dpPb >= 1 && dpPb <= 26) {
+                powerballStats[dpPb].count++;
+                powerballStats[dpPb].dates.push(draw.date + ' (Double Play)');
+            }
+        }
+    });
+    
+    // Convert to array and sort by count (descending)
+    const sortedPowerballs = Object.entries(powerballStats)
+        .map(([number, data]) => ({
+            number: parseInt(number, 10),
+            count: data.count,
+            dates: data.dates
+        }))
+        .sort((a, b) => b.count - a.count || a.number - b.number);
+    
+    // Render Powerball balls (1-26)
+    powerballBallsContainer.innerHTML = '';
+    for (let i = 1; i <= 26; i++) {
+        const ball = document.createElement('div');
+        ball.className = 'ball powerball';
+        ball.textContent = i;
+        ball.style.background = '#f1c40f'; // Yellow for Powerball
+        ball.style.color = '#000';
+        ball.style.cursor = 'pointer';
+        ball.style.transition = 'transform 0.2s, box-shadow 0.2s';
+        
+        // Add hover effect
+        ball.addEventListener('mouseenter', () => {
+            ball.style.transform = 'scale(1.1)';
+            ball.style.boxShadow = '0 0 10px rgba(241, 196, 15, 0.7)';
+        });
+        
+        ball.addEventListener('mouseleave', () => {
+            ball.style.transform = 'scale(1)';
+            ball.style.boxShadow = 'none';
+        });
+        
+        // Show draw dates on click
+        ball.addEventListener('click', () => {
+            const pbData = powerballStats[i];
+            const datesList = pbData.dates.length > 0 
+                ? `<ul style="padding-left: 20px; text-align: left; max-height: 200px; overflow-y: auto; margin: 10px 0 0 0;">
+                    ${pbData.dates.map(date => `<li style="margin-bottom: 5px; font-size: 0.9em;">${date}</li>`).join('')}
+                  </ul>`
+                : '<p style="color: #888; font-style: italic;">No draw data available</p>';
+            
+            frequencyTable.innerHTML = `
+                <div style="background: #f8f9fa; border-radius: 8px; padding: 15px; margin-bottom: 15px;">
+                    <h4 style="margin: 0 0 10px 0; color: #2c3e50;">Powerball ${i} - Drawn ${pbData.count} times</h4>
+                    ${datesList}
+                </div>
+                ${generateFrequencyTable(sortedPowerballs, i === 1)}
+            `;
+        });
+        
+        powerballBallsContainer.appendChild(ball);
+    }
+    
+    // Initial render of frequency table
+    frequencyTable.innerHTML = generateFrequencyTable(sortedPowerballs, true);
+    
+    // Add tab click handler to ensure data is loaded when tab is clicked
+    const powerballTabBtn = document.querySelector('.tab-btn[data-tab="powerball"]');
+    if (powerballTabBtn) {
+        powerballTabBtn.addEventListener('click', () => {
+            // Re-render in case new data was loaded
+            setTimeout(renderPowerballTab, 100);
+        });
+    }
+}
+
+function generateFrequencyTable(sortedPowerballs, showAll) {
+    // Show top 10 by default, or all if showAll is true
+    const displayPowerballs = showAll 
+        ? sortedPowerballs 
+        : [...sortedPowerballs].sort((a, b) => b.count - a.count || a.number - b.number).slice(0, 10);
+    
+    return `
+        <div style="margin-bottom: 15px;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 10px; font-weight: bold;">
+                <span>Powerball</span>
+                <span>Frequency</span>
+            </div>
+            <div style="max-height: 400px; overflow-y: auto;">
+                ${displayPowerballs.map(pb => {
+                    const percentage = ((pb.count / window.filteredDrawRows.length) * 100).toFixed(2);
+                    return `
+                        <div style="display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #eee; align-items: center;">
+                            <div style="display: flex; align-items: center;">
+                                <div class="ball" style="background: #f1c40f; color: #000; margin-right: 10px; width: 24px; height: 24px; font-size: 0.9em; display: flex; align-items: center; justify-content: center;">
+                                    ${pb.number}
+                                </div>
+                                <span>${pb.number}</span>
+                            </div>
+                            <div>
+                                <span style="font-weight: 500;">${pb.count}</span>
+                                <span style="color: #888; font-size: 0.9em; margin-left: 5px;">(${percentage}%)</span>
+                            </div>
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+            ${!showAll && sortedPowerballs.length > 10 ? 
+                `<div style="text-align: center; margin-top: 10px;">
+                    <a href="#" onclick="document.querySelector('.tab-btn[data-tab=\"powerball\"]').click(); return false;" style="color: #3498db; text-decoration: none;">Show all Powerballs</a>
+                </div>` 
+                : ''
+            }
+        </div>
+    `;
+}
+
+// Initialize Powerball tab when the page loads
+document.addEventListener('DOMContentLoaded', function() {
+    // Add to the existing tab click handler
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            if (this.getAttribute('data-tab') === 'powerball') {
+                setTimeout(renderPowerballTab, 100);
+            }
+        });
+    });
+    
+    // Also try to initialize if the tab is active on page load
+    if (document.querySelector('.tab-btn[data-tab="powerball"].active')) {
+        setTimeout(renderPowerballTab, 500);
+    }
+});
