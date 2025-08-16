@@ -405,6 +405,10 @@ document.addEventListener('DOMContentLoaded', function() {
                         };
                     });
                     
+                    // Analyze frequent trios for the random generator after all data is loaded
+                    window.sortedTriplets = analyzeFrequentTrios(window.cash5DrawRows);
+                    console.log('Frequent trios analysis complete. Found', window.sortedTriplets.length, 'unique trios that appear 2+ times');
+                    
                     // Debug: Log first few draws to verify data
                     console.log('First 3 draws from CSV:');
                     window.cash5DrawRows.slice(0, 3).forEach((draw, i) => {
@@ -1626,6 +1630,43 @@ function renderCash5Combo45Results() {
     }
 }
 
+// Function to analyze and sort frequent trios from historical draws
+function analyzeFrequentTrios(draws) {
+    const trioCounts = new Map();
+    
+    // Count occurrences of each trio
+    for (const draw of draws) {
+        const numbers = draw.mainArr || [];
+        if (!Array.isArray(numbers) || numbers.length < 5) continue;
+        
+        // Sort the numbers to ensure consistent trio generation
+        const sortedNumbers = [...numbers].sort((a, b) => a - b);
+        
+        // Generate all possible trios from this draw
+        for (let i = 0; i < sortedNumbers.length - 2; i++) {
+            for (let j = i + 1; j < sortedNumbers.length - 1; j++) {
+                for (let k = j + 1; k < sortedNumbers.length; k++) {
+                    const trio = [sortedNumbers[i], sortedNumbers[j], sortedNumbers[k]];
+                    const trioKey = trio.join('-');
+                    trioCounts.set(trioKey, (trioCounts.get(trioKey) || 0) + 1);
+                }
+            }
+        }
+    }
+    
+    // Convert to array of [trioKey, count] and sort by count (descending)
+    const sortedTriplets = Array.from(trioCounts.entries())
+        .filter(([_, count]) => count >= 2) // Only include trios that appear at least twice
+        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])); // Sort by count, then by numbers
+    
+    console.log(`Analyzed ${draws.length} draws, found ${sortedTriplets.length} unique trios appearing 2+ times`);
+    if (sortedTriplets.length > 0) {
+        console.log('Top 5 most frequent trios:', sortedTriplets.slice(0, 5));
+    }
+    
+    return sortedTriplets;
+}
+
 // --- Utility: Get all pairs and trios from historical draws ---
 function getCash5PairsAndTrios(draws) {
     const pairCounts = new Map();
@@ -1742,19 +1783,86 @@ function countSubsetOccurrences(subset, historicalData) {
     return count;
 }
 
+// Function to generate a combination from frequent trios
+function generateFromFrequentTrios() {
+    if (!window.sortedTriplets || window.sortedTriplets.length === 0) {
+        console.error('No sortedTriplets data available');
+        // Fallback to random generation if no trios available
+        const nums = generateCash5UniqueNumbers(5, 1, 42);
+        return {
+            combination: nums.sort((a, b) => a - b),
+            basedOnTrio: ''
+        };
+    }
+    
+    try {
+        // Get top 10 most frequent trios (or all if less than 10)
+        const topTrios = window.sortedTriplets.slice(0, Math.min(10, window.sortedTriplets.length));
+        if (topTrios.length === 0) {
+            console.log('No frequent trios found, falling back to random generation');
+            const nums = generateCash5UniqueNumbers(5, 1, 42);
+            return {
+                combination: nums.sort((a, b) => a - b),
+                basedOnTrio: ''
+            };
+        }
+        
+        // Select a random trio from top frequent trios
+        const selectedTrio = topTrios[Math.floor(Math.random() * topTrios.length)];
+        const [n1, n2, n3] = selectedTrio[0].split('-').map(Number);
+        
+        // Generate 2 more unique numbers not in the trio
+        const exclude = [n1, n2, n3];
+        const additionalNumbers = generateCash5UniqueNumbers(2, 1, 42, exclude);
+        
+        const combination = [...[n1, n2, n3], ...additionalNumbers].sort((a, b) => a - b);
+        return {
+            combination: combination,
+            basedOnTrio: `${n1}-${n2}-${n3}`,
+            frequency: selectedTrio[1] // Include the frequency count
+        };
+    } catch (error) {
+        console.error('Error in generateFromFrequentTrios:', error);
+        // Fallback to random generation on error
+        const nums = generateCash5UniqueNumbers(5, 1, 42);
+        return {
+            combination: nums.sort((a, b) => a - b),
+            basedOnTrio: ''
+        };
+    }
+}
+
 // Function to render the generated combinations with subset occurrences
-function renderCash5Combinations(count) {
+function renderCash5Combinations(count, useFrequentTrios = false) {
     const container = document.getElementById('cash5-generated-table');
     if (!container || !window.cash5DrawRows) return;
     
-    container.innerHTML = '<div style="margin-bottom: 10px; font-weight: bold;">Generating ' + count + ' combinations...</div>';
+    const loadingText = useFrequentTrios 
+        ? 'Generating combinations from frequent trios...' 
+        : 'Generating ' + count + ' combinations...';
+    container.innerHTML = '<div style="margin-bottom: 10px; font-weight: bold;">' + loadingText + '</div>';
     
     // Generate combinations
     const combinations = [];
     for (let i = 0; i < count; i++) {
-        const nums = generateCash5UniqueNumbers(5, 1, 42);
+        let nums, basedOnTrio = '';
+        
+        if (useFrequentTrios) {
+            const result = generateFromFrequentTrios();
+            if (result) {
+                nums = result.combination;
+                basedOnTrio = result.basedOnTrio;
+            } else {
+                // Fallback to random generation if frequent trios fails
+                nums = generateCash5UniqueNumbers(5, 1, 42);
+            }
+        } else {
+            nums = generateCash5UniqueNumbers(5, 1, 42);
+        }
+        
         combinations.push({
             numbers: nums,
+            basedOnTrio: basedOnTrio,
             subsets: {
                 pairs: getSubsets(nums, 2),
                 trios: getSubsets(nums, 3),
@@ -1828,24 +1936,36 @@ function renderCash5Combinations(count) {
         
         subsetsHtml += '</div>';
         
+        // Highlight the trio in the combination if it was based on a frequent trio
+        const renderNumber = (num) => {
+            const isInTrio = combo.basedOnTrio && combo.basedOnTrio.split('-').includes(num.toString());
+            return `<span class="ball" style="
+                display:inline-block; 
+                width:28px; 
+                height:28px; 
+                line-height:28px; 
+                text-align:center; 
+                border-radius:50%; 
+                background:${isInTrio ? '#9b59b6' : '#27ae60'}; 
+                color:white; 
+                margin:2px;
+                font-size: 0.9em;
+                ${isInTrio ? 'border: 2px solid #8e44ad;' : ''}
+                ${isInTrio ? 'font-weight: bold;' : ''}
+            ">${num}</span>`;
+        };
+
         table += `
         <tr>
             <td style="text-align:left; padding:8px; border:1px solid #ddd; vertical-align:top;">${index + 1}</td>
             <td style="padding:8px; border:1px solid #ddd; vertical-align:top;">
-                <div style="margin-bottom: 5px;">${nums.map(n => 
-                    `<span class="ball" style="
-                        display:inline-block; 
-                        width:28px; 
-                        height:28px; 
-                        line-height:28px; 
-                        text-align:center; 
-                        border-radius:50%; 
-                        background:#27ae60; 
-                        color:white; 
-                        margin:2px;
-                        font-size: 0.9em;
-                    ">${n}</span>`
-                ).join(' ')}</div>
+                <div style="margin-bottom: 5px;">${nums.map(n => renderNumber(n)).join(' ')}</div>
+                ${combo.basedOnTrio ? 
+                    `<div style="font-size: 0.85em; color: #9b59b6; margin-top: 5px;">
+                        Based on trio: ${combo.basedOnTrio}
+                    </div>` 
+                    : ''
+                }
             </td>
             <td style="padding:8px; border:1px solid #ddd; vertical-align:top;">
                 ${subsetsHtml}
@@ -1937,12 +2057,24 @@ window.initCash5RandomTab = function() {
     }
 
     // Quick Random Generator buttons (Generate 4, 8, 16)
-    document.querySelectorAll('.cash5-multi-gen-btn').forEach(btn => {
+    document.querySelectorAll('.cash5-multi-gen-btn:not(#cash5-generate-from-trios)').forEach(btn => {
         btn.onclick = function() {
             const count = parseInt(btn.getAttribute('data-count'), 10);
             renderCash5Combinations(count);
         };
     });
+    
+    // From Frequent Trios button
+    const generateFromTriosBtn = document.getElementById('cash5-generate-from-trios');
+    if (generateFromTriosBtn) {
+        generateFromTriosBtn.onclick = function() {
+            if (!window.sortedTriplets || window.sortedTriplets.length === 0) {
+                alert('Loading frequent trios data... Please try again in a moment.');
+                return;
+            }
+            renderCash5Combinations(5, true);
+        };
+    }
 
     // Two Duos Generator
     const duo1 = document.getElementById('cash5-duo1-select');

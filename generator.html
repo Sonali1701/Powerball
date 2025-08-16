@@ -1070,13 +1070,73 @@
             // Initialize Choices.js on all dropdowns (only once)
         [duo1Select, duo2Select, comboDuoSelect, comboTrioSelect].forEach(sel => {
             if (sel && !sel.classList.contains('choices-initialized')) {
-                new Choices(sel, {
-                    searchEnabled: true,
-                    shouldSort: false,
-                    placeholder: true,
-                    itemSelectText: '',
-                    searchPlaceholderValue: 'Type a number...'
+                // Create a simple select element without Choices.js
+                sel.style.display = 'block';
+                sel.style.width = '100%';
+                sel.style.padding = '8px';
+                sel.style.borderRadius = '4px';
+                sel.style.border = '1px solid #ddd';
+                sel.style.marginBottom = '10px';
+                
+                // Add search input above the select
+                const searchContainer = document.createElement('div');
+                searchContainer.style.marginBottom = '8px';
+                
+                const searchInput = document.createElement('input');
+                searchInput.type = 'text';
+                searchInput.placeholder = 'Search for a number...';
+                searchInput.style.width = '100%';
+                searchInput.style.padding = '8px';
+                searchInput.style.border = '1px solid #ddd';
+                searchInput.style.borderRadius = '4px';
+                
+                // Store original options
+                const originalOptions = Array.from(sel.options);
+                
+                // Add event listener for search
+                searchInput.addEventListener('input', function(e) {
+                    const searchTerm = e.target.value.trim();
+                    
+                    // Clear current options
+                    while (sel.options.length > 0) {
+                        sel.remove(0);
+                    }
+                    
+                    // Add default option
+                    const defaultOption = document.createElement('option');
+                    defaultOption.value = '';
+                    defaultOption.textContent = sel.getAttribute('data-placeholder') || 'Select an option';
+                    sel.appendChild(defaultOption);
+                    
+                    // Filter and add matching options
+                    if (searchTerm === '') {
+                        // Show all options if search is empty
+                        originalOptions.forEach(opt => {
+                            if (opt.value !== '') {
+                                sel.appendChild(opt.cloneNode(true));
+                            }
+                        });
+                    } else if (/^\d+$/.test(searchTerm)) {
+                        // Only filter if search term is a number
+                        originalOptions.forEach(opt => {
+                            if (opt.value === '') return;
+                            
+                            // Check if any number in the option matches exactly
+                            const numbers = opt.value.split('-');
+                            if (numbers.includes(searchTerm)) {
+                                sel.appendChild(opt.cloneNode(true));
+                            }
+                        });
+                    }
+                    
+                    // Trigger change event
+                    const event = new Event('change');
+                    sel.dispatchEvent(event);
                 });
+                
+                // Add elements to the DOM
+                searchContainer.appendChild(searchInput);
+                sel.parentNode.insertBefore(searchContainer, sel);
                 sel.classList.add('choices-initialized');
             }
         });
