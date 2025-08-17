@@ -18,6 +18,7 @@
         <button class="tab-btn" data-tab="random">Random</button>
         <button class="tab-btn" data-tab="combo45">4&5 Combo</button>
         <button class="tab-btn" data-tab="powerball">Powerball</button>
+        <button class="tab-btn" data-tab="trio">Trio</button>
         <button class="tab-btn" onclick="window.location.href='home.html'">Back to Home</button>
     </nav>
     <!-- Main Content -->
@@ -128,34 +129,6 @@
             </div>
         </div>
     </div>
-    <!-- Powerball Tab Content -->
-    <div id="tab-powerball" class="tab-content" style="display: none;">
-        <div class="container main-flex">
-            <div class="left-col">
-                <!-- Left column for Powerball balls -->
-                <div id="powerball-balls" style="display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 20px;">
-                    <!-- Powerball balls will be inserted here by JavaScript -->
-                </div>
-            </div>
-            <div class="center-col">
-                <div id="powerball-stats" style="background: #fff; padding: 15px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-                    <h3 style="margin-top: 0; color: #2c3e50; border-bottom: 1px solid #eee; padding-bottom: 8px;">Powerball Frequency (2016-Now)</h3>
-                    <div id="powerball-frequency-table" style="margin-top: 15px;">
-                        <!-- Frequency table will be inserted here by JavaScript -->
-                        <div style="color: #888; text-align: center; padding: 20px 0;">Loading Powerball data...</div>
-                    </div>
-                </div>
-            </div>
-            <div class="right-col">
-                <!-- Notes for Powerball tab -->
-                <div id="custom-note-powerball" style="margin: 24px 0 18px 0; min-height: 80px; text-align: center; font-size: 1.13em; color: #555; width: 100%; background: #fff; border-radius: 10px; box-shadow: 0 2px 8px rgba(44,62,80,0.07); padding: 12px 8px;">
-                    <textarea id='note-textarea-powerball' placeholder='Write your note here...' style='width: 98%; min-height: 120px; font-size: 1.13em; border-radius: 8px; border: 1.5px solid #e0e0e0; padding: 8px; resize: vertical;'></textarea>
-                    <button id="download-note-btn-powerball" style="display: block; margin: 10px auto; font-size: 0.9em; padding: 8px 12px; border-radius: 6px; border: 1.5px solid #3498db; background: #fff; color: #3498db; cursor: pointer;">Download Notes</button>
-                </div>
-            </div>
-        </div>
-    </div>
-    
     <!-- 2x Tab Content -->
     <div id="tab-2x" class="tab-content" style="display:none;">
         <div class="ball-panel" id="twox-ball-panel"></div>
@@ -211,5 +184,126 @@
     <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
     <script src="script.js"></script>
     
+    <!-- Trio Tab Content -->
+    <div id="tab-trio" class="tab-content" style="display:none;">
+        <div class="container main-flex">
+            <div class="left-col" style="width: 300px;">
+                <div class="generator-panel">
+                    <h2>Frequent Trios</h2>
+                    <div id="trio-list" style="max-height: 600px; overflow-y: auto; padding-right: 10px;">
+                        <div style="color: #666; font-style: italic; text-align: center; padding: 20px;">
+                            Loading frequent trios...
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="center-col">
+                <div class="generator-panel">
+                    <h2>Generate Numbers</h2>
+                    <button id="generate-trio-btn" class="freq-gen-btn" style="width: 100%; margin-bottom: 15px; padding: 12px; font-size: 1.1em;">
+                        Generate From Frequent Trio
+                    </button>
+                    <div id="trio-results" style="margin-top: 20px; min-height: 100px;">
+                        <div style="color: #888; text-align: center; padding: 20px;" id="trio-placeholder">
+                            Click the button above to generate numbers based on frequent trios
+                        </div>
+                    </div>
+                </div>
+                <div class="generator-panel" style="margin-top: 20px;">
+                    <h2>Trio Details</h2>
+                    <div id="trio-details" style="min-height: 200px; color: #666; font-style: italic; text-align: center; padding: 20px;">
+                        Select a trio from the left to see details
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Powerball Tab Content -->
+    <div id="tab-powerball" class="tab-content" style="display:none;">
+        <div class="container main-flex">
+            <div class="left-col" style="width: 200px; padding-right: 20px;">
+                <div class="powerball-ball-panel" id="powerball-ball-panel" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; padding: 10px;">
+                    <!-- Balls will be generated by JavaScript -->
+                </div>
+            </div>
+            <div class="center-col">
+                <div id="powerball-details" style="margin-top: 20px;">
+                    <h3>Powerball Details</h3>
+                    <div id="powerball-frequency" style="margin-bottom: 15px;"></div>
+                    <div id="powerball-history" style="max-height: 500px; overflow-y: auto;">
+                        <table class="powerball-history-table" style="width: 100%; border-collapse: collapse;">
+                            <thead>
+                                <tr style="background-color: #f2f2f2;">
+                                    <th style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd;">Date</th>
+                                    <th style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd;">Draw Type</th>
+                                    <th style="padding: 8px; text-align: left; border-bottom: 1px solid #ddd;">Winning Numbers</th>
+                                </tr>
+                            </thead>
+                            <tbody id="powerball-history-body">
+                                <!-- History will be populated by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="right-col">
+                <div id="powerball-stats" style="margin-top: 20px;">
+                    <h3>Statistics</h3>
+                    <div id="powerball-stats-content">
+                        <!-- Stats will be populated by JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Trio Tab Content -->
+    <div id="tab-trio" class="tab-content" style="display:none;">
+        <div class="container main-flex">
+            <div class="left-col" style="width: 30%; max-width: 300px;">
+                <div style="background: #f8f9fa; border-radius: 8px; padding: 15px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                    <h3 style="margin-top: 0; color: #2c3e50; font-size: 1.1em; padding-bottom: 8px; border-bottom: 1px solid #e0e0e0;">Frequent Trios</h3>
+                    <div id="trio-list" style="max-height: 500px; overflow-y: auto; padding-right: 8px;">
+                        <!-- Trios will be loaded here -->
+                    </div>
+                </div>
+            </div>
+            <div class="center-col" style="flex: 1; max-width: 400px;">
+                <div style="background: #fff; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center;">
+                    <button id="generate-trio-btn" style="
+                        background: linear-gradient(90deg, #4caf50 0%, #8bc34a 100%);
+                        color: white;
+                        border: none;
+                        border-radius: 6px;
+                        padding: 12px 24px;
+                        font-size: 1em;
+                        font-weight: 600;
+                        cursor: pointer;
+                        margin-bottom: 20px;
+                        transition: all 0.2s;
+                    ">
+                        Generate From Frequent Trio
+                    </button>
+                    <div id="trio-results">
+                        <!-- Generated numbers will appear here -->
+                    </div>
+                </div>
+            </div>
+            <div class="right-col" style="width: 30%; max-width: 300px;">
+                <div id="trio-details" style="background: #fff; border-radius: 8px; padding: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                    <h3 style="margin-top: 0; color: #2c3e50; font-size: 1.1em; padding-bottom: 8px; border-bottom: 1px solid #e0e0e0;">Trio Details</h3>
+                    <div style="color: #666; font-style: italic; text-align: center; padding: 20px 0;">
+                        Select a trio to see details
+                    </div>
+                </div>
+                <!-- Notes for trio page -->
+                <div id="custom-note-trio" style="margin-top: 20px; min-height: 80px; text-align: center; font-size: 1.13em; color: #555; width: 100%; background: #fff; border-radius: 10px; box-shadow: 0 2px 8px rgba(44,62,80,0.07); padding: 12px 8px;">
+                    <textarea id='note-textarea-trio' placeholder='Write your note here...' style='width: 98%; min-height: 120px; font-size: 1.13em; border-radius: 8px; border: 1.5px solid #e0e0e0; padding: 8px; resize: vertical;'></textarea>
+                    <button id="download-note-btn-trio" style="display: block; margin: 10px auto; font-size: 0.9em; padding: 8px 12px; border-radius: 6px; border: 1.5px solid #3498db; background: #fff; color: #3498db; cursor: pointer;">Download Notes</button>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
