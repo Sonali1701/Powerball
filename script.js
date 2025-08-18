@@ -65,6 +65,8 @@ document.addEventListener('DOMContentLoaded', function() {
             // Special display style for trio tab
             tabContent.style.display = tabId === 'trio' ? 'flex' : 'block';
             console.log('Displaying tab content for:', tabId);
+            console.log('Tab content element:', tabContent);
+            console.log('Tab content final display:', tabContent.style.display);
             
             // Initialize tab-specific content
             if (tabId === 'combo') {
@@ -73,34 +75,36 @@ document.addEventListener('DOMContentLoaded', function() {
                 renderNewBallPanel();
                 const resultsDiv = document.getElementById('new-tab-results');
                 if (resultsDiv) resultsDiv.innerHTML = '';
+            } else if (tabId === 'trio') {
+                renderTrioTab();
             } else if (tabId === 'combo45') {
                 renderPowerballCombo45Results();
-            } else if (tabId === 'trio') {
-                console.log('Initializing Trio tab');
-                // Show loading message
-                const trioList = document.getElementById('trio-list');
-                if (trioList) {
-                    trioList.innerHTML = '<div style="color: #666; text-align: center; padding: 20px;">Loading data...</div>';
-                }
+            } else if (tabId === 'powerball') {
+                console.log('Powerball tab clicked');
                 
-                // Check if we need to analyze the data
-                if (allTrioData.length === 0) {
-                    if (window.filteredDrawRows && window.filteredDrawRows.length > 0) {
-                        console.log('Analyzing trios with existing data');
-                        analyzeTrios();
-                    } else {
-                        console.log('Waiting for draw data to load...');
-                        const checkDataLoaded = setInterval(() => {
-                            if (window.filteredDrawRows && window.filteredDrawRows.length > 0) {
-                                clearInterval(checkDataLoaded);
-                                console.log('Draw data loaded, analyzing trios');
-                                analyzeTrios();
-                            }
-                        }, 100);
+                // Ensure the tab is visible first
+                const powerballTab = document.getElementById('tab-powerball');
+                console.log('Powerball tab element:', powerballTab);
+                console.log('Powerball tab display style:', powerballTab ? powerballTab.style.display : 'not found');
+                
+                // Check if we have draw data
+                if (!window.filteredDrawRows || window.filteredDrawRows.length === 0) {
+                    console.error('No draw data available for Powerball tab');
+                    const resultsDiv = document.getElementById('powerball-results');
+                    if (resultsDiv) {
+                        resultsDiv.innerHTML = '<div style="color:#e74c3c; margin:18px 0; text-align: center;">Loading draw data... Please wait.</div>';
                     }
+                    // Try to re-render after a short delay in case data is still loading
+                    setTimeout(() => {
+                        if (window.filteredDrawRows && window.filteredDrawRows.length > 0) {
+                            console.log('Draw data loaded, rendering Powerball panel');
+                            renderPowerballBallPanel();
+                        }
+                    }, 1000);
                 } else {
-                    // Data already loaded, just render the list
-                    renderTrioList();
+                    // We have draw data, render the ball panel
+                    console.log('Rendering Powerball panel with', window.filteredDrawRows.length, 'draws');
+                    renderPowerballBallPanel();
                 }
             } else if (tabId === '2x') {
                 console.log('2x tab activated');
@@ -162,15 +166,116 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
+    // Helper: Generate all k-combos from array
+    function getCombos(arr, k) {
+        const results = [];
+        function helper(start, combo) {
+            if (combo.length === k) {
+                results.push(combo.slice().sort((a, b) => a - b));
+                return;
+            }
+            for (let i = start; i < arr.length; i++) {
+                combo.push(arr[i]);
+                helper(i + 1, combo);
+                combo.pop();
+            }
+        }
+        helper(0, []);
+        return results;
+    }
+
+    // Helper: Generate random unique numbers from 1-69, excluding arr
+    function generateUniqueNumbers(count, min, max, excludeArr) {
+        const pool = [];
+        for (let i = min; i <= max; i++) {
+            if (!excludeArr.includes(i)) pool.push(i);
+        }
+        const selected = [];
+        while (selected.length < count && pool.length > 0) {
+            const idx = Math.floor(Math.random() * pool.length);
+            selected.push(pool[idx]);
+            pool.splice(idx, 1);
+        }
+        return selected;
+    }
+
+    // Render the Trio tab results
+    function renderTrioTab() {
+        const resultsDiv = document.getElementById('trio-results');
+        const random2Div = document.getElementById('random2-results');
+        if (!resultsDiv || !random2Div) return;
+        // Filter draws from 2015 to 2025
+        const draws = (window.filteredDrawRows || []).filter(draw => {
+            const dateStr = (draw.date || '').trim();
+            const parts = dateStr.split('/');
+            const year = parts.length === 3 ? parseInt(parts[2], 10) : 0;
+            return year >= 2015 && year <= 2025;
+        });
+        // --- Collect all trios and their dates ---
+        const trioMap = new Map(); // trioStr -> Set of dates
+        draws.forEach(draw => {
+            if (draw.mainArr && draw.mainArr.length === 5) {
+                getCombos(draw.mainArr, 3).forEach(trio => {
+                    const key = trio.join('-');
+                    if (!trioMap.has(key)) trioMap.set(key, new Set());
+                    trioMap.get(key).add(draw.date);
+                });
+            }
+        });
+        // Only use trios that appeared at least 2x
+        const eligibleTrios = Array.from(trioMap.entries()).filter(([_, dates]) => dates.size >= 2);
+        if (eligibleTrios.length === 0) {
+            resultsDiv.innerHTML = '<div style="color:#e74c3c;">No trios found (with 2+ appearances) in draws from 2015-2025.</div>';
+            random2Div.innerHTML = '';
+            return;
+        }
+        // UI header and button
+        resultsDiv.innerHTML = `
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;gap:12px;">
+                <h2 style="margin:0;color:#3498db;font-size:1.3em;font-weight:700;letter-spacing:1px;">Powerball Trio Generator (2015-2025)</h2>
+                <button id="trio-generate-btn" style="padding:10px 28px;font-size:1.13em;border-radius:8px;border:1.5px solid #3498db;background:#fff;color:#3498db;cursor:pointer;font-weight:600;transition:background 0.18s;">Generate Numbers</button>
+            </div>
+            <div id="trio-cards-container"></div>
+        `;
+        random2Div.innerHTML = '';
+        function generateOutputs() {
+            // Shuffle eligible trios
+            const shuffled = eligibleTrios.slice();
+            for (let i = shuffled.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+            }
+            // Pick top 20
+            const chosen = shuffled.slice(0, 20);
+            let cardsHtml = `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:18px;">`;
+            chosen.forEach(([trio, dates]) => {
+                const trioNums = trio.split('-').map(Number);
+                const random2 = generateUniqueNumbers(2, 1, 69, trioNums);
+                const combo = [...trioNums, ...random2].sort((a, b) => a - b);
+                cardsHtml += `
+                    <div style="background:#f8faff;border-radius:13px;box-shadow:0 2px 12px rgb(44 62 80 / 10%);padding:22px 18px 18px 18px;display:flex;flex-direction:column;align-items:center;">
+                        <div style="font-size:1.15em;font-weight:600;color:#234;letter-spacing:0.5px;margin-bottom:6px;">Trio: <span style='color:#e67e22;'>${trioNums.join('-')}</span></div>
+                        <div style="margin-bottom:8px;font-size:1.08em;color:#555;">Dates: <br><span style='color:#3498db;font-size:0.98em;'>${Array.from(dates).join('<br>')}</span></div>
+                        <div style="margin:10px 0 0 0;font-size:1.18em;font-weight:700;letter-spacing:1.2px;background:#27ae60;color:#fff;padding:8px 18px;border-radius:7px;">${combo.join('-')}</div>
+                    </div>
+                `;
+            });
+            cardsHtml += `</div>`;
+            document.getElementById('trio-cards-container').innerHTML = cardsHtml;
+        }
+        // Initial output
+        generateOutputs();
+        // Button handler
+        setTimeout(() => {
+            const btn = document.getElementById('trio-generate-btn');
+            if (btn) btn.onclick = generateOutputs;
+        }, 0);
+    }
     // Add a function to initialize the Trio tab after data is loaded
     function initializeTrioTab() {
         console.log('Initializing Trio tab with', window.filteredDrawRows ? window.filteredDrawRows.length : 0, 'draws');
         if (window.filteredDrawRows && window.filteredDrawRows.length > 0) {
-            // Check if we're on the Trio tab
-            const activeTab = document.querySelector('.tab-btn.active');
-            if (activeTab && activeTab.getAttribute('data-tab') === 'trio') {
-                analyzeTrios();
-            }
+            renderTrioTab();
         }
     }
 
@@ -3841,641 +3946,227 @@ function addToMap(map, combo, date, type) {
 
 // --- POWERBALL TAB FUNCTIONALITY ---
 
-// Function to render the Powerball ball panel
+// Function to render the Powerball ball panel with frequency data
 function renderPowerballBallPanel() {
     const container = document.getElementById('powerball-ball-panel');
-    if (!container) return;
-    
-    // Clear existing content
-    container.innerHTML = '';
-    
-    // Create balls for numbers 1-26
-    for (let i = 1; i <= 26; i++) {
-        const ball = document.createElement('div');
-        ball.className = 'ball powerball';
-        ball.textContent = i;
-        ball.dataset.number = i;
-        ball.style.cursor = 'pointer';
-        ball.style.display = 'flex';
-        ball.style.justifyContent = 'center';
-        ball.style.alignItems = 'center';
-        ball.style.width = '36px';
-        ball.style.height = '36px';
-        ball.style.borderRadius = '50%';
-        ball.style.backgroundColor = '#e53e3e';
-        ball.style.color = 'white';
-        ball.style.fontWeight = 'bold';
-        ball.style.margin = '5px';
-        ball.style.transition = 'all 0.2s';
-        
-        // Add hover effect
-        ball.addEventListener('mouseover', () => {
-            ball.style.transform = 'scale(1.1)';
-            ball.style.boxShadow = '0 0 10px rgba(0,0,0,0.3)';
-        });
-        
-        ball.addEventListener('mouseout', () => {
-            ball.style.transform = 'scale(1)';
-            ball.style.boxShadow = 'none';
-        });
-        
-        // Add click handler
-        ball.addEventListener('click', () => handlePowerballClick(i, ball));
-        
-        container.appendChild(ball);
+    console.log('[DEBUG] renderPowerballBallPanel: container at render time:', container);
+    if (!container) {
+        console.error('[ERROR] powerball-ball-panel container not found at render time!');
+        return;
     }
+    console.log('renderPowerballBallPanel function called');
+    
+    // Calculate Powerball frequencies from the data
+    const powerballFrequencies = calculatePowerballFrequencies();
+    
+    // Create simple HTML string instead of DOM manipulation
+    let ballsHTML = '';
+    for (let i = 1; i <= 26; i++) {
+        const frequency = powerballFrequencies[i] || 0;
+        ballsHTML += `
+            <div class="powerball-ball" data-number="${i}" onclick="handlePowerballClick(${i}, this)" 
+                 style="display: inline-flex; flex-direction: column; align-items: center; justify-content: center; 
+                        width: 60px; height: 60px; border-radius: 50%; background: #e53e3e; color: white; 
+                        font-weight: bold; cursor: pointer; margin: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">
+                <div style="font-size: 1.1em;">${i}</div>
+                <div style="font-size: 0.7em; opacity: 0.9;">${frequency}×</div>
+            </div>
+        `;
+    }
+    
+    container.innerHTML = ballsHTML;
+    console.log('Powerball balls HTML set, container children:', container.children.length);
+}
+
+// Function to calculate Powerball frequencies
+function calculatePowerballFrequencies() {
+    const frequencies = {};
+    
+    console.log('calculatePowerballFrequencies called');
+    console.log('window.filteredDrawRows:', window.filteredDrawRows);
+    
+    if (!window.filteredDrawRows) {
+        console.error('window.filteredDrawRows is not available!');
+        return frequencies;
+    }
+    
+    window.filteredDrawRows.forEach(draw => {
+        // Count main draw Powerball
+        if (draw.powerball) {
+            const pb = parseInt(draw.powerball);
+            if (pb >= 1 && pb <= 26) {
+                frequencies[pb] = (frequencies[pb] || 0) + 1;
+            }
+        }
+        
+        // Count Double Play Powerball
+        if (draw.doublePlayPowerball) {
+            const dpb = parseInt(draw.doublePlayPowerball);
+            if (dpb >= 1 && dpb <= 26) {
+                frequencies[dpb] = (frequencies[dpb] || 0) + 1;
+            }
+        }
+    });
+    
+    return frequencies;
 }
 
 // Function to handle Powerball number click
 function handlePowerballClick(number, element) {
     if (!window.filteredDrawRows) return;
     
-    // Toggle selected state
-    const isSelected = element.classList.toggle('selected');
+    // Remove selected class from all balls
+    document.querySelectorAll('.ball.powerball').forEach(ball => {
+        ball.classList.remove('selected');
+        ball.style.backgroundColor = '#e53e3e';
+    });
     
-    if (isSelected) {
-        // Show details for this Powerball number
-        showPowerballDetails(number);
-    } else {
-        // Clear details
-        clearPowerballDetails();
-    }
+    // Add selected class to clicked ball
+    element.classList.add('selected');
+    element.style.backgroundColor = '#2ecc71';
+    
+    // Show detailed data for this Powerball number
+    showPowerballDetails(number);
 }
 
-// Function to show Powerball details
-function showPowerballDetails(powerballNumber) {
-    if (!window.filteredDrawRows) return;
-    
-    const frequencyElement = document.getElementById('powerball-frequency');
-    const historyBody = document.getElementById('powerball-history-body');
-    const statsElement = document.getElementById('powerball-stats-content');
-    
-    if (!frequencyElement || !historyBody || !statsElement) return;
-    
-    // Filter draws that include this Powerball number
-    const matchingDraws = [];
-    const numberCoOccurrences = new Map(); // To track which numbers appear with this Powerball
-    
-    window.filteredDrawRows.forEach(draw => {
-        // Check main draw
-        if (parseInt(draw.mainPowerball) === powerballNumber) {
-            matchingDraws.push({
-                date: draw.date,
-                type: 'Main',
-                numbers: draw.mainArr.join(', ')
-            });
-            
-            // Track number co-occurrences
-            draw.mainArr.forEach(num => {
-                numberCoOccurrences.set(num, (numberCoOccurrences.get(num) || 0) + 1);
-            });
+// Function to show detailed Powerball data
+// Helper to get all k-combos from an array
+function getCombos(arr, k) {
+    const results = [];
+    function helper(start, combo) {
+        if (combo.length === k) {
+            results.push(combo.slice().sort((a,b)=>a-b).join('-'));
+            return;
         }
-        
-        // Check double play draw
-        if (draw.doublePlayArr && parseInt(draw.doublePlayPowerball) === powerballNumber) {
-            matchingDraws.push({
+        for (let i = start; i < arr.length; i++) {
+            combo.push(arr[i]);
+            helper(i+1, combo);
+            combo.pop();
+        }
+    }
+    helper(0, []);
+    return results;
+}
+// Helper to render combo tables
+function comboTableHtml(title, map) {
+    const filtered = Array.from(map.entries()).filter(([,count])=>count>0);
+    if (filtered.length === 0) return '';
+    return `<div style="margin-bottom:18px;"><h4 style='margin:0 0 8px 0;color:#333;'>${title} (more than 2x)</h4><table style='width:100%;background:#f8f9fa;border-radius:8px;padding:0 8px;font-size:1em;margin-bottom:8px;'><thead><tr><th>Combo</th><th>Count</th></tr></thead><tbody>${filtered.sort((a,b)=>b[1]-a[1]).map(([set,count])=>`<tr><td>${set}</td><td>${count}</td></tr>`).join('')}</tbody></table></div>`;
+}
+function showPowerballDetails(number) {
+    if (!window.filteredDrawRows) return;
+    const resultsDiv = document.getElementById('powerball-results');
+    if (!resultsDiv) return;
+    // --- Collect all occurrences and co-occurring numbers ---
+    const occurrences = [];
+    const coOccurringNumbers = {};
+    window.filteredDrawRows.forEach(draw => {
+        // Main draw
+        if (draw.powerball && parseInt(draw.powerball) === number) {
+            occurrences.push({
+                date: draw.date,
+                type: 'Main Draw',
+                numbers: draw.mainArr,
+                powerball: draw.powerball
+            });
+            if (draw.mainArr) {
+                draw.mainArr.forEach(num => {
+                    const n = parseInt(num);
+                    coOccurringNumbers[n] = (coOccurringNumbers[n] || 0) + 1;
+                });
+            }
+        }
+        // Double Play draw
+        if (draw.doublePlayPowerball && parseInt(draw.doublePlayPowerball) === number) {
+            occurrences.push({
                 date: draw.date,
                 type: 'Double Play',
-                numbers: draw.doublePlayArr.join(', ')
+                numbers: draw.doublePlayArr,
+                powerball: draw.doublePlayPowerball
             });
-            
-            // Track number co-occurrences
-            draw.doublePlayArr.forEach(num => {
-                numberCoOccurrences.set(num, (numberCoOccurrences.get(num) || 0) + 1);
-            });
+            if (draw.doublePlayArr) {
+                draw.doublePlayArr.forEach(num => {
+                    const n = parseInt(num);
+                    coOccurringNumbers[n] = (coOccurringNumbers[n] || 0) + 1;
+                });
+            }
         }
     });
-    
-    // Sort by date (newest first)
-    matchingDraws.sort((a, b) => new Date(b.date) - new Date(a.date));
-    
-    // Update frequency display
-    frequencyElement.innerHTML = `<p>Powerball ${powerballNumber} has been drawn <strong>${matchingDraws.length} times</strong> in the available data.</p>`;
-    
-    // Update history table
-    historyBody.innerHTML = '';
-    matchingDraws.forEach(draw => {
-        const row = document.createElement('tr');
-        row.style.borderBottom = '1px solid #eee';
-        
-        const dateCell = document.createElement('td');
-        dateCell.textContent = draw.date;
-        dateCell.style.padding = '8px';
-        
-        const typeCell = document.createElement('td');
-        typeCell.textContent = draw.type;
-        typeCell.style.padding = '8px';
-        
-        const numbersCell = document.createElement('td');
-        numbersCell.textContent = draw.numbers;
-        numbersCell.style.padding = '8px';
-        
-        row.appendChild(dateCell);
-        row.appendChild(typeCell);
-        row.appendChild(numbersCell);
-        
-        historyBody.appendChild(row);
+    // --- Compute duos, trios, quads, fives ---
+    const duoCounts = new Map();
+    const trioCounts = new Map();
+    const quadCounts = new Map();
+    const fiveCounts = new Map();
+    occurrences.forEach(occ => {
+        const nums = (occ.numbers||[]).map(Number).filter(n => n>=1 && n<=69);
+        if (nums.length >= 2) getCombos(nums, 2).forEach(set => duoCounts.set(set, (duoCounts.get(set)||0)+1));
+        if (nums.length >= 3) getCombos(nums, 3).forEach(set => trioCounts.set(set, (trioCounts.get(set)||0)+1));
+        if (nums.length >= 4) getCombos(nums, 4).forEach(set => quadCounts.set(set, (quadCounts.get(set)||0)+1));
+        if (nums.length === 5) {
+            const fiveSet = nums.slice().sort((a,b)=>a-b).join('-');
+            fiveCounts.set(fiveSet, (fiveCounts.get(fiveSet)||0)+1);
+        }
     });
-    
-    // Update statistics
-    const sortedCoOccurrences = Array.from(numberCoOccurrences.entries())
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 10); // Top 10 most frequent co-occurring numbers
-    
-    let statsHtml = `
-        <h4>Top 10 Numbers Drawn with Powerball ${powerballNumber}:</h4>
-        <ul style="padding-left: 20px;">
-    `;
-    
-    sortedCoOccurrences.forEach(([num, count]) => {
-        statsHtml += `<li>Number ${num}: ${count} time${count !== 1 ? 's' : ''}</li>`;
-    });
-    
-    statsHtml += `
-        </ul>
-        <p>Total draws with this Powerball: <strong>${matchingDraws.length}</strong></p>
-    `;
-    
-    statsElement.innerHTML = statsHtml;
-}
-
-// Function to clear Powerball details
-function clearPowerballDetails() {
-    const frequencyElement = document.getElementById('powerball-frequency');
-    const historyBody = document.getElementById('powerball-history-body');
-    const statsElement = document.getElementById('powerball-stats-content');
-    
-    if (frequencyElement) frequencyElement.innerHTML = '';
-    if (historyBody) historyBody.innerHTML = '';
-    if (statsElement) statsElement.innerHTML = '<p>Select a Powerball number to see details.</p>';
-    
-    // Remove selected class from all balls
-    document.querySelectorAll('.powerball.selected').forEach(ball => {
-        ball.classList.remove('selected');
-    });
-}
-
-// --- TRIO TAB FUNCTIONALITY ---
-let allTrioData = [];
-
-function analyzeTrios() {
-    console.log('analyzeTrios called');
-    
-    // Get reference to the trio list container
-    const trioList = document.getElementById('trio-list');
-    
-    // Show loading message
-    if (trioList) {
-        trioList.innerHTML = `
-            <div style="
-                color: #666; 
-                text-align: center; 
-                padding: 30px 20px;
-            ">
-                <div class="spinner" style="
-                    width: 40px;
-                    height: 40px;
-                    margin: 0 auto 15px;
-                    border: 4px solid #f3f3f3;
-                    border-top: 4px solid #3498db;
-                    border-radius: 50%;
-                    animation: spin 1s linear infinite;
-                "></div>
-                <h3 style="margin: 0 0 10px 0; color: #444;">Analyzing Historical Data</h3>
-                <p style="margin: 0; color: #777; font-size: 0.95em;">
-                    Processing lottery draw history to find frequent number combinations...
-                </p>
-            </div>
-            <style>
-                @keyframes spin {
-                    0% { transform: rotate(0deg); }
-                    100% { transform: rotate(360deg); }
-                }
-            </style>`;
-    }
-    
-    // Check if we have draw data
-    if (!window.filteredDrawRows || window.filteredDrawRows.length === 0) {
-        console.error('No draw data available');
-        console.log('filteredDrawRows:', window.filteredDrawRows);
-        
-        // Show error message in the UI
-        if (trioList) {
-            trioList.innerHTML = `
+    // --- Sort co-occurring numbers ---
+    const sortedCoOccurring = Object.entries(coOccurringNumbers)
+        .sort(([,a], [,b]) => b - a)
+        .slice(0, 10); // Top 10
+    // --- Render HTML ---
+    let html = `
+        <div style="background: #fff; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); padding: 20px; margin-bottom: 20px;">
+            <div style="display: flex; align-items: center; margin-bottom: 20px;">
                 <div style="
-                    color: #f44336; 
-                    text-align: center; 
-                    padding: 30px 20px;
-                    background: #fff5f5;
-                    border-radius: 8px;
-                    border: 1px solid #ffcdd2;
-                    margin: 10px 0;
-                ">
-                    <div style="font-size: 2em; margin-bottom: 10px;">⚠️</div>
-                    <h3 style="margin: 0 0 10px 0; color: #d32f2f;">No Draw Data Available</h3>
-                    <p style="margin: 0 0 15px 0; color: #c62828; font-size: 0.95em;">
-                        Unable to load lottery draw history. Please try refreshing the page.
-                    </p>
-                    <button onclick="window.location.reload()" style="
-                        padding: 8px 16px;
-                        background: #f44336;
-                        color: white;
-                        border: none;
-                        border-radius: 4px;
-                        cursor: pointer;
-                        font-size: 0.9em;
-                    ">
-                        Refresh Page
-                    </button>
-                </div>`;
-        }
-        return;
-    }
-    
-    console.log('Processing', window.filteredDrawRows.length, 'draws');
-    console.log('First draw:', window.filteredDrawRows[0]);
-    
-    // Process the data in chunks to avoid blocking the UI
-    setTimeout(() => {
-        processTriosInChunks(window.filteredDrawRows, 0, 50);
-    }, 50);
-}
-
-function processTriosInChunks(draws, startIndex, chunkSize) {
-    const endIndex = Math.min(startIndex + chunkSize, draws.length);
-    console.log(`Processing draws ${startIndex} to ${endIndex-1} of ${draws.length}`);
-    
-    for (let i = startIndex; i < endIndex; i++) {
-        const draw = draws[i];
-        if (!draw.mainArr || draw.mainArr.length < 3) continue;
-        
-        const date = draw.date || 'Unknown date';
-        const sortedDraw = [...draw.mainArr].sort((a, b) => a - b);
-        
-        // Generate all possible trios from this draw
-        for (let i = 0; i < sortedDraw.length - 2; i++) {
-            for (let j = i + 1; j < sortedDraw.length - 1; j++) {
-                for (let k = j + 1; k < sortedDraw.length; k++) {
-                    const trio = [sortedDraw[i], sortedDraw[j], sortedDraw[k]];
-                    const trioKey = trio.join('-');
-                    
-                    if (!trioCounts.has(trioKey)) {
-                        trioCounts.set(trioKey, { count: 0, dates: [], numbers: trio });
-                    }
-                    
-                    const trioData = trioCounts.get(trioKey);
-                    trioData.count++;
-                    if (!trioData.dates.includes(date)) {
-                        trioData.dates.push(date);
-                    }
-                }
-            }
-        }
-    }
-    
-    // If there are more draws to process, schedule the next chunk
-    if (endIndex < draws.length) {
-        setTimeout(() => {
-            processTriosInChunks(draws, endIndex, chunkSize);
-        }, 0);
-    } else {
-        // All draws processed, now analyze the trios
-        analyzeProcessedTrios();
-    }
-}
-
-let trioCounts = new Map(); // Will store all trios and their counts
-
-function analyzeProcessedTrios() {
-    console.log('All draws processed, analyzing trios...');
-    
-    // Convert the map to an array and filter for trios that appear 2+ times
-    allTrioData = Array.from(trioCounts.entries())
-        .filter(([_, data]) => data.count >= 2)
-        .sort((a, b) => b[1].count - a[1].count);
-    
-    console.log('Found', allTrioData.length, 'frequent trios');
-    
-    // Render the trios in the UI
-    renderTrioList();
-    
-    // If we have trios, show the first one's details
-    if (allTrioData.length > 0) {
-        showTrioDetails(0);
-    }
-    
-    // Reset the trio counts for future analysis
-    trioCounts = new Map();
-}
-
-    // The trio analysis is now handled by processTriosInChunks and analyzeProcessedTrios
-    // This code is intentionally left blank as the functionality has been moved
-
-function renderTrioList() {
-    console.log('Rendering trio list with', allTrioData.length, 'trios');
-    const trioList = document.getElementById('trio-list');
-    if (!trioList) {
-        console.error('Trio list element not found');
-        return;
-    }
-    
-    if (allTrioData.length === 0) {
-        console.log('No trios found to display');
-        trioList.innerHTML = `
-            <div style="
-                color: #666; 
-                text-align: center; 
-                padding: 30px 20px;
-                background: #f9f9f9;
-                border-radius: 8px;
-                margin: 10px 0;
-                border: 1px dashed #ddd;
-            ">
-                <div style="font-size: 2em; margin-bottom: 10px;">🔍</div>
-                <h3 style="margin: 0 0 10px 0; color: #444;">No Frequent Trios Found</h3>
-                <p style="margin: 0; color: #777; font-size: 0.95em;">
-                    No number trios found that appeared 2 or more times in the draw history.
-                </p>
-                <button onclick="window.location.reload()" style="
-                    margin-top: 15px;
-                    padding: 8px 16px;
-                    background: #2196f3;
-                    color: white;
-                    border: none;
-                    border-radius: 4px;
-                    cursor: pointer;
-                    font-size: 0.9em;
-                ">
-                    Refresh Data
-                </button>
-            </div>`;
-        return;
-    }
-    
-    console.log('Rendering', allTrioData.length, 'trios');
-    
-    // Add a header with count
-    let html = `
-        <div style="
-            margin-bottom: 15px;
-            padding: 10px;
-            background: #f0f7ff;
-            border-radius: 6px;
-            font-size: 0.9em;
-            color: #1976d2;
-            font-weight: 500;
-        ">
-            Showing ${allTrioData.length} trios that appeared 2+ times
-        </div>
-        <div class="trio-list-container" style="max-height: 600px; overflow-y: auto; padding-right: 5px;">`;
-    
-    allTrioData.forEach(([trioKey, data], index) => {
-        const [n1, n2, n3] = trioKey.split('-').map(Number);
-        html += `
-            <div class="trio-item" data-index="${index}" style="
-                display: flex;
-                justify-content: space-between;
-                align-items: center;
-                padding: 10px 15px;
-                margin-bottom: 8px;
-                background: #fff;
-                border-radius: 8px;
-                box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-                cursor: pointer;
-                transition: all 0.2s;
-            ">
-                <div style="display: flex; gap: 8px; align-items: center;">
-                    <span class="trio-number" style="
-                        display: inline-flex;
-                        align-items: center;
-                        justify-content: center;
-                        width: 28px;
-                        height: 28px;
-                        border-radius: 50%;
-                        background: #ffeb3b;
-                        color: #000;
-                        font-weight: bold;
-                        font-size: 0.9em;
-                    ">${n1}</span>
-                    <span class="trio-number" style="
-                        display: inline-flex;
-                        align-items: center;
-                        justify-content: center;
-                        width: 28px;
-                        height: 28px;
-                        border-radius: 50%;
-                        background: #ff9800;
-                        color: #fff;
-                        font-weight: bold;
-                        font-size: 0.9em;
-                    ">${n2}</span>
-                    <span class="trio-number" style="
-                        display: inline-flex;
-                        align-items: center;
-                        justify-content: center;
-                        width: 28px;
-                        height: 28px;
-                        border-radius: 50%;
-                        background: #f44336;
-                        color: #fff;
-                        font-weight: bold;
-                        font-size: 0.9em;
-                    ">${n3}</span>
+                    width: 50px; height: 50px; border-radius: 50%; background: #e53e3e; 
+                    color: white; display: flex; align-items: center; justify-content: center; 
+                    font-weight: bold; font-size: 1.3em; margin-right: 15px;
+                ">${number}</div>
+                <div>
+                    <h3 style="margin: 0; color: #333;">Powerball ${number}</h3>
+                    <p style="margin: 5px 0 0 0; color: #666;">Appeared ${occurrences.length} times</p>
                 </div>
-                <span style="
-                    background: #e3f2fd;
-                    color: #1976d2;
-                    padding: 4px 10px;
-                    border-radius: 12px;
-                    font-size: 0.85em;
-                    font-weight: 600;
-                ">${data.count}×</span>
-            </div>`;
-    });
-    
-    html += '</div>';
-    trioList.innerHTML = html;
-    
-    // Add click handlers
-    document.querySelectorAll('.trio-item').forEach(item => {
-        item.addEventListener('click', () => showTrioDetails(parseInt(item.getAttribute('data-index'))));
-    });
-}
-
-function showTrioDetails(index) {
-    if (index < 0 || index >= allTrioData.length) return;
-    
-    const [trioKey, data] = allTrioData[index];
-    const [n1, n2, n3] = trioKey.split('-').map(Number);
-    
-    // Update details panel
-    const detailsDiv = document.getElementById('trio-details');
-    if (!detailsDiv) return;
-    
-    let html = `
-        <div style="margin-bottom: 15px;">
-            <div style="display: flex; gap: 10px; justify-content: center; margin-bottom: 15px;">
-                <span class="trio-number" style="
-                    display: inline-flex;
-                    align-items: center;
-                    justify-content: center;
-                    width: 42px;
-                    height: 42px;
-                    border-radius: 50%;
-                    background: #ffeb3b;
-                    color: #000;
-                    font-weight: bold;
-                    font-size: 1.2em;
-                ">${n1}</span>
-                <span class="trio-number" style="
-                    display: inline-flex;
-                    align-items: center;
-                    justify-content: center;
-                    width: 42px;
-                    height: 42px;
-                    border-radius: 50%;
-                    background: #ff9800;
-                    color: #fff;
-                    font-weight: bold;
-                    font-size: 1.2em;
-                ">${n2}</span>
-                <span class="trio-number" style="
-                    display: inline-flex;
-                    align-items: center;
-                    justify-content: center;
-                    width: 42px;
-                    height: 42px;
-                    border-radius: 50%;
-                    background: #f44336;
-                    color: #fff;
-                    font-weight: bold;
-                    font-size: 1.2em;
-                ">${n3}</span>
-                <span style="
-                    display: inline-flex;
-                    align-items: center;
-                    justify-content: center;
-                    background: #e3f2fd;
-                    color: #1976d2;
-                    padding: 4px 12px;
-                    border-radius: 20px;
-                    font-size: 1em;
-                    font-weight: 600;
-                    height: 42px;
-                ">Appeared ${data.count} times</span>
             </div>
-            <h3 style="margin: 15px 0 10px 0; color: #333; font-size: 1.1em;">Draw Dates:</h3>
-            <div style="max-height: 200px; overflow-y: auto; background: #f9f9f9; border-radius: 6px; padding: 10px;">
-                ${data.dates.map(date => `<div style="padding: 5px 0; border-bottom: 1px solid #eee;">${date}</div>`).join('')}
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+                <div>
+                    <h4 style="margin: 0 0 8px 0; color: #333;">Most Common Partners</h4>
+                    <ul style="padding-left: 18px; margin: 0; color: #444;">
+                        ${sortedCoOccurring.length > 0 ? sortedCoOccurring.map(([num, count]) => `<li>${num}: ${count} times</li>`).join('') : '<li>No co-occurring numbers</li>'}
+                    </ul>
+                </div>
+                <div>
+                    <h4 style="margin: 0 0 8px 0; color: #333;">Draw History</h4>
+                    <div style="max-height: 220px; overflow-y: auto; border: 1px solid #eee; border-radius: 6px; background: #fafbfc; padding: 8px 10px;">
+                        ${occurrences.length > 0 ? occurrences.map(occ => `
+                            <div style="padding: 6px 0; border-bottom: 1px solid #f1f1f1; display: flex; flex-direction: column;">
+                                <div style="font-size: 0.96em; color: #444; margin-bottom: 2px;">
+                                    <strong>${occ.date}</strong> - ${occ.type}
+                                </div>
+                                <div style="display: flex; gap: 4px;">
+                                    ${occ.numbers ? occ.numbers.map(num => `
+                                        <span style="
+                                            display: inline-block; width: 24px; height: 24px; 
+                                            border-radius: 50%; background: #3498db; color: white; 
+                                            text-align: center; line-height: 24px; font-size: 0.8em;
+                                        ">${num}</span>
+                                    `).join('') : ''}
+                                    <span style="
+                                        display: inline-block; width: 24px; height: 24px; 
+                                        border-radius: 50%; background: #e53e3e; color: white; 
+                                        text-align: center; line-height: 24px; font-size: 0.8em; margin-left: 8px;
+                                    ">${occ.powerball}</span>
+                                </div>
+                            </div>
+                        `).join('')
+                        : '<div style="color: #999; text-align: center; padding: 20px;">No occurrences found</div>'}
+                    </div>
+                </div>
+            </div>
+            <div style="margin-top:24px;">
+                ${comboTableHtml('Duos', duoCounts)}
+                ${comboTableHtml('Trios', trioCounts)}
+                ${comboTableHtml('Quads', quadCounts)}
+                ${comboTableHtml('Fives', fiveCounts)}
             </div>
         </div>
-        <button id="use-this-trio" style="
-            display: block;
-            width: 100%;
-            padding: 10px;
-            margin-top: 15px;
-            background: linear-gradient(90deg, #4caf50 0%, #8bc34a 100%);
-            color: white;
-            border: none;
-            border-radius: 6px;
-            font-size: 1em;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-        ">
-            Generate Numbers with This Trio
-        </button>`;
-    
-    detailsDiv.innerHTML = html;
-    
-    // Add click handler for the generate button
-    const useTrioBtn = document.getElementById('use-this-trio');
-    if (useTrioBtn) {
-        useTrioBtn.addEventListener('click', () => generateFromTrio(data.numbers));
-    }
+    `;
+    resultsDiv.innerHTML = html;
 }
-
-function generateFromTrio(trio) {
-    // Generate 2 additional unique numbers
-    const exclude = [...trio];
-    const additionalNumbers = [];
-    
-    while (additionalNumbers.length < 2) {
-        const num = Math.floor(Math.random() * 69) + 1;
-        if (!exclude.includes(num) && !additionalNumbers.includes(num)) {
-            additionalNumbers.push(num);
-        }
-    }
-    
-    // Combine and sort the numbers
-    const allNumbers = [...trio, ...additionalNumbers].sort((a, b) => a - b);
-    
-    // Display the result
-    const resultsDiv = document.getElementById('trio-results');
-    if (!resultsDiv) return;
-    
-    resultsDiv.innerHTML = `
-        <div style="text-align: center; padding: 15px;">
-            <h3 style="margin: 0 0 15px 0; color: #333;">Generated Numbers</h3>
-            <div style="display: flex; justify-content: center; gap: 12px; margin-bottom: 15px;">
-                ${allNumbers.map((num, idx) => `
-                    <span style="
-                        display: inline-flex;
-                        align-items: center;
-                        justify-content: center;
-                        width: 46px;
-                        height: 46px;
-                        border-radius: 50%;
-                        background: ${idx < 3 ? '#f44336' : '#2196f3'};
-                        color: white;
-                        font-weight: bold;
-                        font-size: 1.3em;
-                        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-                    ">${num}</span>
-                `).join('')}
-            </div>
-            <div style="color: #666; font-size: 0.9em; margin-top: 10px;">
-                Based on trio: ${trio[0]}-${trio[1]}-${trio[2]}
-            </div>
-        </div>`;
-}
-
-// Add click handler for the generate button in Trio tab
-document.addEventListener('DOMContentLoaded', function() {
-    const generateTrioBtn = document.getElementById('generate-trio-btn');
-    if (generateTrioBtn) {
-        generateTrioBtn.addEventListener('click', function() {
-            if (allTrioData.length === 0) {
-                analyzeTrios();
-                // Wait a moment for analysis to complete
-                setTimeout(() => {
-                    if (allTrioData.length > 0) {
-                        const randomIndex = Math.floor(Math.random() * Math.min(10, allTrioData.length));
-                        generateFromTrio(allTrioData[randomIndex][1].numbers);
-                    }
-                }, 500);
-            } else {
-                const randomIndex = Math.floor(Math.random() * Math.min(10, allTrioData.length));
-                generateFromTrio(allTrioData[randomIndex][1].numbers);
-            }
-        });
-    }
-});
-
-// Initialize Powerball tab when the page loads
-document.addEventListener('DOMContentLoaded', function() {
-    // Add tab click handler for Powerball tab
-    const powerballTab = document.querySelector('.tab-btn[data-tab="powerball"]');
-    if (powerballTab) {
-        powerballTab.addEventListener('click', function() {
-            // Render the ball panel when the tab is clicked
-            renderPowerballBallPanel();
-            
-            // Initialize the stats content
-            const statsElement = document.getElementById('powerball-stats-content');
-            if (statsElement) {
-                statsElement.innerHTML = '<p>Select a Powerball number to see details.</p>';
-            }
-        });
-    }
-});

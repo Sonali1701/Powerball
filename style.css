@@ -445,7 +445,7 @@ body {
     padding: 24px 8px 24px 16px;
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: flex-start;
     border-right: 1.5px solid #eaeaea;
     min-height: 100%;
 }
@@ -774,6 +774,31 @@ body {
 
 .tab-content {
     animation: fadein 0.4s;
+    position: relative;
+    z-index: 1;
+}
+.tab-content[style*="display: block"] {
+    z-index: 10;
+}
+
+.powerball-ball {
+    display: inline-flex !important;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 60px !important;
+    height: 60px !important;
+    border-radius: 50% !important;
+    background: #e53e3e !important;
+    color: white !important;
+    font-weight: bold !important;
+    cursor: pointer !important;
+    margin: 5px !important;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2) !important;
+    z-index: 10 !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    border: none !important;
 }
 
 @media (width <= 700px) {
@@ -978,20 +1003,22 @@ body {
 #tab-combo .ball-panel,
 #tab-main .ball-panel,
 #tab-2x .ball-panel,
-#tab-new .ball-panel {
+#tab-new .ball-panel,
+#tab-powerball .ball-panel {
     display: flex !important;
     flex-flow: row wrap !important;
-    justify-content: center !important;
-    align-items: center !important;
+    justify-content: flex-start !important;
+    align-items: flex-start !important;
     width: 100% !important;
-    max-width: 100vw !important;
+    max-width: 100% !important;
     min-width: 0 !important;
     height: auto !important;
-    margin: 0 auto 24px !important;
-    padding: 8px 0 !important;
+    margin: 0 0 24px 0 !important;
+    padding: 8px !important;
     background: none !important;
     border: none !important;
     box-shadow: none !important;
+    gap: 4px !important;
 }
 
 .ball {
@@ -1120,7 +1147,8 @@ body {
         box-shadow: none;
     }
 
-    #tab-combo .ball-panel {
+    #tab-combo .ball-panel,
+    #tab-powerball .ball-panel {
         max-width: 100%;
     }
 } 
@@ -1482,7 +1510,7 @@ font-size: 1.08em;
         margin-top: 8px;
     }
 
-    #tab-combo .ball-panel, #tab-2x .ball-panel {
+    #tab-combo .ball-panel, #tab-2x .ball-panel, #tab-powerball .ball-panel {
         padding: 8px 2px !important;
         border-radius: 10px;
     }
