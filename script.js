@@ -77,6 +77,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (resultsDiv) resultsDiv.innerHTML = '';
             } else if (tabId === 'trio') {
                 renderTrioTab();
+            } else if (tabId === 'trio2') {
+                renderTrio2Tab();
             } else if (tabId === 'combo45') {
                 renderPowerballCombo45Results();
             } else if (tabId === 'powerball') {
@@ -279,6 +281,215 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
+    // Helper function to parse date string into Date object
+    function parseDrawDate(dateStr) {
+        const [month, day, year] = dateStr.split('/').map(Number);
+        return new Date(2000 + year, month - 1, day);
+    }
+
+    // Render the Trio 2 tab results (uses nearby dates when same-day not available)
+    function renderTrio2Tab() {
+        console.log('Rendering Trio 2 tab...');
+        const resultsDiv = document.getElementById('trio2-results');
+        const comboDiv = document.getElementById('trio2-combo-results');
+        if (!resultsDiv || !comboDiv) {
+            console.error('Missing required DOM elements');
+            return;
+        }
+
+        // First, log the raw filteredDrawRows for debugging
+        console.log('Raw filteredDrawRows:', window.filteredDrawRows ? window.filteredDrawRows.slice(0, 5) : 'No filteredDrawRows');
+
+        // Filter draws from 2015 to 2025 and ensure they have valid numbers
+        const validDraws = (window.filteredDrawRows || [])
+            .filter(draw => {
+                try {
+                    if (!draw || !draw.mainArr || !Array.isArray(draw.mainArr) || draw.mainArr.length !== 5) {
+                        console.log('Skipping invalid draw (missing/invalid mainArr):', draw);
+                        return false;
+                    }
+                    
+                    // Ensure all main numbers are valid
+                    const hasInvalidNumbers = draw.mainArr.some(num => {
+                        const n = parseInt(num, 10);
+                        return isNaN(n) || n < 1 || n > 69;
+                    });
+                    
+                    if (hasInvalidNumbers) {
+                        console.log('Skipping draw with invalid numbers:', draw);
+                        return false;
+                    }
+                    
+                    const dateStr = (draw.date || '').trim();
+                    if (!dateStr) {
+                        console.log('Skipping draw with missing date:', draw);
+                        return false;
+                    }
+                    
+                    const parts = dateStr.split('/');
+                    if (parts.length !== 3) {
+                        console.log('Skipping draw with invalid date format:', dateStr);
+                        return false;
+                    }
+                    
+                    const month = parseInt(parts[0], 10);
+                    const day = parseInt(parts[1], 10);
+                    let year = parseInt(parts[2], 10);
+                    
+                    if (isNaN(month) || isNaN(day) || isNaN(year)) {
+                        console.log('Skipping draw with non-numeric date parts:', dateStr);
+                        return false;
+                    }
+                    
+                    // Handle 2-digit years (assume 20xx for years < 100)
+                    if (year < 100) {
+                        year += 2000;
+                    }
+                    
+                    return year >= 2015 && year <= 2025;
+                } catch (error) {
+                    console.error('Error processing draw:', draw, error);
+                    return false;
+                }
+            })
+            .sort((a, b) => {
+                // Sort draws by date
+                try {
+                    return parseDrawDate(a.date) - parseDrawDate(b.date);
+                } catch (e) {
+                    console.error('Error sorting dates:', e);
+                    return 0;
+                }
+            });
+            
+        console.log(`Found ${validDraws.length} valid draws from 2015-2025`);
+        if (validDraws.length > 0) {
+            console.log('First valid draw:', validDraws[0]);
+            console.log('Last valid draw:', validDraws[validDraws.length - 1]);
+        }
+
+        // Create a sliding window of 3 consecutive draws to find combinations
+        const eligibleTrios = [];
+        const windowSize = 3; // Look at 3 consecutive draws for combinations
+        
+        for (let i = 0; i <= validDraws.length - windowSize; i++) {
+            const windowDraws = validDraws.slice(i, i + windowSize);
+            const windowDates = new Set(windowDraws.map(d => d.date));
+            
+            // Collect all numbers from this window
+            const allNumbers = new Set();
+            windowDraws.forEach(draw => {
+                draw.mainArr.forEach(num => allNumbers.add(num));
+            });
+            
+            // Try to create combinations using numbers from different draws
+            windowDraws.forEach((draw, drawIndex) => {
+                const otherDraws = [...windowDraws];
+                otherDraws.splice(drawIndex, 1); // Remove current draw
+                
+                // Get all possible trios from current draw
+                const trios = getCombos(draw.mainArr, 3);
+                
+                trios.forEach(trio => {
+                    const trioSet = new Set(trio);
+                    const otherNumbers = Array.from(allNumbers).filter(n => !trioSet.has(n));
+                    
+                    if (otherNumbers.length >= 2) {
+                        eligibleTrios.push({
+                            trio: trio,
+                            date: draw.date,
+                            otherNumbers: otherNumbers,
+                            source: `Draws from ${windowDraws[0].date} to ${windowDraws[windowDraws.length-1].date}`
+                        });
+                    }
+                });
+            });
+        }
+        
+        console.log(`Found ${eligibleTrios.length} eligible trios in nearby draws`);
+
+        if (eligibleTrios.length === 0) {
+            resultsDiv.innerHTML = `
+                <div style="color:#e74c3c; text-align:center; padding:20px;">
+                    <h3>No eligible trios found with nearby draw numbers.</h3>
+                    <p>This could be because there aren't enough consecutive draws with overlapping numbers.</p>
+                </div>
+            `;
+            return;
+        }
+
+        // UI header and button
+        resultsDiv.innerHTML = `
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;gap:12px;">
+                <h2 style="margin:0;color:#3498db;font-size:1.3em;font-weight:700;letter-spacing:1px;">
+                    Powerball Trio Generator (2015-2025)
+                    <div style="font-size:0.8em;color:#666;font-weight:normal;margin-top:4px;">
+                        Using numbers from nearby draws when same-day not available
+                    </div>
+                </h2>
+                <button id="trio2-generate-btn" style="padding:10px 28px;font-size:1.13em;border-radius:8px;border:1.5px solid #3498db;background:#fff;color:#3498db;cursor:pointer;font-weight:600;transition:background 0.18s;">
+                    Generate New Combinations
+                </button>
+            </div>
+            <div id="trio2-cards-container"></div>
+        `;
+
+        function generateTrio2Outputs() {
+            // Shuffle and pick 20 random eligible trios
+            const shuffled = [...eligibleTrios].sort(() => 0.5 - Math.random()).slice(0, 20);
+            let cardsHtml = `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:18px;">`;
+            
+            shuffled.forEach(({trio, date, otherNumbers, source}) => {
+                // Pick 2 random numbers from the other numbers
+                const random2 = [];
+                const available = [...otherNumbers];
+                for (let i = 0; i < 2 && available.length > 0; i++) {
+                    const idx = Math.floor(Math.random() * available.length);
+                    random2.push(available.splice(idx, 1)[0]);
+                }
+                
+                const combo = [...trio, ...random2].sort((a, b) => a - b);
+                
+                cardsHtml += `
+                    <div style="background:#f8faff;border-radius:13px;box-shadow:0 2px 12px rgb(44 62 80 / 10%);padding:22px 18px 18px 18px;display:flex;flex-direction:column;align-items:center;">
+                        <div style="font-size:1.15em;font-weight:600;color:#234;letter-spacing:0.5px;margin-bottom:6px;">
+                            Trio: <span style='color:#e67e22;'>${trio.join('-')}</span>
+                        </div>
+                        <div style="margin-bottom:8px;font-size:1.08em;color:#555;">
+                            Date: <span style='color:#3498db;'>${date}</span>
+                        </div>
+                        <div style="margin-bottom:8px;font-size:0.9em;color:#888;text-align:center;font-style:italic;">
+                            ${source}
+                        </div>
+                        <div style="margin:10px 0 0 0;font-size:1.18em;font-weight:700;letter-spacing:1.2px;background:#27ae60;color:#fff;padding:8px 18px;border-radius:7px;">
+                            ${combo.join('-')}
+                        </div>
+                    </div>
+                `;
+            });
+            
+            cardsHtml += `</div>`;
+            document.getElementById('trio2-cards-container').innerHTML = cardsHtml;
+        }
+
+        // Initial output
+        generateTrio2Outputs();
+        
+        // Button handler
+        setTimeout(() => {
+            const btn = document.getElementById('trio2-generate-btn');
+            if (btn) btn.onclick = generateTrio2Outputs;
+        }, 0);
+    }
+
+    // Add a function to initialize the Trio 2 tab after data is loaded
+    function initializeTrio2Tab() {
+        console.log('Initializing Trio 2 tab with', window.filteredDrawRows ? window.filteredDrawRows.length : 0, 'draws');
+        if (window.filteredDrawRows && window.filteredDrawRows.length > 0) {
+            renderTrio2Tab();
+        }
+    }
+
     // Load the data
     fetch('powerball.csv')
         .then(response => response.text())
@@ -391,14 +602,15 @@ document.addEventListener('DOMContentLoaded', function() {
                             window.filteredDrawRows.push(drawObj);
                         }
                     }
-                    // 1. Filter out draws before 2024 (fix: extract year from MM/DD/YYYY format)
-                    // [MODIFIED] Show draws from 2016 through 2025 (inclusive) for 2x tab and others using filteredDrawRows
+                    // Filter draws to include only those from 2015-2025
                     window.filteredDrawRows = drawRows.filter(draw => {
                         const dateStr = (draw.date || '').trim();
                         const parts = dateStr.split('/');
-                        const year = parts.length === 3 ? parseInt(parts[2], 10) : 0;
-                        return year >= 2016 && year <= 2025;
-                    }); // <-- Now includes full history from 2016
+                        if (parts.length !== 3) return false;
+                        const year = parseInt(parts[2], 10);
+                        const fullYear = year < 100 ? 2000 + year : year; // Handle both 2-digit and 4-digit years
+                        return fullYear >= 2015 && fullYear <= 2025;
+                    });
                     console.log('[DEBUG] window.filteredDrawRows length:', window.filteredDrawRows.length);
                     if (window.filteredDrawRows.length > 0) console.log('[DEBUG] Sample window.filteredDrawRows:', window.filteredDrawRows.slice(0, 2));
                     // After filteredDrawRows is ready, render the combo table if present
@@ -4047,11 +4259,41 @@ function getCombos(arr, k) {
     helper(0, []);
     return results;
 }
-// Helper to render combo tables
+// Helper to render combo tables with dates
 function comboTableHtml(title, map) {
-    const filtered = Array.from(map.entries()).filter(([,count])=>count>0);
-    if (filtered.length === 0) return '';
-    return `<div style="margin-bottom:18px;"><h4 style='margin:0 0 8px 0;color:#333;'>${title} (more than 2x)</h4><table style='width:100%;background:#f8f9fa;border-radius:8px;padding:0 8px;font-size:1em;margin-bottom:8px;'><thead><tr><th>Combo</th><th>Count</th></tr></thead><tbody>${filtered.sort((a,b)=>b[1]-a[1]).map(([set,count])=>`<tr><td>${set}</td><td>${count}</td></tr>`).join('')}</tbody></table></div>`;
+    const entries = Array.from(map.entries());
+    if (entries.length === 0) return '';
+    
+    // Sort entries by count (descending)
+    entries.sort((a, b) => b[1].count - a[1].count);
+    
+    return `
+    <div style="margin-bottom:24px;">
+        <h4 style='margin:0 0 12px 0;color:#333;font-size:1.1em;'>${title}</h4>
+        <div style="max-height: 300px; overflow-y: auto; border: 1px solid #e0e0e0; border-radius: 8px; padding: 12px;">
+            ${entries.map(([set, data]) => {
+                const datesHtml = data.dates
+                    .sort((a, b) => new Date(b.date) - new Date(a.date)) // Sort dates newest first
+                    .map(d => `
+                        <div style="display: flex; justify-content: space-between; padding: 6px 8px; border-bottom: 1px solid #f0f0f0;">
+                            <span>${d.date}</span>
+                            <span style="color: #666; font-size: 0.9em;">${d.type}</span>
+                        </div>
+                    `).join('');
+                
+                return `
+                <div style="margin-bottom: 12px; background: #fff; border-radius: 6px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                    <div style="background: #f5f5f5; padding: 8px 12px; font-weight: bold; display: flex; justify-content: space-between;">
+                        <span>${set}</span>
+                        <span style="color: #e53e3e;">${data.count} ${data.count === 1 ? 'time' : 'times'}</span>
+                    </div>
+                    <div style="max-height: 120px; overflow-y: auto;">
+                        ${datesHtml}
+                    </div>
+                </div>`;
+            }).join('')}
+        </div>
+    </div>`;
 }
 function showPowerballDetails(number) {
     if (!window.filteredDrawRows) return;
@@ -4092,19 +4334,50 @@ function showPowerballDetails(number) {
             }
         }
     });
-    // --- Compute duos, trios, quads, fives ---
+    // --- Compute duos, trios, quads, fives with dates ---
     const duoCounts = new Map();
     const trioCounts = new Map();
     const quadCounts = new Map();
     const fiveCounts = new Map();
+    
     occurrences.forEach(occ => {
         const nums = (occ.numbers||[]).map(Number).filter(n => n>=1 && n<=69);
-        if (nums.length >= 2) getCombos(nums, 2).forEach(set => duoCounts.set(set, (duoCounts.get(set)||0)+1));
-        if (nums.length >= 3) getCombos(nums, 3).forEach(set => trioCounts.set(set, (trioCounts.get(set)||0)+1));
-        if (nums.length >= 4) getCombos(nums, 4).forEach(set => quadCounts.set(set, (quadCounts.get(set)||0)+1));
+        const drawDate = occ.date;
+        const drawType = occ.type;
+        
+        // Track duos with dates
+        if (nums.length >= 2) {
+            getCombos(nums, 2).forEach(set => {
+                if (!duoCounts.has(set)) duoCounts.set(set, {count: 0, dates: []});
+                duoCounts.get(set).count++;
+                duoCounts.get(set).dates.push({date: drawDate, type: drawType});
+            });
+        }
+        
+        // Track trios with dates
+        if (nums.length >= 3) {
+            getCombos(nums, 3).forEach(set => {
+                if (!trioCounts.has(set)) trioCounts.set(set, {count: 0, dates: []});
+                trioCounts.get(set).count++;
+                trioCounts.get(set).dates.push({date: drawDate, type: drawType});
+            });
+        }
+        
+        // Track quads with dates
+        if (nums.length >= 4) {
+            getCombos(nums, 4).forEach(set => {
+                if (!quadCounts.has(set)) quadCounts.set(set, {count: 0, dates: []});
+                quadCounts.get(set).count++;
+                quadCounts.get(set).dates.push({date: drawDate, type: drawType});
+            });
+        }
+        
+        // Track full combinations (5 numbers) with dates
         if (nums.length === 5) {
-            const fiveSet = nums.slice().sort((a,b)=>a-b).join('-');
-            fiveCounts.set(fiveSet, (fiveCounts.get(fiveSet)||0)+1);
+            const fiveSet = nums.slice().sort((a,b) => a-b).join('-');
+            if (!fiveCounts.has(fiveSet)) fiveCounts.set(fiveSet, {count: 0, dates: []});
+            fiveCounts.get(fiveSet).count++;
+            fiveCounts.get(fiveSet).dates.push({date: drawDate, type: drawType});
         }
     });
     // --- Sort co-occurring numbers ---
@@ -4161,10 +4434,27 @@ function showPowerballDetails(number) {
                 </div>
             </div>
             <div style="margin-top:24px;">
-                ${comboTableHtml('Duos', duoCounts)}
-                ${comboTableHtml('Trios', trioCounts)}
-                ${comboTableHtml('Quads', quadCounts)}
-                ${comboTableHtml('Fives', fiveCounts)}
+                <h3 style="color: #333; border-bottom: 2px solid #e53e3e; padding-bottom: 8px; margin-bottom: 16px;">Combination History with Powerball ${number}</h3>
+                
+                <div style="margin-bottom: 30px;">
+                    <h4 style="color: #2c3e50; margin: 0 0 12px 0; font-size: 1.1em;">Number Pairs (2 numbers)</h4>
+                    ${comboTableHtml('', duoCounts)}
+                </div>
+                
+                <div style="margin-bottom: 30px;">
+                    <h4 style="color: #2c3e50; margin: 0 0 12px 0; font-size: 1.1em;">Number Trios (3 numbers)</h4>
+                    ${comboTableHtml('', trioCounts)}
+                </div>
+                
+                <div style="margin-bottom: 30px;">
+                    <h4 style="color: #2c3e50; margin: 0 0 12px 0; font-size: 1.1em;">Number Quads (4 numbers)</h4>
+                    ${comboTableHtml('', quadCounts)}
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <h4 style="color: #2c3e50; margin: 0 0 12px 0; font-size: 1.1em;">Full Combinations (5 numbers)</h4>
+                    ${comboTableHtml('', fiveCounts)}
+                </div>
             </div>
         </div>
     `;
