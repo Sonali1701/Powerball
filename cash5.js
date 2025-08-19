@@ -532,7 +532,7 @@ document.addEventListener('DOMContentLoaded', function() {
         // Use requestAnimationFrame for smoother UI updates
         requestAnimationFrame(() => {
             let html = `<div class='result-meta'>Showing results from 2015 to 2025</div>`;
-            html += `<table class='results-table cash5-wide results-table-interactive'><thead><tr><th>Date</th><th>Winning Numbers</th><th>Multiplier</th></tr></thead><tbody>`;
+            html += `<table class='results-table cash5-wide results-table-interactive'><thead><tr><th>Date</th><th>Winning Numbers</th></tr></thead><tbody>`;
             
             // Filter draws to only include 2015-2025 and sort by date (newest first)
             const draws = (window.cash5DrawRows || [])
@@ -555,12 +555,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 html += `
                     <tr tabindex='0'>
                         <td>${draw.date||''}</td>
-                        <td>${draw.mainArr.map(n => 
-                            selected.includes(n) 
+                        <td>${draw.mainArr.map((n, index) => {
+                            const numElement = selected.includes(n) 
                                 ? `<span class='ball selected' style='margin:0 2px;'>${n}</span>` 
-                                : `<span class='plain-number'>${n}</span>`
-                        ).join(' ')}</td>
-                        <td>${draw.multiplier||''}</td>
+                                : `<span class='plain-number'>${n}</span>`;
+                            // Add a dash after the number if it's not the last one
+                            return index < draw.mainArr.length - 1 ? numElement + ' - ' : numElement;
+                        }).join('')}</td>
                     </tr>`;
             });
             

@@ -444,7 +444,6 @@
       <div class="generator-title">Random Number Generator</div>
       <nav class="tab-nav">
         <button class="tab-btn active" data-tab="home">Quick Generator</button>
-        <button class="tab-btn" data-tab="history">History</button>
         
       </nav>
       <div id="home-tab" class="tab-content" style="display:block;">
@@ -991,8 +990,8 @@
         const tripletCounts = new Map();
         console.log('Number of draws to analyze:', allMainDraws.length);
         
-        // Only use draws from 2024 and 2025
-        const filteredDraws = allMainDraws.filter(d => d.year === 2024 || d.year === 2025);
+        // Use draws from 2023, 2024, and 2025
+        const filteredDraws = allMainDraws.filter(d => d.year === 2023 || d.year === 2024 || d.year === 2025);
         filteredDraws.forEach(drawObj => {
             const sortedDraw = [...drawObj.arr].sort((a, b) => a - b);
             
