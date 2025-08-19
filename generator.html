@@ -460,7 +460,8 @@
                 <button class="multi-gen-btn" data-count="4">Generate 4</button>
                 <button class="multi-gen-btn" data-count="8">Generate 8</button>
                 <button class="multi-gen-btn" data-count="16">Generate 16</button>
-                <button id="generate-from-trios" class="multi-gen-btn" style="background: #9b59b6; color: white;">From Frequent Trios</button>
+                <button id="generate-from-trios" class="multi-gen-btn" style="background: #9b59b6; color: white; margin-bottom: 8px;">From Frequent Trios</button>
+                <button id="generate-from-overlapping-trios" class="multi-gen-btn" style="background: #e74c3c; color: white;">From Overlapping Trios</button>
               </div>
               <div id="generated-table" style="margin-top:18px; min-height: 200px; border: 1px solid #e0e0e0; border-radius: 8px; padding: 15px; background: white; box-shadow: 0 2px 8px rgba(0,0,0,0.05);"></div>
               <div id="csv-loading" style="margin-top:10px; color:#888; font-size:1.05em;"></div>
@@ -629,7 +630,120 @@
         }
     }
     
-    function renderCombinations(n, useFrequentTrios = false) {
+    function generateFromOverlappingTrios() {
+        console.log('generateFromOverlappingTrios called');
+        
+        if (!window.sortedTriplets || window.sortedTriplets.length < 2) {
+            console.error('Not enough trios available');
+            alert('Loading trios data... Please try again in a moment.');
+            return [1, 2, 3, 4, 5];
+        }
+        
+        try {
+            // Get top 20 most frequent trios for better chance of overlap
+            const topTrios = window.sortedTriplets.slice(0, 20);
+            
+            // Try to find two trios that share exactly one number
+            let trio1, trio2, commonNumber;
+            const maxAttempts = 50; // Prevent infinite loops
+            let attempts = 0;
+            
+            while (attempts < maxAttempts) {
+                // Pick two different random trios
+                const index1 = Math.floor(Math.random() * topTrios.length);
+                let index2;
+                do {
+                    index2 = Math.floor(Math.random() * topTrios.length);
+                } while (index2 === index1);
+                
+                const trio1Nums = topTrios[index1][0].split('-').map(Number);
+                const trio2Nums = topTrios[index2][0].split('-').map(Number);
+                
+                // Find common numbers between the two trios
+                const commonNumbers = trio1Nums.filter(num => trio2Nums.includes(num));
+                
+                if (commonNumbers.length === 1) {
+                    // Found two trios with exactly one common number
+                    trio1 = topTrios[index1];
+                    trio2 = topTrios[index2];
+                    commonNumber = commonNumbers[0];
+                    break;
+                }
+                
+                attempts++;
+            }
+            
+            if (!trio1 || !trio2) {
+                console.log('Could not find overlapping trios, falling back to random trios');
+                // Fall back to any two trios and take their union
+                const index1 = Math.floor(Math.random() * topTrios.length);
+                let index2;
+                do {
+                    index2 = Math.floor(Math.random() * topTrios.length);
+                } while (index2 === index1);
+                
+                trio1 = topTrios[index1];
+                trio2 = topTrios[index2];
+                
+                const trio1Nums = trio1[0].split('-').map(Number);
+                const trio2Nums = trio2[0].split('-').map(Number);
+                commonNumber = trio1Nums.find(num => trio2Nums.includes(num)) || trio1Nums[0];
+            }
+            
+            // Get all unique numbers from both trios
+            const combinedNums = [...new Set([
+                ...trio1[0].split('-').map(Number),
+                ...trio2[0].split('-').map(Number)
+            ])];
+            
+            // If we have exactly 5 numbers, use them
+            if (combinedNums.length === 5) {
+                return {
+                    combination: combinedNums.sort((a, b) => a - b),
+                    basedOnTrio: `Overlap: ${trio1[0]} & ${trio2[0]}`,
+                    isOverlap: true
+                };
+            }
+            
+            // If we have more than 5 numbers, take the common number and 4 others
+            if (combinedNums.length > 5) {
+                // Keep the common number and pick 4 others randomly
+                const otherNums = combinedNums.filter(n => n !== commonNumber);
+                const selectedOthers = [];
+                
+                // Randomly select 4 other numbers
+                while (selectedOthers.length < 4 && otherNums.length > 0) {
+                    const randomIndex = Math.floor(Math.random() * otherNums.length);
+                    selectedOthers.push(otherNums.splice(randomIndex, 1)[0]);
+                }
+                
+                const combination = [commonNumber, ...selectedOthers].sort((a, b) => a - b);
+                return {
+                    combination,
+                    basedOnTrio: `Overlap: ${trio1[0]} & ${trio2[0]}`,
+                    isOverlap: true
+                };
+            }
+            
+            // If we have less than 5 numbers, fill with random unique numbers
+            const exclude = [...combinedNums];
+            const additionalNumbers = generateUniqueNumbers(5 - combinedNums.length, 1, 69, exclude);
+            const combination = [...combinedNums, ...additionalNumbers].sort((a, b) => a - b);
+            
+            return {
+                combination,
+                basedOnTrio: `Overlap: ${trio1[0]} & ${trio2[0]}`,
+                isOverlap: true
+            };
+            
+        } catch (error) {
+            console.error('Error in generateFromOverlappingTrios:', error);
+            // Fallback to regular trio generation on error
+            return generateFromFrequentTrios();
+        }
+    }
+    
+    function renderCombinations(n, useFrequentTrios = false, useOverlappingTrios = false) {
         // Ensure n is a valid number
         const count = parseInt(n, 10);
         if (isNaN(count) || count <= 0) {
@@ -697,14 +811,17 @@
 
         for (let i = 0; i < count; i++) {
             try {
-                // Create combination based on frequent trios
+                // Create combination based on frequent or overlapping trios
                 let mainNumbers, basedOnTrio = '';
-                if (useFrequentTrios) {
-                    const result = generateFromFrequentTrios();
+                
+                if (useFrequentTrios || useOverlappingTrios) {
+                    const result = useOverlappingTrios 
+                        ? generateFromOverlappingTrios() 
+                        : generateFromFrequentTrios();
+                    
                     if (result && result.combination) {
                         mainNumbers = result.combination;
                         basedOnTrio = result.basedOnTrio || '';
-                        console.log(`Generated combo ${i+1}:`, mainNumbers, 'Based on trio:', basedOnTrio);
                     } else {
                         console.error('Failed to generate combination from trios, falling back to random');
                         mainNumbers = generateCombination().mainNumbers;
@@ -712,16 +829,9 @@
                 } else {
                     mainNumbers = generateCombination().mainNumbers;
                 }
-                
-                if (!mainNumbers || !Array.isArray(mainNumbers)) {
-                    console.error('Invalid mainNumbers:', mainNumbers);
-                    continue;
-                }
-                
+
                 const tr = document.createElement('tr');
                 tr.style.borderBottom = '1px solid #f5f5f5';
-                
-                // Style the row
                 tr.style.backgroundColor = 'white';
                 tr.style.borderRadius = '8px';
                 tr.style.boxShadow = '0 2px 8px rgba(0,0,0,0.05)';
@@ -746,13 +856,14 @@
                 td2.style.fontWeight = 'bold';
                 td2.style.color = '#2c3e50';
                 td2.style.border = 'none';
-                if (!useFrequentTrios) {
+                
+                if (!useFrequentTrios && !useOverlappingTrios) {
                     td2.style.borderRadius = '0 8px 8px 0';
                 }
                 tr.appendChild(td2);
                 
                 // Add trio info if needed
-                if (useFrequentTrios) {
+                if (useFrequentTrios || useOverlappingTrios) {
                     const td3 = document.createElement('td');
                     td3.textContent = basedOnTrio;
                     td3.style.padding = '12px 8px';
@@ -764,7 +875,6 @@
                 }
                 
                 tbody.appendChild(tr);
-                
             } catch (error) {
                 console.error(`Error generating combination ${i+1}:`, error);
             }
@@ -788,11 +898,18 @@
         console.log('Table rendered with', count, 'combinations');
         console.log('Container dimensions:', container.offsetWidth, 'x', container.offsetHeight);
     }
+    
     // Handle regular number generation buttons
-    document.querySelectorAll('.multi-gen-btn:not(#generate-from-trios)').forEach(btn => {
-        btn.onclick = () => {
-            renderCombinations(parseInt(btn.dataset.count), false);
+    document.querySelectorAll('.multi-gen-btn:not(#generate-from-trios):not(#generate-from-overlapping-trios)').forEach(btn => {
+        btn.onclick = function() {
+            const count = parseInt(this.getAttribute('data-count') || '1', 10);
+            renderCombinations(count);
         };
+    });
+    
+    // Handle overlapping trios button
+    document.getElementById('generate-from-overlapping-trios').addEventListener('click', function() {
+        renderCombinations(5, false, true);
     });
     
     // Handle frequent trios button
