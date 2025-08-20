@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PowerBall Analyzer & Generator</title>               
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 </head>
 <body>
     <div class="lottery-banner" style="background: linear-gradient(90deg, #ffe066 0%, #e74c3c 100%); color: #234; font-size: 2em; font-weight: bold; text-align: center; padding: 18px 0 10px 0; letter-spacing: 2px; box-shadow: 0 2px 6px rgba(0,0,0,0.07); margin-bottom: 8px; border-bottom: 4px solid #e74c3c;">
@@ -144,14 +145,23 @@
                     </div>
                 </div>
                 <div id="combo45-results" style="width: 100%;"></div>
-            </div>
-            <!-- Right column for 5th number details -->
-            <div class="right-col" id="combo45-details-panel" style="width: 300px; margin-left: 20px; background: #fff; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 15px; align-self: flex-start; position: sticky; top: 20px;">
-                <h3 style="margin-top: 0; color: #2c3e50; font-size: 1.1em; padding-bottom: 8px; border-bottom: 1px solid #e0e0e0;">5th Number Details</h3>
-                <div id="combo45-details-content" style="min-height: 100px; color: #666; font-style: italic; display: flex; align-items: center; justify-content: center;">
-                    Click on a 4-number combination's frequency to see the 5th number and draw dates here.
+                
+                <!-- 5th Number Details Section -->
+                <div id="combo45-details-panel" style="width: 100%; margin: 40px 0 20px 0; background: #fff; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); padding: 25px; clear: both; border: 1px solid #e9ecf1;">
+                    <h3 style="margin: 0 0 15px 0; color: #2c3e50; font-size: 1.3em; font-weight: 600; padding-bottom: 12px; border-bottom: 2px solid #f0f2f5; letter-spacing: 0.5px;">
+                        <i class="fas fa-info-circle" style="margin-right: 8px; color: #3498db;"></i>
+                        5th Number Details
+                    </h3>
+                    <div id="combo45-details-content" style="min-height: 120px; color: #4a5568; padding: 20px; background: #f8fafc; border-radius: 8px; margin-top: 15px; font-size: 1.05em; line-height: 1.6; border: 1px solid #edf2f7; transition: all 0.3s ease;">
+                        <div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #718096; font-style: italic;">
+                            <i class="fas fa-mouse-pointer" style="margin-right: 8px; color: #a0aec0;"></i>
+                            Click on a 4-number combination's frequency to see the 5th number and draw dates here.
+                        </div>
+                    </div>
                 </div>
             </div>
+            <!-- Right column for 5th number details -->
+            <!-- Right column removed from here -->
         </div>
     </div>
     <!-- 2x Tab Content -->
