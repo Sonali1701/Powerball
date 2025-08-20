@@ -602,15 +602,8 @@ document.addEventListener('DOMContentLoaded', function() {
                             window.filteredDrawRows.push(drawObj);
                         }
                     }
-                    // Filter draws to include only those from 2015-2025
-                    window.filteredDrawRows = drawRows.filter(draw => {
-                        const dateStr = (draw.date || '').trim();
-                        const parts = dateStr.split('/');
-                        if (parts.length !== 3) return false;
-                        const year = parseInt(parts[2], 10);
-                        const fullYear = year < 100 ? 2000 + year : year; // Handle both 2-digit and 4-digit years
-                        return fullYear >= 2015 && fullYear <= 2025;
-                    });
+                    // Use all available draw data
+                    window.filteredDrawRows = drawRows;
                     console.log('[DEBUG] window.filteredDrawRows length:', window.filteredDrawRows.length);
                     if (window.filteredDrawRows.length > 0) console.log('[DEBUG] Sample window.filteredDrawRows:', window.filteredDrawRows.slice(0, 2));
                     // After filteredDrawRows is ready, render the combo table if present
@@ -1560,19 +1553,42 @@ function generateCombinations(numbers, size) {
 function countPowerballCombinations(draws, comboSize) {
     const comboMap = new Map();
     
-    draws.forEach(draw => {
-        const numbers = [...draw.mainArr].sort((a, b) => a - b);
-        const drawDate = draw.date || 'Unknown date';
-        const combinations = generateCombinations(numbers, comboSize);
+    function processNumberSet(numbers, drawDate, isDoublePlay = false) {
+        if (!numbers || numbers.length < comboSize) return;
+        
+        const combinations = generateCombinations([...numbers].sort((a, b) => a - b), comboSize);
+        const dateSuffix = isDoublePlay ? ' (Double Play)' : '';
         
         combinations.forEach(combo => {
             const key = combo.join(',');
             const existing = comboMap.get(key) || { count: 0, dates: [] };
             comboMap.set(key, {
                 count: existing.count + 1,
-                dates: [...existing.dates, drawDate].sort().reverse()
+                dates: [...existing.dates, drawDate + dateSuffix].sort().reverse()
             });
+            
+            // Debug: Log specific combination we're looking for
+            if (key === '40,41,64,65' || key === '40,41,64,65,66' || key === '40,41,64,65,67') {
+                console.log(`[DEBUG] Found combination ${key} in ${isDoublePlay ? 'Double Play ' : ''}draw on ${drawDate}:`, numbers);
+            }
         });
+    }
+    
+    draws.forEach(draw => {
+        // Process main numbers
+        processNumberSet(draw.mainArr, draw.date, false);
+        
+        // Process Double Play numbers if available
+        if (draw.doublePlayArr && draw.doublePlayArr.length >= comboSize) {
+            processNumberSet(draw.doublePlayArr, draw.date, true);
+        }
+    });
+    
+    // Debug: Log all combinations that include 40,41,64,65
+    comboMap.forEach((value, key) => {
+        if (key.includes('40,41,64,65') || key === '40,41,64,65') {
+            console.log(`[DEBUG] Combo ${key} appears ${value.count} times on dates:`, value.dates);
+        }
     });
     
     return comboMap;
@@ -1881,10 +1897,13 @@ function updatePowerballCombo45Display(fourNumberResults, fiveNumberResults) {
     if (!resultsContainer) return;
     
     // Generate the final HTML with both tables stacked vertically
+    // For the main tables, show only combos that appear at least twice
+    const filteredFiveNumberResults = fiveNumberResults.filter(combo => combo.count >= 2);
+    
     let html = `
         <div style="margin-top: 20px;">
             ${generateComboTable(fourNumberResults, '4-Number Combinations')}
-            ${generateComboTable(fiveNumberResults, '5-Number Combinations')}
+            ${generateComboTable(filteredFiveNumberResults, '5-Number Combinations')}
         </div>
     `;
     
@@ -1905,16 +1924,9 @@ function renderPowerballCombo45Results() {
     const resultsContainer = document.getElementById('combo45-results');
     if (!resultsContainer || !window.filteredDrawRows) return;
     
-    // Filter valid draws (only main numbers, no Powerball) and filter by date range (2016-2025)
+    // Filter valid draws (only main numbers, no Powerball)
     const validDraws = window.filteredDrawRows.filter(draw => {
-        if (!draw || !Array.isArray(draw.mainArr) || draw.mainArr.length !== 5) return false;
-        
-        // Check if the draw is within the date range (2016-2025)
-        if (draw.date) {
-            const year = new Date(draw.date).getFullYear();
-            return year >= 2016 && year <= 2025;
-        }
-        return true; // Include if date is not available
+        return draw && Array.isArray(draw.mainArr) && draw.mainArr.length === 5;
     });
     
     // Count 4-number and 5-number combinations with dates
@@ -1922,10 +1934,11 @@ function renderPowerballCombo45Results() {
     const fiveNumberCombos = countPowerballCombinations(validDraws, 5);
     
     // Process and filter combinations
-    const processCombos = (comboMap, comboSize) => {
+    const processCombos = (comboMap, comboSize, minCount = 1) => {
         const combos = [];
         comboMap.forEach((comboData, comboStr) => {
-            if (comboData.count >= 2) {
+            // Include all combinations that meet the minimum count
+            if (comboData.count >= minCount) {
                 combos.push({
                     numbers: comboStr.split(',').map(Number).sort((a, b) => a - b),
                     count: comboData.count,
@@ -1942,8 +1955,12 @@ function renderPowerballCombo45Results() {
         });
     };
     
-    const fourNumberResults = processCombos(fourNumberCombos, 4);
-    const fiveNumberResults = processCombos(fiveNumberCombos, 5);
+    // Only show combos that appear at least twice in both tables
+    const fourNumberResults = processCombos(fourNumberCombos, 4, 2);
+    const fiveNumberResults = processCombos(fiveNumberCombos, 5, 2);
+    
+    // Store fiveNumberCombos in a variable accessible to the click handler
+    const fiveNumberCombosLocal = fiveNumberCombos;
     
     // Generate HTML for a combo table with enhanced features
     const generateComboTable = (combos, title) => {
@@ -2038,13 +2055,40 @@ function renderPowerballCombo45Results() {
             ballsCell.style.verticalAlign = 'middle';
             ballsCell.style.transition = 'background-color 0.15s ease';
             
-            // Add hover effect to row
-            row.addEventListener('mouseenter', () => {
-                ballsCell.style.backgroundColor = '#f8f9fa';
-            });
+            // Create count cell
+            const countCell = document.createElement('td');
+            countCell.textContent = combo.count + '×';
+            countCell.style.padding = '16px';
+            countCell.style.textAlign = 'center';
+            countCell.style.borderBottom = '1px solid #e9ecef';
+            countCell.style.fontWeight = 'bold';
+            countCell.style.verticalAlign = 'middle';
+            countCell.style.color = '#2c3e50';
+            countCell.style.fontSize = '1.05em';
+            countCell.style.transition = 'background-color 0.15s ease';
             
-            row.addEventListener('mouseleave', () => {
-                ballsCell.style.backgroundColor = '';
+            // Add hover effect to row
+            const highlightRow = () => {
+                row.style.backgroundColor = '#f0f7ff';
+                countCell.style.color = '#1a73e8';
+            };
+            
+            const unhighlightRow = () => {
+                row.style.backgroundColor = '';
+                countCell.style.color = '#3498db';
+            };
+            
+            // Add click event listeners
+            countCell.addEventListener('mouseenter', highlightRow);
+            row.addEventListener('mouseenter', highlightRow);
+            
+            countCell.addEventListener('mouseleave', unhighlightRow);
+            row.addEventListener('mouseleave', unhighlightRow);
+            
+            // Add click event listener to show details
+            countCell.addEventListener('click', (e) => {
+                e.stopPropagation();
+                handleFrequencyClick();
             });
             
             const ballsContainer = document.createElement('div');
@@ -2100,17 +2144,7 @@ function renderPowerballCombo45Results() {
             
             ballsCell.appendChild(ballsContainer);
             
-            // Create count cell
-            const countCell = document.createElement('td');
-            countCell.textContent = combo.count + '×';
-            countCell.style.padding = '16px';
-            countCell.style.textAlign = 'center';
-            countCell.style.borderBottom = '1px solid #e9ecef';
-            countCell.style.fontWeight = 'bold';
-            countCell.style.verticalAlign = 'middle';
-            countCell.style.color = '#2c3e50';
-            countCell.style.fontSize = '1.05em';
-            countCell.style.transition = 'background-color 0.15s ease';
+            // Count cell properties are already set above
             
             // Create dates cell
             const datesCell = document.createElement('td');
@@ -2165,22 +2199,45 @@ function renderPowerballCombo45Results() {
                     countCell.style.color = '#3498db';
                 };
                 
-                countCell.addEventListener('mouseenter', highlightRow);
-                row.addEventListener('mouseenter', highlightRow);
-                
-                countCell.addEventListener('mouseleave', unhighlightRow);
-                row.addEventListener('mouseleave', unhighlightRow);
-                
                 // Handle click on frequency count
                 const handleFrequencyClick = () => {
+                    if (!fiveNumberCombosLocal || fiveNumberCombosLocal.size === 0) {
+                        console.error('No five-number combinations available');
+                        return;
+                    }
+                    
+                    // Process the combinations - include all 5-number combos, even if they only appear once
+                    const fiveNumberResults = processCombos(fiveNumberCombosLocal, 5, 1);
+                    
+                    // Debug: Log available 5-number combinations
+                    console.log('[DEBUG] Available 5-number combinations:', fiveNumberResults.map(c => ({
+                        numbers: c.numbers.join(','),
+                        count: c.count,
+                        dates: c.dates.length
+                    })));
+                    
                     // Find all 5-number combos that include this 4-number combo
                     const matchingCombos = fiveNumberResults.filter(fiveCombo => {
-                        return combo.numbers.every(num => fiveCombo.numbers.includes(num));
+                        const allIncluded = combo.numbers.every(num => fiveCombo.numbers.includes(num));
+                        if (allIncluded) {
+                            console.log('[DEBUG] Found match:', {
+                                fourNumbers: combo.numbers.join(','),
+                                fiveNumbers: fiveCombo.numbers.join(','),
+                                count: fiveCombo.count,
+                                dates: fiveCombo.dates
+                            });
+                        }
+                        return allIncluded;
                     });
+                    
+                    console.log(`[DEBUG] Found ${matchingCombos.length} matching 5-number combos for ${combo.numbers.join(', ')}`);
                     
                     // Update the right panel with the details
                     const detailsPanel = document.getElementById('combo45-details-content');
-                    if (!detailsPanel) return;
+                    if (!detailsPanel) {
+                        console.error('Could not find combo45-details-content element');
+                        return;
+                    }
                     
                     detailsPanel.innerHTML = ''; // Clear previous content
                     
