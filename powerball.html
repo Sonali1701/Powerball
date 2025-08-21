@@ -91,10 +91,18 @@
     <div id="tab-trio" class="tab-content" style="display:none;">
         <div class="container main-flex">
             <div class="left-col">
-                <!-- Placeholder for future trio filters or info -->
+                <div style="background: #f8f9fa; border-radius: 8px; padding: 15px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                    <h3 style="margin-top: 0; color: #2c3e50; font-size: 1.1em; padding-bottom: 8px; border-bottom: 1px solid #e0e0e0;">Generate Trios</h3>
+                    <div style="margin-bottom: 15px;">
+                        <input type="number" id="custom-trio-number" min="1" max="69" placeholder="Enter number (1-69)" style="width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                        <button id="custom-trio-generate-btn" style="width: 100%; padding: 10px; background-color: #9b59b6; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 500;">
+                            Generate Custom Trios
+                        </button>
+                    </div>
+                </div>
             </div>
             <div class="center-col">
-                <h2 style="text-align:center; color:#3498db; margin:16px 0 18px;">Trio & Random 2-Number Analysis (2016-2025)</h2>
+                <h2 style="text-align:center; color:#3498db; margin:16px 0 18px;">Trio & Random 2-Number Analysis (2015-2025)</h2>
                 <div id="trio-results"></div>
                 <div id="random2-results" style="margin-top:24px;"></div>
             </div>
