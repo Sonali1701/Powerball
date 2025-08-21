@@ -201,6 +201,29 @@ document.addEventListener('DOMContentLoaded', function() {
         return selected;
     }
 
+    // Helper function to find all pairs that include a specific number
+    function findPairsWithNumber(draws, targetNumber) {
+        const pairMap = new Map(); // pairStr -> Set of dates
+        draws.forEach(draw => {
+            if (draw.mainArr && draw.mainArr.length === 5 && draw.mainArr.includes(targetNumber)) {
+                // Get all pairs that include the target number
+                const otherNumbers = draw.mainArr.filter(n => n !== targetNumber);
+                otherNumbers.forEach(num => {
+                    const pair = [targetNumber, num].sort((a, b) => a - b);
+                    const key = pair.join('-');
+                    if (!pairMap.has(key)) pairMap.set(key, new Set());
+                    pairMap.get(key).add(draw.date);
+                });
+            }
+        });
+        return Array.from(pairMap.entries())
+            .filter(([_, dates]) => dates.size >= 1) // Include pairs that appeared at least once
+            .map(([pairStr, dates]) => ({
+                numbers: pairStr.split('-').map(Number),
+                dates: dates
+            }));
+    }
+
     // Render the Trio tab results
     function renderTrioTab() {
         const resultsDiv = document.getElementById('trio-results');
@@ -231,11 +254,21 @@ document.addEventListener('DOMContentLoaded', function() {
             random2Div.innerHTML = '';
             return;
         }
-        // UI header and button
+        // Find all pairs that include 17
+        const pairsWith17 = findPairsWithNumber(draws, 17);
+        
+        // UI header and buttons
         resultsDiv.innerHTML = `
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;gap:12px;">
+            <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;margin-bottom:18px;gap:12px;">
                 <h2 style="margin:0;color:#3498db;font-size:1.3em;font-weight:700;letter-spacing:1px;">Powerball Trio Generator (2015-2025)</h2>
-                <button id="trio-generate-btn" style="padding:10px 28px;font-size:1.13em;border-radius:8px;border:1.5px solid #3498db;background:#fff;color:#3498db;cursor:pointer;font-weight:600;transition:background 0.18s;">Generate Numbers</button>
+                <div style="display:flex;gap:10px;">
+                    <button id="trio-generate-btn" style="padding:10px 20px;font-size:1.1em;border-radius:8px;border:1.5px solid #3498db;background:#fff;color:#3498db;cursor:pointer;font-weight:600;transition:all 0.18s;white-space:nowrap;">
+                        Generate Trios
+                    </button>
+                    <button id="trio-17-generate-btn" style="padding:10px 20px;font-size:1.1em;border-radius:8px;border:1.5px solid #e67e22;background:#fff;color:#e67e22;cursor:pointer;font-weight:600;transition:all 0.18s;white-space:nowrap;">
+                        Generate 17-Based Trios
+                    </button>
+                </div>
             </div>
             <div id="trio-cards-container"></div>
         `;
@@ -265,12 +298,127 @@ document.addEventListener('DOMContentLoaded', function() {
             cardsHtml += `</div>`;
             document.getElementById('trio-cards-container').innerHTML = cardsHtml;
         }
+        // Generate 17-based trios function
+        function generate17BasedTrios() {
+            if (pairsWith17.length < 2) {
+                document.getElementById('trio-cards-container').innerHTML = 
+                    '<div style="color:#e74c3c;padding:20px;text-align:center;">Not enough pairs containing 17 found to generate trios.</div>';
+                return;
+            }
+
+            // Shuffle the pairs
+            const shuffledPairs = [...pairsWith17].sort(() => Math.random() - 0.5);
+            
+            // Create a set to track used pairs to ensure we don't reuse the same pair
+            const usedIndices = new Set();
+            const results = [];
+            
+            // Try to create up to 20 unique trios
+            for (let i = 0; i < Math.min(20, Math.floor(pairsWith17.length / 2)); i++) {
+                // Find two different pairs that haven't been used yet
+                let pair1Index, pair2Index;
+                
+                // Try to find a valid pair combination
+                for (let j = 0; j < shuffledPairs.length && !pair1Index; j++) {
+                    if (!usedIndices.has(j)) {
+                        for (let k = j + 1; k < shuffledPairs.length; k++) {
+                            if (!usedIndices.has(k)) {
+                                // Check if these pairs can form a valid trio (all numbers must be unique except 17)
+                                const num1 = shuffledPairs[j].numbers.find(n => n !== 17);
+                                const num2 = shuffledPairs[k].numbers.find(n => n !== 17);
+                                if (num1 !== num2) {
+                                    pair1Index = j;
+                                    pair2Index = k;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                if (pair1Index !== undefined && pair2Index !== undefined) {
+                    const pair1 = shuffledPairs[pair1Index];
+                    const pair2 = shuffledPairs[pair2Index];
+                    
+                    // Extract the other number from each pair (the one that's not 17)
+                    const num1 = pair1.numbers.find(n => n !== 17);
+                    const num2 = pair2.numbers.find(n => n !== 17);
+                    
+                    // Create the trio (17, num1, num2)
+                    const trio = [17, num1, num2].sort((a, b) => a - b);
+                    
+                    // Combine dates from both pairs
+                    const combinedDates = new Set([...pair1.dates, ...pair2.dates]);
+                    
+                    results.push({
+                        trio: trio,
+                        dates: combinedDates,
+                        sourcePairs: [
+                            { numbers: [17, num1], dates: pair1.dates },
+                            { numbers: [17, num2], dates: pair2.dates }
+                        ]
+                    });
+                    
+                    // Mark these pairs as used
+                    usedIndices.add(pair1Index);
+                    usedIndices.add(pair2Index);
+                }
+            }
+            
+            if (results.length === 0) {
+                document.getElementById('trio-cards-container').innerHTML = 
+                    '<div style="color:#e74c3c;padding:20px;text-align:center;">Could not generate any valid 17-based trios from the available pairs.</div>';
+                return;
+            }
+            
+            // Display the results
+            let cardsHtml = `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(350px,1fr));gap:20px;">`;
+            
+            results.forEach(result => {
+                const { trio, dates, sourcePairs } = result;
+                const random2 = generateUniqueNumbers(2, 1, 69, trio);
+                const combo = [...trio, ...random2].sort((a, b) => a - b);
+                
+                cardsHtml += `
+                    <div style="background:#f8faff;border-radius:13px;box-shadow:0 2px 12px rgb(44 62 80 / 10%);padding:20px;display:flex;flex-direction:column;">
+                        <div style="text-align:center;margin-bottom:12px;">
+                            <div style="font-size:1.2em;font-weight:700;color:#e67e22;margin-bottom:5px;">Trio: ${trio.join('-')}</div>
+                            <div style="display:flex;justify-content:center;gap:15px;margin-bottom:10px;">
+                                <span style="background:#f0f7ff;padding:3px 8px;border-radius:4px;font-size:0.9em;">
+                                    ${sourcePairs[0].numbers.join('-')}
+                                </span>
+                                <span style="background:#f0f7ff;padding:3px 8px;border-radius:4px;font-size:0.9em;">
+                                    ${sourcePairs[1].numbers.join('-')}
+                                </span>
+                            </div>
+                            <div style="margin:8px 0;font-size:1.1em;font-weight:700;color:#27ae60;">
+                                ${combo.join('-')}
+                            </div>
+                        </div>
+                        <div style="margin-top:auto;font-size:0.9em;color:#666;max-height:150px;overflow-y:auto;border-top:1px solid #eee;padding-top:10px;">
+                            <div style="font-weight:600;margin-bottom:5px;color:#444;">Appeared on:</div>
+                            <div style="max-height:100px;overflow-y:auto;">
+                                ${Array.from(dates).map(date => `<div>${date}</div>`).join('')}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            cardsHtml += `</div>`;
+            document.getElementById('trio-cards-container').innerHTML = cardsHtml;
+        }
+
         // Initial output
         generateOutputs();
-        // Button handler
+        
+        // Button handlers
         setTimeout(() => {
             const btn = document.getElementById('trio-generate-btn');
+            const btn17 = document.getElementById('trio-17-generate-btn');
+            
             if (btn) btn.onclick = generateOutputs;
+            if (btn17) btn17.onclick = generate17BasedTrios;
         }, 0);
     }
     // Add a function to initialize the Trio tab after data is loaded
