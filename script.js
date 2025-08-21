@@ -416,9 +416,11 @@ document.addEventListener('DOMContentLoaded', function() {
         setTimeout(() => {
             const btn = document.getElementById('trio-generate-btn');
             const btn17 = document.getElementById('trio-17-generate-btn');
+            const customTrioBtn = document.getElementById('custom-trio-generate-btn');
             
             if (btn) btn.onclick = generateOutputs;
             if (btn17) btn17.onclick = generate17BasedTrios;
+            if (customTrioBtn) customTrioBtn.onclick = generateCustomBasedTrios;
         }, 0);
     }
     // Add a function to initialize the Trio tab after data is loaded
@@ -427,6 +429,131 @@ document.addEventListener('DOMContentLoaded', function() {
         if (window.filteredDrawRows && window.filteredDrawRows.length > 0) {
             renderTrioTab();
         }
+    }
+    
+    // Function to generate trios based on a custom number
+    function generateCustomBasedTrios() {
+        const customNumber = parseInt(document.getElementById('custom-trio-number').value);
+        
+        if (isNaN(customNumber) || customNumber < 1 || customNumber > 69) {
+            alert('Please enter a valid number between 1 and 69');
+            return;
+        }
+        
+        // Find all pairs that include the custom number
+        const pairsWithNumber = findPairsWithNumber(window.filteredDrawRows, customNumber);
+        
+        if (pairsWithNumber.length < 2) {
+            document.getElementById('trio-cards-container').innerHTML = 
+                `<div style="color:#e74c3c;padding:20px;text-align:center;">Not enough pairs containing ${customNumber} found to generate trios.</div>`;
+            return;
+        }
+
+        // Shuffle the pairs
+        const shuffledPairs = [...pairsWithNumber].sort(() => Math.random() - 0.5);
+        
+        // Create a set to track used pairs to ensure we don't reuse the same pair
+        const usedIndices = new Set();
+        const results = [];
+        
+        // Try to create up to 20 unique trios
+        for (let i = 0; i < Math.min(20, Math.floor(pairsWithNumber.length / 2)); i++) {
+            // Find two different pairs that haven't been used yet
+            let pair1Index, pair2Index;
+            
+            // Try to find a valid pair combination
+            for (let j = 0; j < shuffledPairs.length && !pair1Index; j++) {
+                if (!usedIndices.has(j)) {
+                    for (let k = j + 1; k < shuffledPairs.length; k++) {
+                        if (!usedIndices.has(k)) {
+                            // Check if these pairs can form a valid trio (all numbers must be unique except the custom number)
+                            const num1 = shuffledPairs[j].numbers.find(n => n !== customNumber);
+                            const num2 = shuffledPairs[k].numbers.find(n => n !== customNumber);
+                            if (num1 !== num2) {
+                                pair1Index = j;
+                                pair2Index = k;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            
+            if (pair1Index !== undefined && pair2Index !== undefined) {
+                const pair1 = shuffledPairs[pair1Index];
+                const pair2 = shuffledPairs[pair2Index];
+                
+                // Extract the other number from each pair (the one that's not the custom number)
+                const num1 = pair1.numbers.find(n => n !== customNumber);
+                const num2 = pair2.numbers.find(n => n !== customNumber);
+                
+                // Create the trio (customNumber, num1, num2)
+                const trio = [customNumber, num1, num2].sort((a, b) => a - b);
+                
+                // Combine dates from both pairs
+                const combinedDates = new Set([...pair1.dates, ...pair2.dates]);
+                
+                results.push({
+                    trio: trio,
+                    dates: combinedDates,
+                    sourcePairs: [
+                        { numbers: [customNumber, num1], dates: pair1.dates },
+                        { numbers: [customNumber, num2], dates: pair2.dates }
+                    ]
+                });
+                
+                // Mark these pairs as used
+                usedIndices.add(pair1Index);
+                usedIndices.add(pair2Index);
+            }
+        }
+        
+        const cardsContainer = document.getElementById('trio-results') || document.createElement('div');
+        
+        if (results.length === 0) {
+            cardsContainer.innerHTML = 
+                `<div style="color:#e74c3c;padding:20px;text-align:center;">Could not generate any valid ${customNumber}-based trios from the available pairs.</div>`;
+            return;
+        }
+        
+        // Generate HTML for the results
+        let cardsHtml = `
+            <div style="margin: 24px 0;">
+                <h3 style="color:#2c3e50;margin-bottom:16px;font-size:1.3em;">Generated ${customNumber}-Based Trios</h3>
+                <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;">
+        `;
+        
+        results.forEach((result, index) => {
+            const datesList = Array.from(result.dates).slice(0, 5).map(date => 
+                `<div style="font-size:0.85em;color:#7f8c8d;margin-top:4px;">${date}</div>`
+            ).join('');
+            
+            cardsHtml += `
+                <div style="background:white;border-radius:10px;padding:16px;box-shadow:0 2px 6px rgba(0,0,0,0.08);">
+                    <div style="display:flex;justify-content:center;gap:8px;margin-bottom:12px;">
+                        ${result.trio.map(num => 
+                            `<div style="width:36px;height:36px;border-radius:50%;background:#9b59b6;color:white;display:flex;align-items:center;justify-content:center;font-weight:bold;">
+                                ${num}
+                            </div>`
+                        ).join('')}
+                    </div>
+                    <div style="font-size:0.9em;color:#7f8c8d;margin-bottom:8px;">
+                        Based on pairs: ${result.sourcePairs[0].numbers.join(', ')} and ${result.sourcePairs[1].numbers.join(', ')}
+                    </div>
+                    <div style="max-height:120px;overflow-y:auto;border-top:1px solid #eee;padding-top:8px;">
+                        ${datesList}
+                        ${result.dates.size > 5 ? '<div style="font-size:0.8em;color:#7f8c8d;margin-top:4px;">...and ' + (result.dates.size - 5) + ' more</div>' : ''}
+                    </div>
+                </div>
+            `;
+        });
+        
+        cardsHtml += `
+                </div>
+            </div>
+        `;
+        
+        cardsContainer.innerHTML = cardsHtml;
     }
 
     // Helper function to parse date string into Date object
