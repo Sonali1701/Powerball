@@ -1,5 +1,123 @@
 // Cash 5 Analyzer & Generator Logic
-// Assumes 'Cash5_results(Andrea) - SCEL_Results.csv' is the data file
+
+// Global variable to store the latest results
+let cash5Results = [];
+
+// Function to load data from local CSV
+async function loadCash5Data() {
+    const loadingIndicator = document.getElementById('cash5-loading-indicator');
+    
+    try {
+        // Load from local CSV
+        const response = await fetch('cash5.csv');
+        if (!response.ok) throw new Error('Failed to load local CSV');
+        
+        const csvText = await response.text();
+        const results = Papa.parse(csvText, { header: true }).data;
+        
+        // Filter out any empty rows and ensure we have valid data
+        cash5Results = results.filter(row => row['Draw Date'] && row['Ball 1']);
+        
+        // Sort by date (newest first)
+        cash5Results.sort((a, b) => new Date(b['Draw Date']) - new Date(a['Draw Date']));
+        
+        // Update the UI with the loaded data
+        processAndUpdateUI();
+        
+        // Store in localStorage for offline use
+        localStorage.setItem('cachedCash5Results', JSON.stringify(cash5Results));
+        localStorage.setItem('cash5LastUpdated', new Date().toISOString());
+        
+        return true;
+        
+    } catch (error) {
+        console.error('Error loading from CSV:', error);
+        
+        // Try to load from localStorage if available
+        try {
+            const cachedResults = localStorage.getItem('cachedCash5Results');
+            
+            if (cachedResults) {
+                cash5Results = JSON.parse(cachedResults);
+                processAndUpdateUI();
+                return true;
+            }
+            
+            throw new Error('No data available');
+            
+        } catch (cacheError) {
+            console.error('Error loading from cache:', cacheError);
+            return false;
+        }
+    } finally {
+        if (loadingIndicator) loadingIndicator.style.display = 'none';
+    }
+}
+
+// Process the data and update the UI
+function processAndUpdateUI() {
+    if (!cash5Results || cash5Results.length === 0) {
+        console.error('No data available to process');
+        return;
+    }
+    
+    console.log('Updating UI with Cash 5 results');
+    
+    // Sort results by date (newest first)
+    const sortedResults = [...cash5Results].sort((a, b) => 
+        new Date(b['Draw Date']) - new Date(a['Draw Date'])
+    );
+    
+    // Update the results table
+    const tbody = document.querySelector('#cash5-results-table tbody');
+    if (tbody) {
+        // Clear existing rows
+        tbody.innerHTML = '';
+        
+        // Add new rows
+        sortedResults.forEach(draw => {
+            const row = document.createElement('tr');
+            
+            // Format the date
+            const drawDate = new Date(draw['Draw Date']);
+            const formattedDate = drawDate.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                weekday: 'short'
+            });
+            
+            // Create cells for each ball
+            const balls = [
+                draw['Ball 1'],
+                draw['Ball 2'],
+                draw['Ball 3'],
+                draw['Ball 4'],
+                draw['Ball 5']
+            ];
+            
+            // Add date cell
+            const dateCell = document.createElement('td');
+            dateCell.textContent = formattedDate;
+            row.appendChild(dateCell);
+            
+            // Add ball cells
+            balls.forEach(ball => {
+                const cell = document.createElement('td');
+                cell.className = 'ball';
+                cell.textContent = ball;
+                row.appendChild(cell);
+            });
+            
+            tbody.appendChild(row);
+        });
+    }
+    
+    // Initialize the Random tab if it exists
+    if (typeof window.initCash5RandomTab === 'function') {
+        window.initCash5RandomTab();
+    }
+}
 
 // Performance optimization utilities
 const perf = {
@@ -65,9 +183,20 @@ const domCache = {
     }
 };
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', async function() {
     // Initialize DOM cache
     domCache.init();
+    
+    // Add event listener for refresh button
+    const refreshBtn = document.getElementById('cash5-refresh-data');
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', async () => {
+            await loadCash5Data();
+        });
+    }
+    
+    // Load initial data
+    await loadCash5Data();
     // --- Download Notes Buttons (Combo, 2x, New) ---
     [
         { btn: 'cash5-download-note-btn-combo', textarea: 'cash5-note-textarea-combo', filename: 'cash5_combo_notes.txt' },

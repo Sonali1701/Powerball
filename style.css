@@ -8,6 +8,41 @@ body {
     line-height: 1.4;
 }
 
+/* Style for number 17 in results table */
+#tab-powerball .results-table td.ball:contains('17') {
+    background: #ffd700 !important;
+    color: #000 !important;
+    border-color: #ffc800 !important;
+    box-shadow: 0 0 0 2px #ffc800 !important;
+}
+
+/* Style for number 17 in all contexts */
+.ball[data-ball-number="17"], 
+[data-ball-number="17"],
+.plain-number[data-ball-number="17"],
+.results-table .ball[data-ball-number="17"],
+.results-table [data-ball-number="17"],
+.results-table .plain-number[data-ball-number="17"],
+.ball[data-number="17"],
+[data-number="17"],
+.plain-number[data-number="17"],
+.results-table .ball[data-number="17"],
+.results-table [data-number="17"],
+.results-table .plain-number[data-number="17"] {
+    background: #ffd700 !important; /* Gold/yellow color */
+    color: #000 !important;
+    border-color: #ffc800 !important;
+    box-shadow: 0 0 0 2px #ffc800 !important;
+}
+
+/* Specific style for Powerball results table */
+#tab-powerball .results-table td.ball:contains("17") {
+    background: #ffd700 !important;
+    color: #000 !important;
+    border-color: #ffc800 !important;
+    box-shadow: 0 0 0 2px #ffc800 !important;
+}
+
 .container.main-flex {
     display: flex;
     flex-direction: row;

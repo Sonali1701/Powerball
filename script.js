@@ -1,4 +1,246 @@
-// Document click handler for debugging - modified to not interfere with ball clicks
+// Local data storage for Powerball and Double Play results
+
+// Global variables to store the latest results
+let powerballResults = [];
+let doublePlayResults = [];
+
+// Function to load data from local CSV
+async function loadLotteryData() {
+    const loadingIndicator = document.getElementById('loading-indicator');
+    const lastUpdatedEl = document.getElementById('last-updated');
+    
+    if (loadingIndicator) loadingIndicator.style.display = 'inline-block';
+    
+    try {
+        // Load from local CSV
+        const csvResponse = await fetch('powerball.csv');
+        if (!csvResponse.ok) throw new Error('Failed to load local CSV');
+        
+        const csvText = await csvResponse.text();
+        const lines = csvText.split('\n').filter(line => line.trim() !== '');
+        
+        let currentDate = '';
+        const localPowerballResults = [];
+        const localDoublePlayResults = [];
+        
+        // Process each line in the CSV
+        for (const line of lines) {
+            const trimmedLine = line.trim();
+            
+            // Check if line is a date
+            const dateMatch = trimmedLine.match(/^(\d{1,2}\/\d{1,2}\/\d{4})/);
+            if (dateMatch) {
+                currentDate = dateMatch[1];
+                continue;
+            }
+            
+            // Process Powerball line
+            const pbMatch = trimmedLine.match(/Powerball® Numbers\s+([\d\s\-]+),"\s*(\d+)\s*,\s*(\d+)/);
+            if (pbMatch && currentDate) {
+                const balls = pbMatch[1].trim().split(/\s*\-\s*/).map(Number);
+                const powerball = parseInt(pbMatch[2].trim(), 10);
+                const powerplay = pbMatch[3].trim();
+                
+                localPowerballResults.push({
+                    'Draw Date': currentDate,
+                    'Ball 1': balls[0],
+                    'Ball 2': balls[1],
+                    'Ball 3': balls[2],
+                    'Ball 4': balls[3],
+                    'Ball 5': balls[4],
+                    'Powerball': powerball,
+                    'Power Play': powerplay
+                });
+                continue;
+            }
+            
+            // Process Double Play line
+            const dpMatch = trimmedLine.match(/Double Play® Numbers\s+([\d\s\-]+),"\s*(\d+)/);
+            if (dpMatch && currentDate) {
+                const balls = dpMatch[1].trim().split(/\s*\-\s*/).map(Number);
+                const powerball = parseInt(dpMatch[2].trim(), 10);
+                
+                localDoublePlayResults.push({
+                    'Draw Date': currentDate,
+                    'Double Play 1': balls[0],
+                    'Double Play 2': balls[1],
+                    'Double Play 3': balls[2],
+                    'Double Play 4': balls[3],
+                    'Double Play 5': balls[4],
+                    'Double Play PB': powerball
+                });
+            }
+        }
+        
+        // Sort results by date (newest first)
+        powerballResults = localPowerballResults.sort((a, b) => 
+            new Date(b['Draw Date']) - new Date(a['Draw Date'])
+        );
+        
+        doublePlayResults = localDoublePlayResults.sort((a, b) => 
+            new Date(b['Draw Date']) - new Date(a['Draw Date'])
+        );
+        
+        // Update the UI with the loaded data
+        processAndUpdateUI();
+        
+        // Update last updated timestamp
+        if (lastUpdatedEl) {
+            lastUpdatedEl.textContent = `Last updated: ${new Date().toLocaleString()}`;
+        }
+        
+        // Store in localStorage for offline use
+        localStorage.setItem('cachedPowerballResults', JSON.stringify(powerballResults));
+        localStorage.setItem('cachedDoublePlayResults', JSON.stringify(doublePlayResults));
+        localStorage.setItem('lastUpdated', new Date().toISOString());
+        
+        return true;
+        
+    } catch (error) {
+        console.error('Error loading local CSV:', error);
+        
+        // Try to load from localStorage if available
+        try {
+            const cachedPowerball = localStorage.getItem('cachedPowerballResults');
+            const cachedDoublePlay = localStorage.getItem('cachedDoublePlayResults');
+            
+            if (cachedPowerball && cachedDoublePlay) {
+                powerballResults = JSON.parse(cachedPowerball);
+                doublePlayResults = JSON.parse(cachedDoublePlay);
+                processAndUpdateUI();
+                
+                if (lastUpdatedEl) {
+                    const lastUpdated = localStorage.getItem('lastUpdated');
+                    lastUpdatedEl.textContent = `Last updated: ${new Date(lastUpdated).toLocaleString()} (cached)`;
+                }
+                
+                return true;
+            }
+            
+            throw new Error('No data available');
+            
+        } catch (cacheError) {
+            console.error('Error loading from cache:', cacheError);
+            return false;
+        }
+    } finally {
+        if (loadingIndicator) loadingIndicator.style.display = 'none';
+    }
+}
+
+// Process the data and update the UI
+function processAndUpdateUI() {
+    if ((!powerballResults || powerballResults.length === 0) && 
+        (!doublePlayResults || doublePlayResults.length === 0)) {
+        console.error('No data available to process');
+        return;
+    }
+    
+    console.log('Updating UI with Powerball and Double Play results');
+    
+    // Function to update a results table
+    const updateTable = (results, tableId, isDoublePlay = false) => {
+        if (!results || results.length === 0) return;
+        
+        // Sort results by date (newest first)
+        const sortedResults = [...results].sort((a, b) => 
+            new Date(b['Draw Date']) - new Date(a['Draw Date'])
+        );
+        
+        // Update the results table
+        const tbody = document.querySelector(`#${tableId} tbody`);
+        if (!tbody) {
+            console.error(`Table body not found for #${tableId}`);
+            return;
+        }
+        
+        // Clear existing rows
+        tbody.innerHTML = '';
+        
+        // Add new rows
+        sortedResults.forEach(draw => {
+            const row = document.createElement('tr');
+            
+            // Format the date
+            const drawDate = new Date(draw['Draw Date']);
+            const formattedDate = drawDate.toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                weekday: 'short'
+            });
+            
+            // Create cells for each ball
+            const balls = [
+                draw['Ball 1'],
+                draw['Ball 2'],
+                draw['Ball 3'],
+                draw['Ball 4'],
+                draw['Ball 5']
+            ];
+            
+            // Add date cell
+            const dateCell = document.createElement('td');
+            dateCell.textContent = formattedDate;
+            row.appendChild(dateCell);
+            
+            // Add ball cells
+            balls.forEach(ball => {
+                const cell = document.createElement('td');
+                cell.className = 'ball';
+                cell.textContent = ball;
+                
+                // Add custom attribute and inline style for the number 17
+                if (ball == 17) {
+                    cell.className += ' number-17';
+                    cell.setAttribute('data-number', '17');
+                    cell.style.backgroundColor = '#ffd700';
+                    cell.style.color = '#000';
+                    cell.style.borderColor = '#ffc800';
+                    cell.style.boxShadow = '0 0 0 2px #ffc800';
+                }
+                
+                row.appendChild(cell);
+            });
+            
+            // Add Powerball cell
+            const powerballCell = document.createElement('td');
+            powerballCell.className = 'powerball';
+            powerballCell.textContent = draw['Powerball'] || '';
+            row.appendChild(powerballCell);
+            
+            // Add Power Play cell if available (only for Powerball, not Double Play)
+            if (!isDoublePlay && draw['Power Play']) {
+                const powerPlayCell = document.createElement('td');
+                powerPlayCell.className = 'powerplay';
+                powerPlayCell.textContent = draw['Power Play'];
+                row.appendChild(powerPlayCell);
+            }
+            
+            tbody.appendChild(row);
+        });
+    };
+    
+    // Update Powerball table
+    updateTable(powerballResults, 'powerball-results');
+    
+    // Update Double Play table if results exist
+    if (doublePlayResults && doublePlayResults.length > 0) {
+        const doublePlaySection = document.querySelector('.double-play-section');
+        if (doublePlaySection) {
+            doublePlaySection.style.display = 'block';
+        }
+        updateTable(doublePlayResults, 'doubleplay-results', true);
+    }
+    
+    // Update last updated timestamp
+    const lastUpdated = document.getElementById('last-updated');
+    if (lastUpdated) {
+        lastUpdated.textContent = new Date().toLocaleString();
+    }
+    
+    console.log('UI update complete');
+}
 document.addEventListener('click', function(e) {
     // Skip if the click is on a ball (ball has its own handler)
     if (e.target.closest('.ball')) {
@@ -6,7 +248,111 @@ document.addEventListener('click', function(e) {
     }
 }, true);
 
-document.addEventListener('DOMContentLoaded', function() {
+// Style number 17 in the results table
+function styleNumber17() {
+    // Function to apply styles to a single element
+    const styleElement = (element) => {
+        if (element && element.textContent && element.textContent.trim() === '17') {
+            element.classList.add('number-17');
+            element.setAttribute('data-number', '17');
+            element.style.cssText = 'background: #ffd700 !important; color: #000 !important; border-color: #ffc800 !important; box-shadow: 0 0 0 2px #ffc800 !important;';
+            return true;
+        }
+        return false;
+    };
+    
+    // Check all possible ball elements in all tabs
+    const allBalls = document.querySelectorAll('.ball, .ball-panel, [class*="ball"], [class^="ball"], [class$="ball"], [class*=" ball "], [class*=" ball"], [class$=" ball"], .results-table td, [class*="number"], .number, [class*="number-"]');
+    allBalls.forEach(ball => styleElement(ball));
+    
+    // Also check all table cells, spans, and divs in case they contain the number 17
+    const allElements = document.querySelectorAll('td, span, div');
+    allElements.forEach(el => {
+        if (el.textContent && el.textContent.trim() === '17') {
+            styleElement(el);
+        }
+    });
+}
+
+// Set up a mutation observer to watch for changes in the results table
+function setupMutationObserver() {
+    // Watch the entire document since we don't know where the number 17 might appear
+    const targetNode = document.body;
+    
+    const observer = new MutationObserver(() => {
+        // Small delay to ensure the DOM is fully updated
+        setTimeout(styleNumber17, 100);
+    });
+    
+    // Start observing the document with the configured parameters
+    observer.observe(targetNode, { 
+        childList: true, 
+        subtree: true,
+        characterData: true,
+        attributes: true
+    });
+    
+    // Run initial check
+    styleNumber17();
+}
+
+// Add a style tag with the highest specificity
+const style = document.createElement('style');
+style.textContent = `
+    /* Style for number 17 in all tabs */
+    .ball[data-number="17"],
+    .ball.number-17,
+    .ball:contains('17'),
+    td.ball[data-number="17"],
+    td.ball.number-17,
+    td.ball:contains('17') {
+        background: #ffd700 !important;
+        color: #000 !important;
+        border-color: #ffc800 !important;
+        box-shadow: 0 0 0 2px #ffc800 !important;
+    }
+`;
+document.head.appendChild(style);
+
+// Initialize the page
+document.addEventListener('DOMContentLoaded', async function() {
+    // Initialize API data loading
+    const refreshBtn = document.getElementById('refresh-data');
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', async () => {
+            try {
+                await loadLotteryData();
+                styleNumber17();
+            } catch (error) {
+                console.error('Error refreshing data:', error);
+            }
+        });
+    }
+    
+    // Set up mutation observer for styling number 17
+    setupMutationObserver();
+    
+    // Load initial data
+    try {
+        await loadLotteryData();
+        styleNumber17();
+    } catch (error) {
+        console.error('Error loading initial data:', error);
+    }
+    
+    // Set up a mutation observer to watch for changes in the results table
+    const observer = new MutationObserver(() => {
+        styleNumber17();
+    });
+    
+    const resultsTable = document.getElementById('powerball-results');
+    if (resultsTable) {
+        observer.observe(resultsTable, { childList: true, subtree: true });
+    }
+    
+    // Initial styling
+    styleNumber17();
+    
     // --- Auto-save notes logic ---
     const noteConfigs = [
         { textarea: 'note-textarea', key: 'notes_main' },
@@ -1389,19 +1735,14 @@ document.addEventListener('DOMContentLoaded', function() {
                         ballContainer.style.display = 'flex';
                         ballContainer.style.flexWrap = 'wrap';
                         ballContainer.style.gap = '8px';
-                        ballContainer.style.padding = '10px';
-                        ballContainer.style.justifyContent = 'center';
                         
+                        // Create balls from 1 to 69
                         for (let n = 1; n <= 69; n++) {
-                            const ball = document.createElement('span');
+                            const ball = document.createElement('div');
                             ball.className = 'ball';
                             ball.textContent = n;
-                            ball.setAttribute('data-ball-number', n);
                             
-                            // Add hover effect
-                            ball.style.transition = 'all 0.2s ease';
-                            ball.style.cursor = 'pointer';
-                            
+                            // Add click handler
                             ball.onclick = function() {
                                 if (selectedBalls.has(n)) {
                                     selectedBalls.delete(n);
