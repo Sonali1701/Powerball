@@ -189,17 +189,6 @@ function processAndUpdateUI() {
                 const cell = document.createElement('td');
                 cell.className = 'ball';
                 cell.textContent = ball;
-                
-                // Add custom attribute and inline style for the number 17
-                if (ball == 17) {
-                    cell.className += ' number-17';
-                    cell.setAttribute('data-number', '17');
-                    cell.style.backgroundColor = '#ffd700';
-                    cell.style.color = '#000';
-                    cell.style.borderColor = '#ffc800';
-                    cell.style.boxShadow = '0 0 0 2px #ffc800';
-                }
-                
                 row.appendChild(cell);
             });
             
@@ -248,72 +237,6 @@ document.addEventListener('click', function(e) {
     }
 }, true);
 
-// Style number 17 in the results table
-function styleNumber17() {
-    // Function to apply styles to a single element
-    const styleElement = (element) => {
-        if (element && element.textContent && element.textContent.trim() === '17') {
-            element.classList.add('number-17');
-            element.setAttribute('data-number', '17');
-            element.style.cssText = 'background: #ffd700 !important; color: #000 !important; border-color: #ffc800 !important; box-shadow: 0 0 0 2px #ffc800 !important;';
-            return true;
-        }
-        return false;
-    };
-    
-    // Check all possible ball elements in all tabs
-    const allBalls = document.querySelectorAll('.ball, .ball-panel, [class*="ball"], [class^="ball"], [class$="ball"], [class*=" ball "], [class*=" ball"], [class$=" ball"], .results-table td, [class*="number"], .number, [class*="number-"]');
-    allBalls.forEach(ball => styleElement(ball));
-    
-    // Also check all table cells, spans, and divs in case they contain the number 17
-    const allElements = document.querySelectorAll('td, span, div');
-    allElements.forEach(el => {
-        if (el.textContent && el.textContent.trim() === '17') {
-            styleElement(el);
-        }
-    });
-}
-
-// Set up a mutation observer to watch for changes in the results table
-function setupMutationObserver() {
-    // Watch the entire document since we don't know where the number 17 might appear
-    const targetNode = document.body;
-    
-    const observer = new MutationObserver(() => {
-        // Small delay to ensure the DOM is fully updated
-        setTimeout(styleNumber17, 100);
-    });
-    
-    // Start observing the document with the configured parameters
-    observer.observe(targetNode, { 
-        childList: true, 
-        subtree: true,
-        characterData: true,
-        attributes: true
-    });
-    
-    // Run initial check
-    styleNumber17();
-}
-
-// Add a style tag with the highest specificity
-const style = document.createElement('style');
-style.textContent = `
-    /* Style for number 17 in all tabs */
-    .ball[data-number="17"],
-    .ball.number-17,
-    .ball:contains('17'),
-    td.ball[data-number="17"],
-    td.ball.number-17,
-    td.ball:contains('17') {
-        background: #ffd700 !important;
-        color: #000 !important;
-        border-color: #ffc800 !important;
-        box-shadow: 0 0 0 2px #ffc800 !important;
-    }
-`;
-document.head.appendChild(style);
-
 // Initialize the page
 document.addEventListener('DOMContentLoaded', async function() {
     // Initialize API data loading
@@ -322,36 +245,18 @@ document.addEventListener('DOMContentLoaded', async function() {
         refreshBtn.addEventListener('click', async () => {
             try {
                 await loadLotteryData();
-                styleNumber17();
             } catch (error) {
                 console.error('Error refreshing data:', error);
             }
         });
     }
     
-    // Set up mutation observer for styling number 17
-    setupMutationObserver();
-    
     // Load initial data
     try {
         await loadLotteryData();
-        styleNumber17();
     } catch (error) {
         console.error('Error loading initial data:', error);
     }
-    
-    // Set up a mutation observer to watch for changes in the results table
-    const observer = new MutationObserver(() => {
-        styleNumber17();
-    });
-    
-    const resultsTable = document.getElementById('powerball-results');
-    if (resultsTable) {
-        observer.observe(resultsTable, { childList: true, subtree: true });
-    }
-    
-    // Initial styling
-    styleNumber17();
     
     // --- Auto-save notes logic ---
     const noteConfigs = [
