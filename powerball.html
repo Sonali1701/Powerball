@@ -16,11 +16,11 @@
         <button class="tab-btn active" data-tab="combo">Past 2 years</button> <!--combo tab-->
         <button class="tab-btn" data-tab="2x">Pairs</button> <!--2x tab-->
         <button class="tab-btn" data-tab="new">History</button> <!--New tab-->
-        <button class="tab-btn" data-tab="trio">Trio</button> <!--Trio tab-->
-        <button class="tab-btn" data-tab="trio2">Trio 2</button> <!--Trio 2 tab-->
         <button class="tab-btn" data-tab="random">Random</button>
         <button class="tab-btn" data-tab="combo45">4&5 Combo</button>
         <button class="tab-btn" data-tab="powerball">Powerball</button>
+        <button class="tab-btn" data-tab="trio">Trio</button> <!--Trio tab-->
+        <button class="tab-btn" data-tab="trio2">Trio 2</button> <!--Trio 2 tab-->
         <button class="tab-btn" onclick="window.location.href='home.html'">Back to Home</button>
     </nav>
     <!-- Main Content -->
@@ -87,38 +87,7 @@
             </div>
         </div>
     </div>
-    <!-- Trio Tab Content -->
-    <div id="tab-trio" class="tab-content" style="display:none;">
-        <div class="container main-flex">
-            <div class="left-col">
-                <div style="background: #f8f9fa; border-radius: 8px; padding: 15px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-                    <h3 style="margin-top: 0; color: #2c3e50; font-size: 1.1em; padding-bottom: 8px; border-bottom: 1px solid #e0e0e0;">Generate Trios</h3>
-                    <div style="margin-bottom: 15px;">
-                        <input type="number" id="custom-trio-number" min="1" max="69" placeholder="Enter number (1-69)" style="width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 4px;">
-                        <button id="custom-trio-generate-btn" style="width: 100%; padding: 10px; background-color: #9b59b6; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 500;">
-                            Generate Custom Trios
-                        </button>
-                    </div>
-                </div>
-            </div>
-            <div class="center-col">
-                <h2 style="text-align:center; color:#3498db; margin:16px 0 18px;">Trio & Random 2-Number Analysis (2015-2025)</h2>
-                <div id="trio-results"></div>
-                <div id="random2-results" style="margin-top:24px;"></div>
-            </div>
-            <div class="right-col">
-                <!-- Notes for trio page -->
-                <div id="custom-note-trio" style="margin: 24px 0 18px 0; min-height: 80px; text-align: center; font-size: 1.13em; color: #555; width: 100%; background: #fff; border-radius: 10px; box-shadow: 0 2px 8px rgba(44,62,80,0.07); padding: 12px 8px;">
-                  <textarea id='note-textarea-trio' placeholder='Write your note here...' style='width: 98%; min-height: 120px; font-size: 1.13em; border-radius: 8px; border: 1.5px solid #e0e0e0; padding: 8px; resize: vertical;'></textarea>
-                </div>
-            </div>
-        </div>
-    </div>
-    <!-- Trio 2 Tab Content -->
-    <div id="tab-trio2" class="tab-content" style="display:none;">
-        <div id="trio2-results" style="padding: 20px; max-width: 1200px; margin: 0 auto;"></div>
-        <div id="trio2-combo-results" style="padding: 0 20px 20px 20px; max-width: 1200px; margin: 0 auto;"></div>
-    </div>
+    
     <!-- Random Tab Content -->
     <div id="tab-random" class="tab-content" style="display:none;">
         <div style="width:100%;height:80vh;max-width:900px;margin:0 auto;box-shadow:0 2px 12px rgba(44,62,80,0.10);border-radius:14px;overflow:hidden;background:#fff;">
@@ -194,6 +163,39 @@
             </div>
         </div>
     </div>
+    <!-- Trio Tab Content -->
+<div id="tab-trio" class="tab-content" style="display:none;">
+    <div class="container main-flex">
+        <div class="left-col">
+            <div style="background: #f8f9fa; border-radius: 8px; padding: 15px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                <h3 style="margin-top: 0; color: #2c3e50; font-size: 1.1em; padding-bottom: 8px; border-bottom: 1px solid #e0e0e0;">Generate Trios</h3>
+                <div style="margin-bottom: 15px;">
+                    <input type="number" id="custom-trio-number" min="1" max="69" placeholder="Enter number (1-69)" style="width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                    <button id="custom-trio-generate-btn" style="width: 100%; padding: 10px; background-color: #9b59b6; color: white; border: none; border-radius: 4px; cursor: pointer; font-weight: 500;">
+                        Generate Custom Trios
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="center-col">
+            <h2 style="text-align:center; color:#3498db; margin:16px 0 18px;">Trio & Random 2-Number Analysis (2015-2025)</h2>
+            <div id="trio-results"></div>
+            <div id="random2-results" style="margin-top:24px;"></div>
+        </div>
+        <div class="right-col">
+            <!-- Notes for trio page -->
+            <div id="custom-note-trio" style="margin: 24px 0 18px 0; min-height: 80px; text-align: center; font-size: 1.13em; color: #555; width: 100%; background: #fff; border-radius: 10px; box-shadow: 0 2px 8px rgba(44,62,80,0.07); padding: 12px 8px;">
+              <textarea id='note-textarea-trio' placeholder='Write your note here...' style='width: 98%; min-height: 120px; font-size: 1.13em; border-radius: 8px; border: 1.5px solid #e0e0e0; padding: 8px; resize: vertical;'></textarea>
+            </div>
+        </div>
+    </div>
+  </div>
+  <!-- Trio 2 Tab Content -->
+  <div id="tab-trio2" class="tab-content" style="display:none;">
+    <div id="trio2-results" style="padding: 20px; max-width: 1200px; margin: 0 auto;"></div>
+    <div id="trio2-combo-results" style="padding: 0 20px 20px 20px; max-width: 1200px; margin: 0 auto;"></div>
+  </div>
+  
     <!-- Powerball Tab Content -->
     <div id="tab-powerball" class="tab-content" style="display:none;">
         <div class="container" style="max-width: 1000px; margin: 0 auto; padding: 20px;">
