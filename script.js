@@ -4,6 +4,237 @@
 let powerballResults = [];
 let doublePlayResults = [];
 
+// --- Global helper functions ---
+
+// Function to get last digits for a draw
+function getLastDigitCounts(mainArr) {
+    return mainArr.map(num => num % 10);
+}
+
+// Render History tab with both main and double play as columns
+function renderHistoryTab() {
+    console.log('Rendering History tab...');
+    const resultsDiv = document.getElementById('new-tab-results');
+    
+    if (!resultsDiv) {
+        console.error('Results container not found');
+        return;
+    }
+    
+    // Show loading state
+    resultsDiv.innerHTML = '<div style="text-align: center; padding: 20px; color: #666;">Loading history data...</div>';
+    
+    // Check if data is available
+    if (!window.filteredDrawRows || !Array.isArray(window.filteredDrawRows) || window.filteredDrawRows.length === 0) {
+        console.error('No valid draw data available for History tab');
+        resultsDiv.innerHTML = `
+            <div style="color:#e74c3c; margin:18px 0; padding: 15px; background: #fff5f5; border: 1px solid #ffd6d6; border-radius: 4px;">
+                <p>No draw data available. This could be because:</p>
+                <ul style="text-align: left; margin: 10px 0 0 20px;">
+                    <li>Data is still loading. Please wait a moment and try again.</li>
+                    <li>The data file may be missing or corrupted.</li>
+                    <li>There was an error processing the data.</li>
+                </ul>
+                <p style="margin-top: 10px;">Please refresh the page to try again.</p>
+            </div>`;
+        return;
+    }
+    
+    console.log('Draw data available, rows:', window.filteredDrawRows.length);
+    
+    // Create a more structured table with proper column widths
+    let html = `
+    <div style="width: 100%; overflow-x: auto;">
+        <table class="freq-table" style="table-layout: fixed; width: 100%; border-collapse: collapse;">
+            <colgroup>
+                <col style="width: 15%;">
+                <col style="width: 50%;">
+                <col style="width: 25%;">
+                <col style="width: 10%;">
+            </colgroup>
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Numbers</th>
+                    <th>Last Digits</th>
+                    <th>Sum | O/E</th>
+                </tr>
+            </thead>
+            <tbody>`;
+    
+    window.filteredDrawRows.forEach((draw, index) => {
+        if (!draw.mainArr || !Array.isArray(draw.mainArr) || draw.mainArr.length === 0) {
+            console.warn(`Draw at index ${index} has invalid mainArr:`, draw);
+            return;
+        }
+        
+        // Main Draw Row
+        const mainNumbers = draw.mainArr || [];
+        const powerball = draw.powerball || 0;
+        
+        // Calculate sums for main draw
+        const sumMain = mainNumbers.reduce((a, b) => a + b, 0);
+        // Convert powerball to number before adding
+        const powerballNum = parseInt(powerball, 10) || 0;
+        const sumWithPowerball = sumMain + powerballNum;
+        
+        // Calculate odd/even counts for main draw
+        const oddCount = mainNumbers.filter(n => n % 2 !== 0).length;
+        const evenCount = mainNumbers.length - oddCount;
+        const oddEvenStr = `${oddCount}/${evenCount}`;
+        
+        // Format last digits for main draw
+        const lastDigits = getLastDigitCounts(mainNumbers);
+        const digitCountsStr = lastDigits.map(digit => 
+            `<span class="digit-count" title="Last digit: ${digit}">${digit}</span>`
+        ).join('');
+        
+        // Format main numbers with circles
+        const mainNumbersHtml = mainNumbers.map(num => 
+            `<span class="number-badge main-number">${num}</span>`
+        ).join('');
+        
+        // Format powerball if available
+        const powerballHtml = powerball ? 
+            `<span class="number-badge powerball">${powerball}</span>` : '';
+        
+        // Main Draw Row
+        html += `
+            <tr class="main-draw-row">
+                <td rowspan="2" style="vertical-align: middle; white-space: nowrap;">${draw.date || 'N/A'}</td>
+                <td style="white-space: nowrap;">
+                    <strong>Main:</strong> ${mainNumbersHtml}${powerballHtml}
+                </td>
+                <td style="text-align: center;">${digitCountsStr || 'N/A'}</td>
+                <td style="text-align: center; font-weight: 500; white-space: nowrap;">
+                    <div>${sumMain} | ${sumWithPowerball}</div>
+                    <div style="font-size: 0.9em; color: #666;">${oddEvenStr}</div>
+                </td>
+            </tr>`;
+            
+        // Double Play Row (if available)
+        if (draw.doublePlayArr && draw.doublePlayArr.length === 5) {
+            const doublePlayNumbers = draw.doublePlayArr;
+            const doublePlaySum = doublePlayNumbers.reduce((a, b) => a + b, 0);
+            const dpOddCount = doublePlayNumbers.filter(n => n % 2 !== 0).length;
+            const dpEvenCount = doublePlayNumbers.length - dpOddCount;
+            const dpOddEvenStr = `${dpOddCount}/${dpEvenCount}`;
+            
+            const dpLastDigits = getLastDigitCounts(doublePlayNumbers);
+            const dpDigitCountsStr = dpLastDigits.map(digit => 
+                `<span class="digit-count" title="Last digit: ${digit}">${digit}</span>`
+            ).join('');
+            
+            const doublePlayHtml = doublePlayNumbers.map(num => 
+                `<span class="number-badge double-play">${num}</span>`
+            ).join('');
+            
+            html += `
+            <tr class="double-play-row">
+                <td style="white-space: nowrap;">
+                    <strong>Double Play:</strong> ${doublePlayHtml}
+                </td>
+                <td style="text-align: center;">${dpDigitCountsStr || 'N/A'}</td>
+                <td style="text-align: center; font-weight: 500; white-space: nowrap;">
+                    <div>${doublePlaySum}</div>
+                    <div style="font-size: 0.9em; color: #666;">${dpOddEvenStr}</div>
+                </td>
+            </tr>`;
+        } else {
+            html += `
+            <tr class="double-play-row">
+                <td colspan="3" style="text-align: center; color: #999;">No Double Play data available</td>
+            </tr>`;
+        }
+    });
+    
+    html += `
+            </tbody>
+        </table>
+    </div>`;
+    
+    if (resultsDiv) {
+        resultsDiv.innerHTML = html;
+    } else {
+        console.error('Could not find history container with ID: new-tab-results');
+    }
+}
+
+// Function to render the new ball panel
+function renderNewBallPanel() {
+    const panel = document.getElementById('new-ball-panel');
+    if (!panel) return;
+    panel.innerHTML = '';
+    const selectedBalls = new Set();
+    for (let n = 1; n <= 69; n++) {
+        const ball = document.createElement('span');
+        ball.className = 'ball';
+        ball.textContent = n;
+        ball.onclick = function() {
+            if (selectedBalls.has(n)) {
+                selectedBalls.delete(n);
+                ball.classList.remove('selected');
+            } else if (selectedBalls.size < 5) {
+                selectedBalls.add(n);
+                ball.classList.add('selected');
+            }
+            if (selectedBalls.size === 5) {
+                // Enable powerball selection
+                document.querySelectorAll('.powerball').forEach(pb => {
+                    pb.style.opacity = '1';
+                    pb.style.pointerEvents = 'auto';
+                });
+            } else {
+                // Disable powerball selection
+                document.querySelectorAll('.powerball').forEach(pb => {
+                    pb.style.opacity = '0.5';
+                    pb.style.pointerEvents = 'none';
+                });
+            }
+        };
+        panel.appendChild(ball);
+    }
+    
+    // Add powerball selection
+    const powerballContainer = document.createElement('div');
+    powerballContainer.className = 'powerball-container';
+    powerballContainer.style.marginTop = '15px';
+    powerballContainer.innerHTML = '<div style="margin-bottom: 8px; font-weight: bold;">Powerball:</div>';
+    
+    for (let pb = 1; pb <= 26; pb++) {
+        const powerball = document.createElement('span');
+        powerball.className = 'powerball';
+        powerball.textContent = pb;
+        powerball.style.opacity = '0.5';
+        powerball.style.pointerEvents = 'none';
+        powerball.onclick = function() {
+            document.querySelectorAll('.powerball').forEach(pb => pb.classList.remove('selected'));
+            this.classList.add('selected');
+            document.getElementById('generate-btn').disabled = false;
+        };
+        powerballContainer.appendChild(powerball);
+    }
+    
+    panel.appendChild(powerballContainer);
+    
+    // Add generate button
+    const generateBtn = document.createElement('button');
+    generateBtn.id = 'generate-btn';
+    generateBtn.textContent = 'Generate Numbers';
+    generateBtn.disabled = true;
+    generateBtn.style.marginTop = '15px';
+    generateBtn.onclick = function() {
+        const selectedPowerball = document.querySelector('.powerball.selected');
+        if (selectedBalls.size === 5 && selectedPowerball) {
+            const numbers = Array.from(selectedBalls).sort((a, b) => a - b);
+            const powerball = parseInt(selectedPowerball.textContent);
+            alert(`Your numbers: ${numbers.join(', ')} Powerball: ${powerball}`);
+        }
+    };
+    
+    panel.appendChild(generateBtn);
+}
+
 // Function to load data from local CSV
 async function loadLotteryData() {
     const loadingIndicator = document.getElementById('loading-indicator');
@@ -323,9 +554,29 @@ document.addEventListener('DOMContentLoaded', async function() {
             if (tabId === 'combo') {
                 renderComboBallPanel();
             } else if (tabId === 'new') {
+                console.log('History tab activated');
                 renderNewBallPanel();
                 const resultsDiv = document.getElementById('new-tab-results');
-                if (resultsDiv) resultsDiv.innerHTML = '';
+                if (resultsDiv) {
+                    // Clear previous content
+                    resultsDiv.innerHTML = '<div style="text-align: center; padding: 10px; color: #666;">Loading history data...</div>';
+                    
+                    // Small delay to allow UI to update before rendering
+                    setTimeout(() => {
+                        try {
+                            renderHistoryTab();
+                            console.log('History tab rendered successfully');
+                        } catch (error) {
+                            console.error('Error rendering history tab:', error);
+                            resultsDiv.innerHTML = `
+                                <div style="color:#e74c3c; margin:18px 0; padding: 15px; background: #fff5f5; border: 1px solid #ffd6d6; border-radius: 4px;">
+                                    <p>Error loading history data:</p>
+                                    <pre style="white-space: pre-wrap; background: #fff; padding: 10px; border: 1px solid #eee; margin: 10px 0; overflow: auto;">${error.message || 'Unknown error'}</pre>
+                                    <p>Please check the console for more details and refresh the page to try again.</p>
+                                </div>`;
+                        }
+                    }, 50);
+                }
             } else if (tabId === 'trio') {
                 renderTrioTab();
             } else if (tabId === 'trio2') {
@@ -1742,18 +1993,19 @@ document.addEventListener('DOMContentLoaded', async function() {
                             }
                         }
                     }
-                    // --- Render History tab with both main and double play as columns ---
-                    function renderHistoryTab() {
-                        let html = '<table class="freq-table"><thead><tr><th>#</th><th>Date</th><th>Main Numbers</th><th>Double Play Numbers</th></tr></thead><tbody>';
-                        let rowNum = 1;
-                        window.filteredDrawRows.forEach(draw => {
-                            html += `<tr><td>${rowNum++}</td><td>${draw.date}</td><td>${draw.mainArr.join('-')}</td><td>${draw.doublePlayArr && draw.doublePlayArr.length === 5 ? draw.doublePlayArr.join('-') : ''}</td></tr>`;
+                    // Function to calculate last digit counts for a draw
+                    function getLastDigitCounts(mainArr) {
+                        const digitCounts = Array(10).fill(0);
+                        // Count last digits of the 5 main numbers
+                        mainArr.forEach(num => {
+                            const lastDigit = num % 10;
+                            digitCounts[lastDigit]++;
                         });
-                        html += '</tbody></table>';
-                        document.getElementById('history-table').innerHTML = html;
+                        return digitCounts;
                     }
-                    // --- New tab functions ---
-                    function renderNewBallPanel() {
+
+                    // Moved to global scope
+function renderNewBallPanel() {
                         const panel = document.getElementById('new-ball-panel');
                         if (!panel) return;
                         panel.innerHTML = '';

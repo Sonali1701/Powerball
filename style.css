@@ -1360,6 +1360,265 @@ body {
     background: #eaf3fb;
 }
 
+/* Ensure digit counts column is visible */
+#new-tab-results {
+    width: 100%;
+    overflow-x: auto;
+    margin: 15px 0;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+}
+
+#new-tab-results table.freq-table {
+    table-layout: fixed;
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+#new-tab-results table.freq-table th,
+#new-tab-results table.freq-table td {
+    padding: 12px 8px;
+    text-align: center;
+    border-bottom: 1px solid #f0f0f0;
+    vertical-align: middle;
+}
+
+#new-tab-results table.freq-table th {
+    background: linear-gradient(135deg, #4a6bdf, #3a5bd9);
+    color: white;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.85em;
+    letter-spacing: 0.5px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    white-space: nowrap;
+}
+
+#new-tab-results table.freq-table tr {
+    transition: all 0.2s ease;
+}
+
+#new-tab-results table.freq-table tr:hover {
+    background-color: #f8f9ff;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+#new-tab-results table.freq-table tr:last-child td {
+    border-bottom: none;
+}
+
+/* Set specific widths for each column */
+#new-tab-results table.freq-table th:nth-child(1),
+#new-tab-results table.freq-table td:nth-child(1) {
+    width: 15%;
+    min-width: 90px;
+    white-space: nowrap;
+    padding: 8px 4px;
+}
+
+#new-tab-results table.freq-table th:nth-child(2),
+#new-tab-results table.freq-table td:nth-child(2) {
+    width: 50%;
+    min-width: 200px;
+    padding: 8px 4px;
+}
+
+#new-tab-results table.freq-table th:nth-child(3),
+#new-tab-results table.freq-table td:nth-child(3) {
+    width: 25%;
+    min-width: 120px;
+    text-align: center;
+    padding: 8px 4px;
+}
+
+#new-tab-results table.freq-table th:nth-child(4),
+#new-tab-results table.freq-table td:nth-child(4) {
+    width: 10%;
+    min-width: 80px;
+    text-align: center;
+    padding: 8px 4px;
+}
+
+#new-tab-results table.freq-table th:nth-child(4),
+#new-tab-results table.freq-table td:nth-child(4) {
+    width: 15%;
+    min-width: 150px;
+    white-space: normal;
+    word-break: break-word;
+    text-align: center;
+    padding: 8px 12px;
+}
+
+/* Sum and Sum+PB Columns */
+#new-tab-results table.freq-table th:nth-child(5),
+#new-tab-results table.freq-table td:nth-child(5),
+#new-tab-results table.freq-table th:nth-child(6),
+#new-tab-results table.freq-table td:nth-child(6) {
+    width: 8%;
+    min-width: 70px;
+    text-align: center;
+    font-family: 'Courier New', monospace;
+    font-weight: bold;
+}
+
+/* Odd/Even Column */
+#new-tab-results table.freq-table th:nth-child(7),
+#new-tab-results table.freq-table td:nth-child(7) {
+    width: 8%;
+    min-width: 60px;
+    text-align: center;
+    font-family: 'Courier New', monospace;
+    font-weight: bold;
+}
+
+/* Style for number cells */
+#new-tab-results .number-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    margin: 1px 1px;
+    font-weight: 600;
+    font-size: 0.85em;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    transition: all 0.2s ease;
+    vertical-align: middle;
+}
+
+#new-tab-results .number-badge:hover {
+    transform: scale(1.1);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+}
+
+/* Main number badge */
+#new-tab-results .main-number {
+    background: #e74c3c;
+    color: white;
+}
+
+/* Powerball badge */
+#new-tab-results .powerball {
+    background: #f1c40f;
+    color: #000;
+    font-weight: bold;
+}
+
+/* Double play badge */
+#new-tab-results .double-play {
+    background: #3498db;
+    color: white;
+    font-size: 0.85em;
+}
+
+/* Row styling */
+#new-tab-results tr.main-draw-row {
+    background-color: #fff;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+#new-tab-results tr.double-play-row {
+    background-color: #f9f9f9;
+    border-bottom: 2px solid #eaeaea;
+}
+
+#new-tab-results tr:hover {
+    background-color: #f5f8ff !important;
+}
+
+#new-tab-results tr.main-draw-row td:first-child {
+    border-top-left-radius: 8px;
+    border-bottom-left-radius: 0;
+}
+
+#new-tab-results tr.main-draw-row td:last-child {
+    border-top-right-radius: 8px;
+    border-bottom-right-radius: 0;
+}
+
+#new-tab-results tr.double-play-row:last-child {
+    border-bottom-left-radius: 8px;
+    border-bottom-right-radius: 8px;
+}
+
+#new-tab-results tr.double-play-row:last-child td:first-child {
+    border-bottom-left-radius: 8px;
+}
+
+#new-tab-results tr.double-play-row:last-child td:last-child {
+    border-bottom-right-radius: 8px;
+}
+
+#new-tab-results td[colspan] {
+    padding: 12px 8px;
+    color: #999;
+    font-style: italic;
+}
+
+#new-tab-results strong {
+    color: #555;
+    margin-right: 8px;
+    font-weight: 600;
+}
+
+/* Style for digit count badges */
+#new-tab-results .digit-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    margin: 1px;
+    background: #f0f4ff;
+    color: #3a5bd9;
+    font-weight: 600;
+    font-size: 0.8em;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    transition: all 0.2s ease;
+    vertical-align: middle;
+}
+
+#new-tab-results .digit-count:hover {
+    transform: scale(1.1);
+    background: #4a6bdf;
+    color: white;
+}
+
+#new-tab-results table.freq-table th:nth-child(5),
+#new-tab-results table.freq-table td:nth-child(5) {
+    width: 25%;
+    min-width: 150px;
+}
+
+/* Make the table scrollable on small screens */
+@media (max-width: 768px) {
+    #new-tab-results {
+        display: block;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    #new-tab-results table {
+        width: 100%;
+        margin-bottom: 1rem;
+    }
+    
+    #new-tab-results table th,
+    #new-tab-results table td {
+        white-space: nowrap;
+    }
+}
+
 #history-content table.freq-table th {
     background: #eaf3fb;
     color: #234;
