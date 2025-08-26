@@ -51,13 +51,11 @@
         
         .draw-card {
             background: white;
-            border-radius: 12px;
-            padding: 18px;
+            border-radius: 10px;
             margin-bottom: 20px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.08);
-            position: relative;
-            border: 1px solid #e0e0e0;
-            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            overflow: hidden;
+            border: 1px solid #e9ecef;
         }
         
         .draw-card:hover {
@@ -70,143 +68,131 @@
             border-left: 4px solid #4a90e2;
         }
         
-        .analysis-summary {
-            margin-top: 12px;
-            padding: 12px;
-            background: #f9fafb;
-            border-radius: 8px;
-            font-size: 0.85em;
-            color: #4a5568;
-            border: 1px solid #edf2f7;
+        .analysis-box {
+            padding: 15px;
+            background: #f8f9fa;
         }
         
         .analysis-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-            gap: 8px;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 10px;
         }
         
         .stat-item {
-            display: flex;
-            flex-direction: column;
-            padding: 4px 0;
+            background: white;
+            padding: 10px;
+            border-radius: 6px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            text-align: center;
         }
         
         .stat-label {
             font-size: 0.75em;
-            color: #718096;
-            margin-bottom: 2px;
+            color: #6c757d;
+            margin-bottom: 4px;
         }
         
         .stat-value {
             font-weight: 600;
-            color: #2d3748;
+            color: #2c3e50;
+            font-size: 1.1em;
         }
         
-        .notes {
-            margin-top: 10px;
-            padding: 8px;
-            background: #fff8e1;
-            border-left: 3px solid #ffc107;
-            font-size: 0.85em;
-            color: #5d4037;
-            border-radius: 0 4px 4px 0;
+        .numbers-box {
+            padding: 20px;
+            border-bottom: 1px solid #f1f3f5;
+            background: #fff;
         }
         
-        .analysis-summary > div {
-            margin: 4px 0;
-            display: flex;
-            justify-content: space-between;
-        }
-        
-        .analysis-summary > div::after {
-            content: '';
-            flex: 1;
-            border-bottom: 1px dotted #ddd;
-            margin: 0 8px 4px;
-        }
-        
-        h1 {
-            color: #e31837;
-            text-align: center;
-            margin-bottom: 30px;
-        }
-        .entry-form {
-            background: white;
-            padding: 25px;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
-        }
-        .form-group {
-            margin-bottom: 20px;
-        }
-        .form-row {
-            display: flex;
-            gap: 15px;
-            margin-bottom: 15px;
-            align-items: center;
-        }
-        .form-row label {
-            min-width: 120px;
-            font-weight: 600;
-        }
-        input[type="number"] {
-            width: 70px;
-            height: 40px;
-            text-align: center;
-            font-size: 16px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            padding: 5px;
-        }
-        .number-inputs {
+        .draw-numbers {
             display: flex;
             gap: 10px;
             flex-wrap: wrap;
-            align-items: center;
-        }
-        .number-inputs input {
-            flex: 0 0 auto;
-        }
-        .buttons {
-            display: flex;
-            gap: 15px;
-            margin-top: 25px;
             justify-content: center;
+            margin: 0 auto;
+            max-width: 360px;
         }
-        button {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 5px;
+        
+        .number {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: #f1f3f5;
             font-weight: 600;
+            color: #2c3e50;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .powerball-badge {
+            background: #f1c40f;
+            color: #000;
+        }
+        
+        .draw-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 15px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .delete-btn {
+            background: #fff5f5;
+            border: 1px solid #ffd6d6;
+            color: #e74c3c;
+            font-size: 1em;
             cursor: pointer;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
             transition: all 0.2s;
         }
+        
+        .delete-btn:hover {
+            background: #ffebeb;
+            transform: scale(1.1);
+        }
+        
         .btn-save {
             background-color: #28a745;
             color: white;
         }
+        
         .btn-save:hover {
             background-color: #218838;
         }
+        
         .btn-download {
             background-color: #007bff;
             color: white;
         }
+        
         .btn-download:hover {
             background-color: #0056b3;
         }
+        
         .btn-clear {
             background-color: #dc3545;
             color: white;
         }
+        
         .btn-clear:hover {
             background-color: #c82333;
         }
+        
         .draws-list {
             margin-top: 30px;
         }
+        
         .draw-item {
             background: white;
             padding: 15px;
@@ -217,32 +203,71 @@
             align-items: center;
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
-        .draw-numbers {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-            margin: 15px 0;
-            padding: 12px 0;
-            border-bottom: 1px dashed #f0f0f0;
-        }
-        .number-badge {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-            background: #e74c3c;
-            color: white;
-            font-weight: bold;
-        }
-        .powerball-badge {
-            background: #f1c40f;
-            color: #000;
-        }
+        
         .draw-date {
             font-weight: 600;
             color: #333;
+        }
+        
+        .entry-form {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+            align-items: center;
+        }
+        
+        .form-row label {
+            min-width: 120px;
+            font-weight: 600;
+        }
+        
+        input[type="number"] {
+            width: 70px;
+            height: 40px;
+            text-align: center;
+            font-size: 16px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 5px;
+        }
+        
+        .number-inputs {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        
+        .number-inputs input {
+            flex: 0 0 auto;
+        }
+        
+        .buttons {
+            display: flex;
+            gap: 15px;
+            margin-top: 25px;
+            justify-content: center;
+        }
+        
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
         }
     </style>
 </head>
@@ -511,39 +536,37 @@
             html += `
                 <div class="draw-card">
                     <div class="draw-header">
-                        <div>
-                            <span class="draw-date">${draw.date}</span>
-                            ${draw.analysis?.drawType === 'double-play' ? '<span class="draw-type">Double Play</span>' : ''}
-                            ${draw.analysis?.drawType === 'special' ? '<span class="draw-type" style="background:#f3e5f5;color:#8e24aa">Special</span>' : ''}
-                        </div>
-                        <button class="delete-btn" title="Delete draw" data-id="${draw.id}">
+                        <span class="draw-date">${draw.date}</span>
+                        <button class="delete-btn" data-id="${draw.id}" title="Delete draw">
                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <line x1="18" y1="6" x2="6" y2="18"></line>
                                 <line x1="6" y1="6" x2="18" y2="18"></line>
                             </svg>
                         </button>
                     </div>
-                    <div class="draw-numbers">
-                        ${draw.numbers.map(n => `<span class="number">${n}</span>`).join('')}
-                        ${draw.powerball ? `<span class="powerball">${draw.powerball}</span>` : ''}
+                    <div class="numbers-box">
+                        <div class="draw-numbers">
+                            ${draw.numbers.map(n => `<span class="number">${n}</span>`).join('')}
+                            ${draw.powerball ? `<span class="powerball">${draw.powerball}</span>` : ''}
+                        </div>
                     </div>`;
             
             // Add analysis summary if available
             if (draw.analysis) {
                 html += `
-                    <div class="analysis-summary">
+                    <div class="analysis-box">
                         <div class="analysis-grid">
                             <div class="stat-item">
-                                <span class="stat-label">Sum</span>
-                                <span class="stat-value">${draw.analysis.sum || 'N/A'}</span>
+                                <div class="stat-label">Sum</div>
+                                <div class="stat-value">${draw.analysis.sum || 'N/A'}</div>
                             </div>
                             <div class="stat-item">
-                                <span class="stat-label">Odd/Even</span>
-                                <span class="stat-value">${draw.analysis.oddsEvens.odds}/${draw.analysis.oddsEvens.evens}</span>
+                                <div class="stat-label">Odd/Even</div>
+                                <div class="stat-value">${draw.analysis.oddsEvens.odds}/${draw.analysis.oddsEvens.evens}</div>
                             </div>
                             <div class="stat-item">
-                                <span class="stat-label">Low/High</span>
-                                <span class="stat-value">${draw.analysis.lowHigh.lows}/${draw.analysis.lowHigh.highs}</span>
+                                <div class="stat-label">Low/High</div>
+                                <div class="stat-value">${draw.analysis.lowHigh.lows}/${draw.analysis.lowHigh.highs}</div>
                             </div>
                             <div class="stat-item">
                                 <span class="stat-label">Range</span>
