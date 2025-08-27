@@ -179,22 +179,118 @@ function createGameElement(gameNumber, pattern) {
     return gameDiv;
 }
 
-// Add game to the ticket list
+// Add game to the ticket list with improved formatting
 function addToTicketList(gameNumber, pattern) {
     const ticketList = document.getElementById('ticket-list');
     
+    // Create main ticket container
     const ticketDiv = document.createElement('div');
     ticketDiv.className = 'ticket';
+    ticketDiv.style.margin = '15px 0';
+    ticketDiv.style.padding = '15px';
+    ticketDiv.style.border = '1px solid #e0e0e0';
+    ticketDiv.style.borderRadius = '8px';
+    ticketDiv.style.backgroundColor = '#f9f9f9';
     
-    const ticketTitle = document.createElement('strong');
-    ticketTitle.textContent = `Game ${gameNumber}: `;
+    // Create game number header
+    const gameHeader = document.createElement('div');
+    gameHeader.style.display = 'flex';
+    gameHeader.style.justifyContent = 'space-between';
+    gameHeader.style.marginBottom = '10px';
+    gameHeader.style.paddingBottom = '8px';
+    gameHeader.style.borderBottom = '1px solid #e0e0e0';
     
-    const ticketNumbers = document.createElement('span');
-    const numbers = pattern.map(letter => numberMap[letter]);
-    ticketNumbers.textContent = numbers.join(' - ');
+    const ticketTitle = document.createElement('div');
+    ticketTitle.textContent = `Game ${gameNumber}`;
+    ticketTitle.style.fontWeight = 'bold';
+    ticketTitle.style.fontSize = '1.1em';
+    ticketTitle.style.color = '#2c3e50';
     
-    ticketDiv.appendChild(ticketTitle);
-    ticketDiv.appendChild(ticketNumbers);
+    // Add pattern letters
+    const patternLetters = document.createElement('div');
+    patternLetters.textContent = pattern.join(' ');
+    patternLetters.style.fontFamily = 'monospace';
+    patternLetters.style.color = '#7f8c8d';
+    
+    gameHeader.appendChild(ticketTitle);
+    gameHeader.appendChild(patternLetters);
+    
+    // Create numbers container
+    const numbersContainer = document.createElement('div');
+    numbersContainer.style.display = 'flex';
+    numbersContainer.style.flexWrap = 'wrap';
+    numbersContainer.style.gap = '8px';
+    numbersContainer.style.alignItems = 'center';
+    
+    // Add regular numbers
+    const displayPattern = [...pattern];
+    const powerballIndex = displayPattern.indexOf('A*');
+    let powerballNumber = '';
+    
+    if (powerballIndex !== -1) {
+        powerballNumber = numberMap['A*'];
+        displayPattern.splice(powerballIndex, 1);
+    }
+    
+    // Add regular number balls
+    displayPattern.forEach(letter => {
+        const numberBall = document.createElement('div');
+        numberBall.textContent = numberMap[letter];
+        numberBall.style.width = '36px';
+        numberBall.style.height = '36px';
+        numberBall.style.borderRadius = '50%';
+        numberBall.style.backgroundColor = '#3498db';
+        numberBall.style.color = 'white';
+        numberBall.style.display = 'flex';
+        numberBall.style.alignItems = 'center';
+        numberBall.style.justifyContent = 'center';
+        numberBall.style.fontWeight = 'bold';
+        numberBall.style.fontSize = '0.9em';
+        
+        // Add letter as a tooltip
+        numberBall.title = `Letter: ${letter}`;
+        
+        numbersContainer.appendChild(numberBall);
+    });
+    
+    // Add powerball if exists
+    if (powerballNumber) {
+        const powerball = document.createElement('div');
+        powerball.textContent = powerballNumber;
+        powerball.style.width = '36px';
+        powerball.style.height = '36px';
+        powerball.style.borderRadius = '50%';
+        powerball.style.backgroundColor = '#e74c3c';
+        powerball.style.color = 'white';
+        powerball.style.display = 'flex';
+        powerball.style.alignItems = 'center';
+        powerball.style.justifyContent = 'center';
+        powerball.style.fontWeight = 'bold';
+        powerball.style.fontSize = '0.9em';
+        powerball.title = 'Powerball (A*)';
+        powerball.style.marginLeft = '10px';
+        powerball.style.border = '2px solid #c0392b';
+        
+        numbersContainer.appendChild(powerball);
+    }
+    
+    // Add hover effect
+    ticketDiv.addEventListener('mouseenter', () => {
+        ticketDiv.style.boxShadow = '0 4px 8px rgba(0,0,0,0.1)';
+        ticketDiv.style.transform = 'translateY(-2px)';
+    });
+    
+    ticketDiv.addEventListener('mouseleave', () => {
+        ticketDiv.style.boxShadow = 'none';
+        ticketDiv.style.transform = 'translateY(0)';
+    });
+    
+    // Add transition for smooth effects
+    ticketDiv.style.transition = 'all 0.2s ease-in-out';
+    
+    // Assemble the ticket
+    ticketDiv.appendChild(gameHeader);
+    ticketDiv.appendChild(numbersContainer);
     ticketList.appendChild(ticketDiv);
 }
 
@@ -205,12 +301,54 @@ function downloadTickets() {
         return;
     }
     
-    let csvContent = 'Game,Numbers\n';
+    let csvContent = 'Game,Numbers,Letter Mappings\n';
+    
+    // Add letter mappings at the top of the file
+    const letterMappings = [];
+    LETTERS.forEach(letter => {
+        const cleanLetter = letter.replace('*', '');
+        letterMappings.push(`${cleanLetter}=${numberMap[letter]}`);
+    });
     
     GAME_PATTERNS.forEach((pattern, index) => {
         const gameNumber = index + 1;
-        const numbers = pattern.map(letter => numberMap[letter]);
-        csvContent += `Game ${gameNumber},"${numbers.join(', ')}"\n`;
+        
+        // Create a copy of the pattern to avoid modifying the original
+        const sortedPattern = [...pattern];
+        
+        // Find and remove the Powerball (A*) from the pattern
+        const powerballIndex = sortedPattern.indexOf('A*');
+        let powerballNumber = '';
+        
+        if (powerballIndex !== -1) {
+            powerballNumber = numberMap['A*'];
+            sortedPattern.splice(powerballIndex, 1);
+        }
+        
+        // Get the regular numbers
+        const regularNumbers = sortedPattern.map(letter => numberMap[letter]);
+        
+        // Combine regular numbers with powerball at the end
+        const allNumbers = [...regularNumbers];
+        if (powerballNumber !== '') {
+            allNumbers.push(powerballNumber);
+        }
+        
+        // Get letter codes for this game
+        const letterCodes = pattern.map(letter => {
+            const cleanLetter = letter.replace('*', '');
+            return `${cleanLetter}${letter.includes('*') ? '*' : ''}`;
+        });
+        
+        // Add to CSV with both numbers and letter codes
+        csvContent += `Game ${gameNumber},"${allNumbers.join(', ')}","${letterCodes.join(' ')}`;
+        
+        // Add letter mappings for the first game only
+        if (index === 0) {
+            csvContent += `\n\nLetter Mappings: ${letterMappings.join(', ')}`;
+        }
+        
+        csvContent += '"\n';
     });
     
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
