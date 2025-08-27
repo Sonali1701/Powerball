@@ -50,9 +50,16 @@ function initializeInputs() {
         input.placeholder = isPowerNumber ? 'Power #' : `#${index}`;
         input.dataset.letter = letter;
         
-        // Add validation
-        input.addEventListener('input', function() {
+        // Add validation on change (when input loses focus)
+        input.addEventListener('change', function() {
             validateNumberInput(this);
+        });
+        
+        // Also validate on blur (when clicking away)
+        input.addEventListener('blur', function() {
+            if (this.value) {
+                validateNumberInput(this);
+            }
         });
         
         inputGroup.appendChild(label);
@@ -84,21 +91,42 @@ function generateDefaultValues() {
 
 // Validate number input
 function validateNumberInput(input) {
-    let value = parseInt(input.value);
+    let value = input.value;
+    
+    // Allow empty input (for backspace/delete)
+    if (value === '') return;
+    
+    // Parse as integer
+    const numValue = parseInt(value, 10);
+    
+    // Check if valid number
+    if (isNaN(numValue)) {
+        input.value = '';
+        return;
+    }
     
     // Ensure value is between 1 and 69
-    if (value < 1) input.value = 1;
-    if (value > 69) input.value = 69;
+    if (numValue < 1) {
+        input.value = '1';
+    } else if (numValue > 69) {
+        input.value = '69';
+    } else {
+        input.value = numValue.toString();
+    }
     
-    // Ensure no duplicates (except empty)
-    if (input.value) {
+    // Only check for duplicates when we have a complete number
+    if (input.value.length > 0) {
         const inputs = document.querySelectorAll('.number-inputs input');
-        inputs.forEach(otherInput => {
-            if (otherInput !== input && otherInput.value === input.value) {
+        const currentValue = input.value;
+        
+        // Check for duplicate values (exact match only)
+        for (const otherInput of inputs) {
+            if (otherInput !== input && otherInput.value === currentValue) {
                 input.value = '';
                 alert('Please enter unique numbers between 1 and 69');
+                return;
             }
-        });
+        }
     }
 }
 
