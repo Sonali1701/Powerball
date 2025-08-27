@@ -732,28 +732,36 @@ body {
 /* Tab Navigation Styles */
 .tab-nav {
     display: flex;
+    flex-wrap: wrap;
     justify-content: center;
     align-items: center;
-    gap: 0;
-    margin: 24px 0 18px;
+    gap: 4px;
+    padding: 8px;
+    margin: 16px 0;
     background: #f8faff;
-    border-radius: 12px;
-    box-shadow: 0 2px 8px rgb(44 62 80 / 4%);
-    overflow: hidden;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgb(44 62 80 / 8%);
+    max-width: 100%;
+    box-sizing: border-box;
 }
 
 .tab-btn {
-    background: none;
-    border: none;
+    background: #f1f1f1;
+    border: 1px solid #ddd;
+    border-radius: 6px;
     outline: none;
-    padding: 14px 36px;
-    font-size: 1.13em;
+    padding: 8px 16px;
+    font-size: 0.95em;
     font-weight: 600;
     color: #234;
     cursor: pointer;
-    transition: background 0.18s, color 0.18s, box-shadow 0.18s;
-    border-bottom: 3px solid transparent;
-    border-right: 1.5px solid #eaeaea;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    margin: 2px;
+    flex: 1 1 auto;
+    text-align: center;
+    min-width: fit-content;
+    max-width: 200px;
 }
 
 .tab-btn:last-child {
@@ -802,12 +810,31 @@ body {
     border: none !important;
 }
 
-@media (width <= 700px) {
+@media (max-width: 900px) {
     .tab-btn {
-        padding: 10px;
-        font-size: 1em;
+        padding: 6px 10px;
+        font-size: 0.8em;
+        min-width: 100px;
     }
-} 
+    
+    .tab-nav {
+        padding: 6px;
+        gap: 3px;
+    }
+}
+
+@media (max-width: 500px) {
+    .tab-btn {
+        padding: 5px 8px;
+        font-size: 0.75em;
+        min-width: 80px;
+    }
+    
+    .tab-nav {
+        padding: 4px;
+        gap: 2px;
+    }
+}
 
 /* 2x Page Styles */
 #tab-2x .main-flex {
@@ -1154,16 +1181,26 @@ body {
     }
 } 
 
-.combo-results-table .aligned-numbers > span {
-    margin-right: 8px;
-    margin-left: 0;
-    display: inline-flex;
-    align-items: center;
+.combo-results-table .aligned-numbers {
+    display: flex;
+    flex-wrap: nowrap;
+    white-space: nowrap;
+    overflow-x: auto;
+    padding: 4px 0;
+    gap: 4px;
 }
 
-.combo-results-table .aligned-numbers > span:last-child {
-    margin-right: 0;
-} 
+.combo-results-table .aligned-numbers > span {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    margin: 0 2px;
+    font-weight: bold;
+}
 
 .generated-ball.red, .red-ball {
     background: #e74c3c !important;
@@ -1371,13 +1408,14 @@ body {
 }
 
 #new-tab-results table.freq-table {
-    table-layout: fixed;
+    table-layout: auto;
     width: 100%;
     border-collapse: separate;
     border-spacing: 0;
     background: white;
     border-radius: 8px;
     overflow: hidden;
+    white-space: nowrap;
 }
 
 #new-tab-results table.freq-table th,
@@ -1426,9 +1464,10 @@ body {
 
 #new-tab-results table.freq-table th:nth-child(2),
 #new-tab-results table.freq-table td:nth-child(2) {
-    width: 50%;
+    width: auto;
     min-width: 200px;
     padding: 8px 4px;
+    white-space: nowrap;
 }
 
 #new-tab-results table.freq-table th:nth-child(3),
@@ -1487,12 +1526,22 @@ body {
     width: 26px;
     height: 26px;
     border-radius: 50%;
-    margin: 1px 1px;
+    margin: 1px 2px;
     font-weight: 600;
     font-size: 0.85em;
     box-shadow: 0 1px 2px rgba(0,0,0,0.1);
     transition: all 0.2s ease;
     vertical-align: middle;
+    flex-shrink: 0;
+}
+
+/* Ensure numbers container stays in one line */
+#new-tab-results .draw-numbers {
+    display: flex;
+    flex-wrap: nowrap;
+    white-space: nowrap;
+    overflow-x: auto;
+    padding: 2px 0;
 }
 
 #new-tab-results .number-badge:hover {
@@ -1548,6 +1597,141 @@ body {
 #new-tab-results tr.double-play-row:last-child {
     border-bottom-left-radius: 8px;
     border-bottom-right-radius: 8px;
+}
+
+/* Ending Digits Tab Styles */
+#tab-ending-digits .ball {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: #f0f0f0;
+    color: #333;
+    font-weight: bold;
+    cursor: pointer;
+    margin: 2px;
+    transition: all 0.2s ease;
+    border: 2px solid #ddd;
+    font-size: 1em;
+}
+
+#tab-ending-digits .ball:hover {
+    transform: scale(1.1);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+
+#tab-ending-digits .ball.selected {
+    background: #3498db;
+    color: white;
+    border-color: #2980b9;
+}
+
+#ending-digits-ball-panel {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin: 10px 0;
+    justify-content: center;
+}
+
+#ending-digits-selected {
+    min-height: 40px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    align-items: center;
+    padding: 8px;
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+}
+
+.ending-digit-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: #3498db;
+    color: white;
+    font-weight: bold;
+    font-size: 0.9em;
+}
+
+.ending-digits-result-item {
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    margin-bottom: 10px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.ending-digits-result-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 15px;
+    background: #f8f9fa;
+    border-bottom: 1px solid #e0e0e0;
+    cursor: pointer;
+}
+
+.ending-digits-result-header:hover {
+    background: #f1f3f5;
+}
+
+.ending-digits-result-content {
+    padding: 15px;
+    display: none;
+}
+
+.ending-digits-result-item.expanded .ending-digits-result-content {
+    display: block;
+}
+
+.ending-digits-dates {
+    margin-top: 10px;
+    font-size: 0.9em;
+    color: #666;
+}
+
+.ending-digits-date {
+    display: inline-block;
+    margin: 2px 5px 2px 0;
+    padding: 3px 8px;
+    background: #f0f4f8;
+    border-radius: 4px;
+    font-size: 0.85em;
+}
+
+.ending-digits-combination {
+    display: flex;
+    gap: 5px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+}
+
+.ending-digits-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #e9ecef;
+    color: #333;
+    font-weight: bold;
+    font-size: 0.9em;
+}
+
+.ending-digits-frequency {
+    font-weight: bold;
+    color: #2c3e50;
+    margin-left: 8px;
 }
 
 #new-tab-results tr.double-play-row:last-child td:first-child {
