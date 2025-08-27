@@ -2076,10 +2076,10 @@ function renderNewBallPanel() {
                                 const matchArr = draw.mainArr.filter(num => selectedSet.has(Number(num)));
                                 if (matchArr.length > 0) {
                                     const balls = draw.mainArr.map((num, idx) => selectedSet.has(Number(num))
-                                        ? `<span style='display:inline-block;background:linear-gradient(120deg,#e74c3c 60%,#ffb3b3 100%);color:#fff;border-radius:50%;width:32px;height:32px;line-height:32px;text-align:center;font-size:1.08em;font-weight:bold;margin:0 2px;'>${num}</span>${idx < draw.mainArr.length-1 ? '<b style="color:#000;font-size:1.2em;">-</b>' : ''}`
-                                        : `<span class='plain-number'>${num}</span>${idx < draw.mainArr.length-1 ? '<b style="color:#000;font-size:1.2em;">-</b>' : ''}`
+                                        ? `<span style='display:inline-flex;align-items:center;justify-content:center;background:linear-gradient(120deg,#e74c3c 60%,#ffb3b3 100%);color:#fff;border-radius:50%;width:30px;height:30px;line-height:1;text-align:center;font-size:1em;font-weight:bold;margin:0 1px;padding:0;flex-shrink:0;'>${num}</span>${idx < draw.mainArr.length-1 ? '<span style="color:#000;margin:0 2px;flex-shrink:0;">-</span>' : ''}`
+                                        : `<span class='plain-number' style='display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;margin:0 1px;padding:0;flex-shrink:0;'>${num}</span>${idx < draw.mainArr.length-1 ? '<span style="color:#000;margin:0 2px;flex-shrink:0;">-</span>' : ''}`
                                     ).join("");
-                                    html += `<tr><td>${draw.date}</td><td>Main</td><td><div class='aligned-numbers' style='display:flex;gap:8px;align-items:center;flex-wrap:wrap;'>${balls}</div></td><td><span class='yellow-ball'>${draw.powerball || ''}</span></td></tr>`;
+                                    html += `<tr><td style="white-space:nowrap;">${draw.date}</td><td>Main</td><td style="white-space:nowrap;overflow-x:auto;"><div style="display:flex;align-items:center;white-space:nowrap;">${balls}</div></td><td style="white-space:nowrap;"><span class='yellow-ball'>${draw.powerball || ''}</span></td></tr>`;
                                 }
                             }
                             
@@ -2088,10 +2088,10 @@ function renderNewBallPanel() {
                                 const matchArr = draw.doublePlayArr.filter(num => selectedSet.has(Number(num)));
                                 if (matchArr.length > 0) {
                                     const balls = draw.doublePlayArr.map((num, idx) => selectedSet.has(Number(num))
-                                        ? `<span style='display:inline-block;background:linear-gradient(120deg,#e74c3c 60%,#ffb3b3 100%);color:#fff;border-radius:50%;width:32px;height:32px;line-height:32px;text-align:center;font-size:1.08em;font-weight:bold;margin:0 2px;'>${num}</span>${idx < draw.doublePlayArr.length-1 ? '<b style="color:#000;font-size:1.2em;">-</b>' : ''}`
-                                        : `<span class='plain-number'>${num}</span>${idx < draw.doublePlayArr.length-1 ? '<b style="color:#000;font-size:1.2em;">-</b>' : ''}`
+                                        ? `<span style='display:inline-flex;align-items:center;justify-content:center;background:linear-gradient(120deg,#e74c3c 60%,#ffb3b3 100%);color:#fff;border-radius:50%;width:30px;height:30px;line-height:1;text-align:center;font-size:1em;font-weight:bold;margin:0 1px;padding:0;flex-shrink:0;'>${num}</span>${idx < draw.doublePlayArr.length-1 ? '<span style="color:#000;margin:0 2px;flex-shrink:0;">-</span>' : ''}`
+                                        : `<span class='plain-number' style='display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;margin:0 1px;padding:0;flex-shrink:0;'>${num}</span>${idx < draw.doublePlayArr.length-1 ? '<span style="color:#000;margin:0 2px;flex-shrink:0;">-</span>' : ''}`
                                     ).join("");
-                                    html += `<tr><td>${draw.date}</td><td>Double Play</td><td><div class='aligned-numbers' style='display:flex;gap:8px;align-items:center;flex-wrap:wrap;'>${balls}</div></td><td><span class='yellow-ball'>${draw.doublePlayPowerball || ''}</span></td></tr>`;
+                                    html += `<tr><td style="white-space:nowrap;">${draw.date}</td><td>Double Play</td><td style="white-space:nowrap;overflow-x:auto;"><div style="display:flex;align-items:center;white-space:nowrap;">${balls}</div></td><td style="white-space:nowrap;"><span class='yellow-ball'>${draw.doublePlayPowerball || ''}</span></td></tr>`;
                                 }
                             }
                         });
