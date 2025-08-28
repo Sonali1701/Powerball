@@ -1,24 +1,31 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <!-- Choices.js for searchable dropdowns -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
-    <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+    <!-- Choices.js for searchable dropdowns - Load with preconnect and preload -->
+    <link rel="preload" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js" as="script">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" media="print" onload="this.media='all'">
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, viewport-fit=cover">
+    <meta name="theme-color" content="#3498db">
     <title>PowerBall Random Generator</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css" media="print" onload="this.media='all'">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
     <style>
       body {
         background: linear-gradient(120deg, #f0f4ff 0%, #fff 100%);
       }
       .generator-container {
         max-width: 900px;
-        margin: 40px auto 0 auto;
+        margin: 20px auto;
         background: #fff;
-        border-radius: 18px;
+        border-radius: 16px;
         box-shadow: 0 4px 24px rgba(44,62,80,0.10);
-        padding: 32px 18px 32px 18px;
+        padding: 24px 16px;
+        transition: all 0.3s ease;
+        will-change: transform, box-shadow;
       }
       .generator-title {
         text-align: center;
@@ -58,29 +65,83 @@
         color: #fff;
         border: none;
         border-radius: 8px;
-        padding: 10px 18px;
+        padding: 12px 18px;
         font-size: 1.08em;
         font-weight: 600;
-        margin: 0 8px 8px 0;
+        margin: 0 0 12px 0;
         cursor: pointer;
-        transition: box-shadow 0.15s, background 0.15s;
+        transition: all 0.2s ease;
         box-shadow: 0 2px 8px rgba(44,62,80,0.08);
+        -webkit-tap-highlight-color: transparent;
+        touch-action: manipulation;
+        min-height: 44px; /* Minimum touch target size */
+        width: 100%;
+        display: block;
       }
       .multi-gen-btn:hover, .freq-gen-btn:hover, #build-duo-combo-btn:hover, #build-combo-btn:hover {
         background: linear-gradient(90deg, #217dbb 0%, #3498db 100%);
         box-shadow: 0 4px 16px rgba(44,62,80,0.13);
       }
-      @media (max-width: 700px) {
+      /* Mobile-first responsive design */
+      @media (max-width: 480px) {
         .generator-container {
-          padding: 10px 2px 18px 2px;
+          padding: 8px 4px 16px 4px;
+          margin: 16px 8px;
+          width: calc(100% - 24px);
+          box-sizing: border-box;
         }
-        .generator-flex-layout {
-          flex-direction: column;
-          gap: 18px 0;
+        .generator-title {
+          font-size: 1.6em;
+          padding: 0 8px;
         }
-        .generator-section {
-          min-width: 0;
-          max-width: 100vw;
+        .tab-nav {
+          flex-wrap: wrap;
+          padding: 6px 4px;
+          gap: 6px;
+        }
+        .tab-btn {
+          padding: 8px 12px;
+          font-size: 1em;
+          flex: 1 0 calc(50% - 12px);
+          text-align: center;
+        }
+        .generator-panel {
+          padding: 16px 12px;
+          margin: 0 4px;
+          width: calc(100% - 32px);
+        }
+        .multi-gen-btn, .freq-gen-btn, #build-duo-combo-btn, #build-combo-btn {
+          width: 100%;
+          margin: 0 0 10px 0;
+          padding: 12px;
+          font-size: 1.1em;
+        }
+        .pills-container {
+          grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+          gap: 8px;
+        }
+      }
+
+      @media (min-width: 481px) and (max-width: 768px) {
+        .generator-container {
+          padding: 16px 12px;
+          margin: 20px 12px;
+          width: calc(100% - 48px);
+        }
+        .generator-title {
+          font-size: 1.8em;
+        }
+        .tab-btn {
+          padding: 8px 14px;
+          font-size: 1.05em;
+        }
+      }
+
+      @media (min-width: 769px) {
+        .generator-container {
+          max-width: 900px;
+          margin: 40px auto;
+          padding: 32px 18px;
         }
       }
       .back-link {
@@ -644,160 +705,165 @@
         }
         
         try {
-            // Get all trios that have appeared at most 2 times
-            const validTrios = window.sortedTriplets.filter(trio => trio[1] <= 2);
-        
+            // 1. Get all trios regardless of frequency
+            const validTrios = [...window.sortedTriplets];
+            
             if (validTrios.length < 2) {
-                console.log('Not enough trios with frequency <= 2, using all available trios');
+                console.log('Not enough trios available, using all available trios');
                 validTrios.push(...window.sortedTriplets);
             }
         
-            console.log('Using', validTrios.length, 'valid trios for overlapping (frequency <= 2)');
+            console.log('Using', validTrios.length, 'valid trios for overlapping');
             
-            // Try to find two trios that share one or two numbers
-            let trio1, trio2, commonNumbers = [];
-            const maxAttempts = 100; // Increased attempts for better chance of finding matches
+            // 2. Try to find 2 or 3 trios that share 1 or 2 numbers
+            let selectedTrios = [];
+            let commonNumbers = [];
+            const maxAttempts = 200;
             let attempts = 0;
+            let foundMatch = false;
             
-            while (attempts < maxAttempts) {
-                // Pick two different random trios
-                const index1 = Math.floor(Math.random() * validTrios.length);
-                let index2;
-                do {
-                    index2 = Math.floor(Math.random() * validTrios.length);
-                } while (index2 === index1);
+            // First try to find 3 trios with overlapping numbers
+            while (attempts < maxAttempts && !foundMatch) {
+                // Pick 3 different random trios
+                const indices = [];
+                while (indices.length < 3) {
+                    const idx = Math.floor(Math.random() * validTrios.length);
+                    if (!indices.includes(idx)) {
+                        indices.push(idx);
+                    }
+                }
                 
-                const trio1Nums = validTrios[index1][0].split('-').map(Number);
-                const trio2Nums = validTrios[index2][0].split('-').map(Number);
+                const trio1 = validTrios[indices[0]];
+                const trio2 = validTrios[indices[1]];
+                const trio3 = validTrios[indices[2]];
                 
-                // Find common numbers between the two trios
-                commonNumbers = trio1Nums.filter(num => trio2Nums.includes(num));
+                const nums1 = trio1[0].split('-').map(Number);
+                const nums2 = trio2[0].split('-').map(Number);
+                const nums3 = trio3[0].split('-').map(Number);
                 
-                if (commonNumbers.length === 1 || commonNumbers.length === 2) {
-                    // Found two trios with one or two common numbers
-                    trio1 = validTrios[index1];
-                    trio2 = validTrios[index2];
-                    
-                    console.log(`Found trios with ${commonNumbers.length} common numbers:`, commonNumbers);
+                // Find all unique numbers
+                const allNums = [...new Set([...nums1, ...nums2, ...nums3])];
+                
+                // If we have 5 or fewer unique numbers, this is a good combination
+                if (allNums.length <= 5) {
+                    selectedTrios = [trio1, trio2, trio3];
+                    commonNumbers = allNums;
+                    foundMatch = true;
+                    console.log('Found 3 trios with overlapping numbers:', allNums);
                     break;
                 }
                 
                 attempts++;
             }
             
-            if (!trio1 || !trio2) {
-                console.log('Could not find overlapping trios, falling back to random trios');
-                // Fall back to any two trios and take their union
+            // If no 3-trio match found, try with 2 trios
+            if (!foundMatch) {
+                console.log('No 3-trio match found, trying with 2 trios');
+                attempts = 0;
+                
+                while (attempts < maxAttempts && !foundMatch) {
+                    // Pick 2 different random trios
+                    const index1 = Math.floor(Math.random() * validTrios.length);
+                    let index2;
+                    do {
+                        index2 = Math.floor(Math.random() * validTrios.length);
+                    } while (index2 === index1);
+                    
+                    const trio1 = validTrios[index1];
+                    const trio2 = validTrios[index2];
+                    
+                    const nums1 = trio1[0].split('-').map(Number);
+                    const nums2 = trio2[0].split('-').map(Number);
+                    
+                    // Find common numbers
+                    const common = nums1.filter(num => nums2.includes(num));
+                    
+                    // If they share 1 or 2 numbers
+                    if (common.length === 1 || common.length === 2) {
+                        selectedTrios = [trio1, trio2];
+                        commonNumbers = common;
+                        foundMatch = true;
+                        console.log(`Found 2 trios with ${common.length} common numbers:`, common);
+                    }
+                    
+                    attempts++;
+                }
+            }
+            
+            // If still no match, fall back to any two trios
+            if (!foundMatch) {
+                console.log('Could not find overlapping trios, falling back to any two trios');
                 const index1 = Math.floor(Math.random() * validTrios.length);
                 let index2;
                 do {
                     index2 = Math.floor(Math.random() * validTrios.length);
                 } while (index2 === index1);
                 
-                trio1 = validTrios[index1];
-                trio2 = validTrios[index2];
-                
-                const trio1Nums = trio1[0].split('-').map(Number);
-                const trio2Nums = trio2[0].split('-').map(Number);
-                commonNumbers = trio1Nums.filter(num => trio2Nums.includes(num));
+                selectedTrios = [validTrios[index1], validTrios[index2]];
+                const nums1 = selectedTrios[0][0].split('-').map(Number);
+                const nums2 = selectedTrios[1][0].split('-').map(Number);
+                commonNumbers = nums1.filter(num => nums2.includes(num));
                 
                 if (commonNumbers.length === 0) {
                     // If no common numbers, just pick one from each trio
-                    commonNumbers = [trio1Nums[0], trio2Nums[0]];
+                    commonNumbers = [nums1[0], nums2[0]];
                 }
             }
             
-            // Get all unique numbers from both trios
-            const combinedNums = [...new Set([
-                ...trio1[0].split('-').map(Number),
-                ...trio2[0].split('-').map(Number)
-            ])];
+            // 3. Generate the final combination
+            let combination;
+            let basedOnTrio = '';
             
-            console.log('Combined numbers before filtering:', combinedNums);
+            // Get all unique numbers from selected trios
+            const allNumbers = [...new Set(selectedTrios.flatMap(trio => 
+                trio[0].split('-').map(Number)
+            ))];
             
-            // If we have exactly 5 numbers, use them
-            if (combinedNums.length === 5) {
-                // Get the original indices for frequency info
-                const trio1Index = validTrios.findIndex(t => t[0] === trio1[0]);
-                const trio2Index = validTrios.findIndex(t => t[0] === trio2[0]);
-                const freq1 = trio1Index !== -1 ? validTrios[trio1Index][1] : 1;
-                const freq2 = trio2Index !== -1 ? validTrios[trio2Index][1] : 1;
+            if (allNumbers.length <= 5) {
+                // If we have 5 or fewer unique numbers, use them all
+                combination = allNumbers;
+            } else {
+                // Otherwise, prioritize the most common numbers
+                const numberFrequencies = {};
+                selectedTrios.forEach(trio => {
+                    const nums = trio[0].split('-').map(Number);
+                    nums.forEach(num => {
+                        numberFrequencies[num] = (numberFrequencies[num] || 0) + 1;
+                    });
+                });
                 
-                // Calculate how many numbers overlap between the two trios
-                const trio1Nums = trio1[0].split('-').map(Number);
-                const trio2Nums = trio2[0].split('-').map(Number);
-                const overlapCount = trio1Nums.filter(num => trio2Nums.includes(num)).length;
-                
-                return {
-                    combination: combinedNums.sort((a, b) => a - b),
-                    basedOnTrio: `Trio (${freq1}x): ${trio1[0]} & Trio (${freq2}x): ${trio2[0]} (${overlapCount} common)`,
-                    isOverlap: true,
-                    frequency: Math.min(freq1, freq2)
-                };
+                // Sort numbers by frequency (descending) and take top 5
+                combination = Object.entries(numberFrequencies)
+                    .sort((a, b) => b[1] - a[1])
+                    .slice(0, 5)
+                    .map(([num]) => parseInt(num, 10));
             }
             
-            // If we have more than 5 numbers, prioritize keeping the overlapping numbers
-            if (combinedNums.length > 5) {
-                // Keep the overlapping numbers and fill the rest randomly
-                const nonOverlappingNums = combinedNums.filter(n => !commonNumbers.includes(n));
-                const selectedNonOverlapping = [];
-                
-                // Calculate how many more numbers we need (5 - number of overlapping numbers)
-                const needed = 5 - Math.min(commonNumbers.length, 5);
-                
-                // Randomly select from non-overlapping numbers if needed
-                while (selectedNonOverlapping.length < needed && nonOverlappingNums.length > 0) {
-                    const randomIndex = Math.floor(Math.random() * nonOverlappingNums.length);
-                    selectedNonOverlapping.push(nonOverlappingNums.splice(randomIndex, 1)[0]);
-                }
-                
-                // Combine overlapping and selected non-overlapping numbers
-                const combination = [...new Set([...commonNumbers, ...selectedNonOverlapping])]
-                    .slice(0, 5) // Ensure we don't exceed 5 numbers
-                    .sort((a, b) => a - b);
-                    
-                console.log('Final combination:', combination, 'from overlapping numbers:', commonNumbers);
-                
-                // Get the original indices for frequency info
-                const trio1Index = validTrios.findIndex(t => t[0] === trio1[0]);
-                const trio2Index = validTrios.findIndex(t => t[0] === trio2[0]);
-                const freq1 = trio1Index !== -1 ? validTrios[trio1Index][1] : 1;
-                const freq2 = trio2Index !== -1 ? validTrios[trio2Index][1] : 1;
-                
-                // Calculate how many numbers overlap between the two trios
-                const trio1Nums = trio1[0].split('-').map(Number);
-                const trio2Nums = trio2[0].split('-').map(Number);
-                const overlapCount = trio1Nums.filter(num => trio2Nums.includes(num)).length;
-                
-                return {
-                    combination,
-                    basedOnTrio: `Trio (${freq1}x): ${trio1[0]} & Trio (${freq2}x): ${trio2[0]} (${overlapCount} common)`,
-                    isOverlap: true,
-                    frequency: Math.min(freq1, freq2)
-                };
+            // Fill in with random numbers if needed
+            if (combination.length < 5) {
+                const exclude = [...combination];
+                const additional = generateUniqueNumbers(5 - combination.length, 1, 69, exclude);
+                combination = [...combination, ...additional];
             }
             
-            // If we have less than 5 numbers, fill with random unique numbers
-            const exclude = [...combinedNums];
-            const additionalNumbers = generateUniqueNumbers(5 - combinedNums.length, 1, 69, exclude);
-            const combination = [...combinedNums, ...additionalNumbers].sort((a, b) => a - b);
+            // Sort the final combination
+            combination = combination.slice(0, 5).sort((a, b) => a - b);
             
-            // Get the original indices for frequency info
-            const trio1Index = validTrios.findIndex(t => t[0] === trio1[0]);
-            const trio2Index = validTrios.findIndex(t => t[0] === trio2[0]);
-            const freq1 = trio1Index !== -1 ? validTrios[trio1Index][1] : 1;
-            const freq2 = trio2Index !== -1 ? validTrios[trio2Index][1] : 1;
+            // Create the description
+            basedOnTrio = selectedTrios.map(trio => {
+                const [nums, freq] = trio;
+                return `Trio (${freq}x): ${nums}`;
+            }).join(' & ');
             
-            // Calculate how many numbers overlap between the two trios
-            const trio1Nums = trio1[0].split('-').map(Number);
-            const trio2Nums = trio2[0].split('-').map(Number);
-            const overlapCount = trio1Nums.filter(num => trio2Nums.includes(num)).length;
+            if (commonNumbers.length > 0) {
+                basedOnTrio += ` (${commonNumbers.length} common)`;
+            }
             
             return {
                 combination,
-                basedOnTrio: `Trio (${freq1}x): ${trio1[0]} & Trio (${freq2}x): ${trio2[0]} (${overlapCount} common)`,
+                basedOnTrio,
                 isOverlap: true,
-                frequency: Math.min(freq1, freq2)
+                frequency: Math.min(...selectedTrios.map(t => t[1]))
             };
             
         } catch (error) {
@@ -842,32 +908,21 @@
         const headerRow = document.createElement('tr');
         headerRow.style.backgroundColor = '#f8f9fa';
         
-        let th2;
+        // Always create the Numbers header first
+        const th2 = document.createElement('th');
+        th2.textContent = 'Numbers';
+        th2.style.textAlign = 'left';
+        th2.style.padding = '12px 8px';
+        th2.style.border = 'none';
         
-        if (!useOverlappingTrios) {
-            const th1 = document.createElement('th');
-            th1.textContent = '#';
-            th1.style.textAlign = 'center';
-            th1.style.padding = '12px 8px';
-            th1.style.border = 'none';
-            th1.style.borderRadius = '8px 0 0 8px';
-            headerRow.appendChild(th1);
-            
-            th2 = document.createElement('th');
-            th2.textContent = 'Numbers';
-            th2.style.textAlign = 'left';
-            th2.style.padding = '12px 8px';
-            th2.style.border = 'none';
-            headerRow.appendChild(th2);
+        // Only add border radius if there's no trio info column
+        if (!useFrequentTrios && !useOverlappingTrios) {
+            th2.style.borderRadius = '0 8px 8px 0';
         } else {
-            th2 = document.createElement('th');
-            th2.textContent = 'Numbers';
-            th2.style.textAlign = 'left';
-            th2.style.padding = '12px 8px';
-            th2.style.border = 'none';
             th2.style.borderRadius = '8px 0 0 8px';
-            headerRow.appendChild(th2);
         }
+        
+        headerRow.appendChild(th2);
         
         if (useFrequentTrios) {
             const th3 = document.createElement('th');
@@ -914,20 +969,7 @@
                 tr.style.margin = '0';
                 tr.style.display = 'table-row';
                 
-                // Add row number if not using overlapping trios
-                if (!useOverlappingTrios) {
-                    const td1 = document.createElement('td');
-                    td1.textContent = i + 1;
-                    td1.style.padding = '12px 8px';
-                    td1.style.textAlign = 'center';
-                    td1.style.color = '#666';
-                    td1.style.border = 'none';
-                    td1.style.borderRight = '1px solid #eee';
-                    td1.style.borderRadius = '8px 0 0 8px';
-                    tr.appendChild(td1);
-                }
-                
-                // Add numbers
+                // Add numbers cell
                 const td2 = document.createElement('td');
                 td2.textContent = mainNumbers.join(' - ');
                 td2.style.padding = '12px 8px';
@@ -936,10 +978,10 @@
                 td2.style.border = 'none';
                 td2.style.whiteSpace = 'nowrap';  // Prevent line breaks in numbers
                 
-                if (useOverlappingTrios) {
-                    td2.style.borderRadius = '8px 0 0 8px';  // Rounded left corners for first cell
-                } else if (!useFrequentTrios) {
-                    td2.style.borderRadius = '0 8px 8px 0';
+                if (useFrequentTrios || useOverlappingTrios) {
+                    td2.style.borderRadius = '8px 0 0 8px';  // Rounded left corners when there's a trio info column
+                } else {
+                    td2.style.borderRadius = '8px';  // Rounded corners when it's the only column
                 }
                 tr.appendChild(td2);
                 
@@ -1379,6 +1421,96 @@
             }
         }
     
+    </script>
+    <script>
+    // Defer non-critical JavaScript loading
+    document.addEventListener('DOMContentLoaded', function() {
+        // Load Choices.js after the page is interactive
+        const choicesScript = document.createElement('script');
+        choicesScript.src = 'https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js';
+        choicesScript.onload = function() {
+            console.log('Choices.js loaded');
+            // Initialize any Choices.js instances here if needed
+        };
+        document.body.appendChild(choicesScript);
+
+        // Optimize touch interactions
+        document.documentElement.style.touchAction = 'manipulation';
+        
+        // Add passive event listeners for better scrolling performance
+        const addPassiveEventListener = (element, event, handler) => {
+            const supportsPassive = false;
+            try {
+                const opts = Object.defineProperty({}, 'passive', {
+                    get: function() { supportsPassive = true; }
+                });
+                window.addEventListener('test', null, opts);
+                window.removeEventListener('test', null, opts);
+            } catch (e) {}
+            
+            element.addEventListener(event, handler, supportsPassive ? { passive: true } : false);
+        };
+
+        // Optimize window resize
+        let resizeTimeout;
+        addPassiveEventListener(window, 'resize', function() {
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(function() {
+                // Handle resize logic here if needed
+            }, 250);
+        });
+
+        // Optimize scroll performance
+        addPassiveEventListener(window, 'scroll', function() {
+            // Handle scroll logic here if needed
+        }, { passive: true });
+
+        // Optimize button clicks for mobile
+        document.querySelectorAll('button, a, [role="button"]').forEach(button => {
+            button.style.webkitTapHighlightColor = 'transparent';
+            button.addEventListener('touchstart', function() {
+                this.classList.add('active');
+            }, { passive: true });
+            button.addEventListener('touchend', function() {
+                this.classList.remove('active');
+            }, { passive: true });
+        });
+    });
+
+    // Optimize animation frame usage
+    (function() {
+        let lastScrollTop = 0;
+        const delta = 5;
+        
+        function checkScroll() {
+            const st = window.scrollY;
+            
+            if (Math.abs(lastScrollTop - st) <= delta) {
+                return; // No significant scroll
+            }
+            
+            // Handle scroll direction
+            if (st > lastScrollTop && st > 0) {
+                // Scrolling down
+            } else {
+                // Scrolling up
+            }
+            
+            lastScrollTop = st <= 0 ? 0 : st;
+        }
+        
+        // Throttle the scroll event
+        let ticking = false;
+        window.addEventListener('scroll', function() {
+            if (!ticking) {
+                window.requestAnimationFrame(function() {
+                    checkScroll();
+                    ticking = false;
+                });
+                ticking = true;
+            }
+        }, { passive: true });
+    })();
     </script>
 </body>
 </html>
