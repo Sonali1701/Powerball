@@ -635,17 +635,21 @@
         
         if (!window.sortedTriplets || window.sortedTriplets.length < 2) {
             console.error('Not enough trios available');
-            alert('Loading trios data... Please try again in a moment.');
-            return [1, 2, 3, 4, 5];
+            alert('Not enough valid trios found in the data. Try with a larger date range or different settings.');
+            return { combination: [1, 2, 3, 4, 5], basedOnTrio: 'Default (not enough valid trios)', isOverlap: false };
         }
         
         try {
-            // Get top 20 most frequent trios for better chance of overlap
-            const topTrios = window.sortedTriplets.slice(0, 20);
+            // Get all valid trios (already filtered to only those that appeared together in actual draws)
+            const validTrios = window.sortedTriplets;
+            console.log('Using', validTrios.length, 'valid trios for overlapping');
             
-            // Try to find two trios that share exactly one number
-            let trio1, trio2, commonNumber;
-            const maxAttempts = 50; // Prevent infinite loops
+            // Use all valid trios since we've already filtered for actual ones
+            const topTrios = validTrios.slice(0, Math.min(50, validTrios.length)); // Use more trios for better overlap chances
+            
+            // Try to find two trios that share one or two numbers
+            let trio1, trio2, commonNumbers = [];
+            const maxAttempts = 100; // Increased attempts for better chance of finding matches
             let attempts = 0;
             
             while (attempts < maxAttempts) {
@@ -660,13 +664,13 @@
                 const trio2Nums = topTrios[index2][0].split('-').map(Number);
                 
                 // Find common numbers between the two trios
-                const commonNumbers = trio1Nums.filter(num => trio2Nums.includes(num));
+                commonNumbers = trio1Nums.filter(num => trio2Nums.includes(num));
                 
-                if (commonNumbers.length === 1) {
-                    // Found two trios with exactly one common number
+                if (commonNumbers.length === 1 || commonNumbers.length === 2) {
+                    // Found two trios with one or two common numbers
                     trio1 = topTrios[index1];
                     trio2 = topTrios[index2];
-                    commonNumber = commonNumbers[0];
+                    console.log(`Found trios with ${commonNumbers.length} common numbers:`, commonNumbers);
                     break;
                 }
                 
@@ -687,7 +691,12 @@
                 
                 const trio1Nums = trio1[0].split('-').map(Number);
                 const trio2Nums = trio2[0].split('-').map(Number);
-                commonNumber = trio1Nums.find(num => trio2Nums.includes(num)) || trio1Nums[0];
+                commonNumbers = trio1Nums.filter(num => trio2Nums.includes(num));
+                
+                if (commonNumbers.length === 0) {
+                    // If no common numbers, just pick one from each trio
+                    commonNumbers = [trio1Nums[0], trio2Nums[0]];
+                }
             }
             
             // Get all unique numbers from both trios
@@ -695,6 +704,8 @@
                 ...trio1[0].split('-').map(Number),
                 ...trio2[0].split('-').map(Number)
             ])];
+            
+            console.log('Combined numbers before filtering:', combinedNums);
             
             // If we have exactly 5 numbers, use them
             if (combinedNums.length === 5) {
@@ -705,22 +716,31 @@
                 };
             }
             
-            // If we have more than 5 numbers, take the common number and 4 others
+            // If we have more than 5 numbers, prioritize keeping the overlapping numbers
             if (combinedNums.length > 5) {
-                // Keep the common number and pick 4 others randomly
-                const otherNums = combinedNums.filter(n => n !== commonNumber);
-                const selectedOthers = [];
+                // Keep the overlapping numbers and fill the rest randomly
+                const nonOverlappingNums = combinedNums.filter(n => !commonNumbers.includes(n));
+                const selectedNonOverlapping = [];
                 
-                // Randomly select 4 other numbers
-                while (selectedOthers.length < 4 && otherNums.length > 0) {
-                    const randomIndex = Math.floor(Math.random() * otherNums.length);
-                    selectedOthers.push(otherNums.splice(randomIndex, 1)[0]);
+                // Calculate how many more numbers we need (5 - number of overlapping numbers)
+                const needed = 5 - Math.min(commonNumbers.length, 5);
+                
+                // Randomly select from non-overlapping numbers if needed
+                while (selectedNonOverlapping.length < needed && nonOverlappingNums.length > 0) {
+                    const randomIndex = Math.floor(Math.random() * nonOverlappingNums.length);
+                    selectedNonOverlapping.push(nonOverlappingNums.splice(randomIndex, 1)[0]);
                 }
                 
-                const combination = [commonNumber, ...selectedOthers].sort((a, b) => a - b);
+                // Combine overlapping and selected non-overlapping numbers
+                const combination = [...new Set([...commonNumbers, ...selectedNonOverlapping])]
+                    .slice(0, 5) // Ensure we don't exceed 5 numbers
+                    .sort((a, b) => a - b);
+                    
+                console.log('Final combination:', combination, 'from overlapping numbers:', commonNumbers);
+                
                 return {
                     combination,
-                    basedOnTrio: `Overlap: ${trio1[0]} & ${trio2[0]}`,
+                    basedOnTrio: `Overlap (${commonNumbers.length} common): ${trio1[0]} & ${trio2[0]}`,
                     isOverlap: true
                 };
             }
@@ -1102,17 +1122,36 @@
     // Function to analyze frequent sets and populate dropdowns
     function analyzeFrequentSets() {
         console.log('Starting analyzeFrequentSets...');
-        // Analyze and count all pairs and triplets from historical data
+        // Analyze and track actual trios that appeared together in a single draw
+        const actualTrios = new Map(); // Store actual trios from draws
         const pairCounts = new Map();
         const tripletCounts = new Map();
         console.log('Number of draws to analyze:', allMainDraws.length);
         
-        // Use draws from 2023, 2024, and 2025
-        const filteredDraws = allMainDraws.filter(d => d.year === 2023 || d.year === 2024 || d.year === 2025);
+        // First pass: Collect all actual trios that appeared together
+        const filteredDraws = allMainDraws.filter(d => d.year >= 2016 && d.year <= 2025);
         filteredDraws.forEach(drawObj => {
             const sortedDraw = [...drawObj.arr].sort((a, b) => a - b);
             
-            // Count pairs
+            // Track all trios that actually appeared together in this draw
+            for (let i = 0; i < sortedDraw.length - 2; i++) {
+                for (let j = i + 1; j < sortedDraw.length - 1; j++) {
+                    for (let k = j + 1; k < sortedDraw.length; k++) {
+                        const trio = [sortedDraw[i], sortedDraw[j], sortedDraw[k]];
+                        const trioKey = trio.join('-');
+                        actualTrios.set(trioKey, true);
+                    }
+                }
+            }
+        });
+        
+        console.log('Found', actualTrios.size, 'unique trios that appeared in actual draws');
+        
+        // Second pass: Count frequencies of actual trios
+        filteredDraws.forEach(drawObj => {
+            const sortedDraw = [...drawObj.arr].sort((a, b) => a - b);
+            
+            // Count pairs (for other functionality)
             for (let i = 0; i < sortedDraw.length; i++) {
                 for (let j = i + 1; j < sortedDraw.length; j++) {
                     const pair = [sortedDraw[i], sortedDraw[j]];
@@ -1121,26 +1160,31 @@
                 }
             }
             
-            // Count triplets
-            for (let i = 0; i < sortedDraw.length; i++) {
-                for (let j = i + 1; j < sortedDraw.length; j++) {
+            // Only count trios that we've seen in actual draws
+            const seenTrios = new Set(); // Avoid counting same trio multiple times in one draw
+            for (let i = 0; i < sortedDraw.length - 2; i++) {
+                for (let j = i + 1; j < sortedDraw.length - 1; j++) {
                     for (let k = j + 1; k < sortedDraw.length; k++) {
-                        const triplet = [sortedDraw[i], sortedDraw[j], sortedDraw[k]];
-                        const tripletKey = triplet.join('-');
-                        tripletCounts.set(tripletKey, (tripletCounts.get(tripletKey) || 0) + 1);
+                        const trio = [sortedDraw[i], sortedDraw[j], sortedDraw[k]];
+                        const trioKey = trio.join('-');
+                        if (actualTrios.has(trioKey) && !seenTrios.has(trioKey)) {
+                            tripletCounts.set(trioKey, (tripletCounts.get(trioKey) || 0) + 1);
+                            seenTrios.add(trioKey);
+                        }
                     }
                 }
             }
         });
         
-        // Convert to arrays, filter for 2+ occurrences, and sort by frequency (descending)
+        // Convert to arrays and sort by frequency (descending)
         const sortedPairs = Array.from(pairCounts.entries())
-            .filter(([_, count]) => count >= 2)  // Only include pairs that appear 2+ times
-            .sort((a, b) => b[1] - a[1]); // Show all pairs that appear 2+ times
+            .filter(([_, count]) => count >= 1)  // Include all actual pairs
+            .sort((a, b) => b[1] - a[1]);
             
+        // Only include trios that actually appeared together in a draw
         window.sortedTriplets = Array.from(tripletCounts.entries())
-            .filter(([_, count]) => count >= 2)  // Only include triplets that appear 2+ times
-            .sort((a, b) => b[1] - a[1]); // Show all triplets that appear 2+ times
+            .filter(([trioKey, count]) => actualTrios.has(trioKey) && count >= 1)  // Only actual trios that appeared at least once
+            .sort((a, b) => b[1] - a[1]);
             
         console.log('Found', sortedPairs.length, 'frequent pairs and', window.sortedTriplets.length, 'frequent trios');
         
