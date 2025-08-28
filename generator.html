@@ -630,6 +630,10 @@
         }
     }
     
+    // Track used trios to implement round-robin
+    let usedTrios = new Set();
+    let lastUsedTrioIndex = -1;
+    
     function generateFromOverlappingTrios() {
         console.log('generateFromOverlappingTrios called');
         
@@ -639,13 +643,38 @@
             return { combination: [1, 2, 3, 4, 5], basedOnTrio: 'Default (not enough valid trios)', isOverlap: false };
         }
         
+        // Reset used trios if we've used them all
+        if (usedTrios.size >= window.sortedTriplets.length) {
+            console.log('Resetting used trios for round-robin');
+            usedTrios.clear();
+        }
+        
         try {
-            // Get all valid trios (already filtered to only those that appeared together in actual draws)
-            const validTrios = window.sortedTriplets;
+            // Get all valid trios, sorted by frequency (highest first)
+            const validTrios = [...window.sortedTriplets];
             console.log('Using', validTrios.length, 'valid trios for overlapping');
             
-            // Use all valid trios since we've already filtered for actual ones
-            const topTrios = validTrios.slice(0, Math.min(50, validTrios.length)); // Use more trios for better overlap chances
+            // Filter out recently used trios, but keep some for variety
+            const availableTrios = validTrios.filter((trio, index) => 
+                !usedTrios.has(index) || Math.random() > 0.7 // 30% chance to reuse a trio
+            );
+            
+            // If we filtered out too many, add some back
+            const minTrios = Math.min(10, validTrios.length);
+            if (availableTrios.length < minTrios) {
+                // Add back some of the most frequent trios that were filtered out
+                validTrios.forEach((trio, index) => {
+                    if (availableTrios.length < minTrios && !availableTrios.includes(trio)) {
+                        availableTrios.push(trio);
+                    }
+                });
+            }
+            
+            // Sort available trios by frequency (highest first)
+            availableTrios.sort((a, b) => b[1] - a[1]);
+            
+            // Use the available trios
+            const topTrios = availableTrios.slice(0, Math.min(50, availableTrios.length));
             
             // Try to find two trios that share one or two numbers
             let trio1, trio2, commonNumbers = [];
@@ -670,7 +699,16 @@
                     // Found two trios with one or two common numbers
                     trio1 = topTrios[index1];
                     trio2 = topTrios[index2];
+                    
+                    // Mark these trios as used by finding their original indices
+                    const trio1Index = validTrios.findIndex(t => t[0] === trio1[0]);
+                    const trio2Index = validTrios.findIndex(t => t[0] === trio2[0]);
+                    
+                    if (trio1Index !== -1) usedTrios.add(trio1Index);
+                    if (trio2Index !== -1) usedTrios.add(trio2Index);
+                    
                     console.log(`Found trios with ${commonNumbers.length} common numbers:`, commonNumbers);
+                    console.log('Used trios count:', usedTrios.size);
                     break;
                 }
                 
@@ -709,10 +747,22 @@
             
             // If we have exactly 5 numbers, use them
             if (combinedNums.length === 5) {
+                // Get the original indices for frequency info
+                const trio1Index = validTrios.findIndex(t => t[0] === trio1[0]);
+                const trio2Index = validTrios.findIndex(t => t[0] === trio2[0]);
+                const freq1 = trio1Index !== -1 ? validTrios[trio1Index][1] : 1;
+                const freq2 = trio2Index !== -1 ? validTrios[trio2Index][1] : 1;
+                
+                // Calculate how many numbers overlap between the two trios
+                const trio1Nums = trio1[0].split('-').map(Number);
+                const trio2Nums = trio2[0].split('-').map(Number);
+                const overlapCount = trio1Nums.filter(num => trio2Nums.includes(num)).length;
+                
                 return {
                     combination: combinedNums.sort((a, b) => a - b),
-                    basedOnTrio: `Overlap: ${trio1[0]} & ${trio2[0]}`,
-                    isOverlap: true
+                    basedOnTrio: `Trio (${freq1}x): ${trio1[0]} & Trio (${freq2}x): ${trio2[0]} (${overlapCount} common)`,
+                    isOverlap: true,
+                    frequency: Math.min(freq1, freq2)
                 };
             }
             
@@ -738,10 +788,22 @@
                     
                 console.log('Final combination:', combination, 'from overlapping numbers:', commonNumbers);
                 
+                // Get the original indices for frequency info
+                const trio1Index = validTrios.findIndex(t => t[0] === trio1[0]);
+                const trio2Index = validTrios.findIndex(t => t[0] === trio2[0]);
+                const freq1 = trio1Index !== -1 ? validTrios[trio1Index][1] : 1;
+                const freq2 = trio2Index !== -1 ? validTrios[trio2Index][1] : 1;
+                
+                // Calculate how many numbers overlap between the two trios
+                const trio1Nums = trio1[0].split('-').map(Number);
+                const trio2Nums = trio2[0].split('-').map(Number);
+                const overlapCount = trio1Nums.filter(num => trio2Nums.includes(num)).length;
+                
                 return {
                     combination,
-                    basedOnTrio: `Overlap (${commonNumbers.length} common): ${trio1[0]} & ${trio2[0]}`,
-                    isOverlap: true
+                    basedOnTrio: `Trio (${freq1}x): ${trio1[0]} & Trio (${freq2}x): ${trio2[0]} (${overlapCount} common)`,
+                    isOverlap: true,
+                    frequency: Math.min(freq1, freq2)
                 };
             }
             
@@ -750,10 +812,22 @@
             const additionalNumbers = generateUniqueNumbers(5 - combinedNums.length, 1, 69, exclude);
             const combination = [...combinedNums, ...additionalNumbers].sort((a, b) => a - b);
             
+            // Get the original indices for frequency info
+            const trio1Index = validTrios.findIndex(t => t[0] === trio1[0]);
+            const trio2Index = validTrios.findIndex(t => t[0] === trio2[0]);
+            const freq1 = trio1Index !== -1 ? validTrios[trio1Index][1] : 1;
+            const freq2 = trio2Index !== -1 ? validTrios[trio2Index][1] : 1;
+            
+            // Calculate how many numbers overlap between the two trios
+            const trio1Nums = trio1[0].split('-').map(Number);
+            const trio2Nums = trio2[0].split('-').map(Number);
+            const overlapCount = trio1Nums.filter(num => trio2Nums.includes(num)).length;
+            
             return {
                 combination,
-                basedOnTrio: `Overlap: ${trio1[0]} & ${trio2[0]}`,
-                isOverlap: true
+                basedOnTrio: `Trio (${freq1}x): ${trio1[0]} & Trio (${freq2}x): ${trio2[0]} (${overlapCount} common)`,
+                isOverlap: true,
+                frequency: Math.min(freq1, freq2)
             };
             
         } catch (error) {
