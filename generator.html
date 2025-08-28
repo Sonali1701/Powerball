@@ -643,38 +643,16 @@
             return { combination: [1, 2, 3, 4, 5], basedOnTrio: 'Default (not enough valid trios)', isOverlap: false };
         }
         
-        // Reset used trios if we've used them all
-        if (usedTrios.size >= window.sortedTriplets.length) {
-            console.log('Resetting used trios for round-robin');
-            usedTrios.clear();
-        }
-        
         try {
-            // Get all valid trios, sorted by frequency (highest first)
-            const validTrios = [...window.sortedTriplets];
-            console.log('Using', validTrios.length, 'valid trios for overlapping');
-            
-            // Filter out recently used trios, but keep some for variety
-            const availableTrios = validTrios.filter((trio, index) => 
-                !usedTrios.has(index) || Math.random() > 0.7 // 30% chance to reuse a trio
-            );
-            
-            // If we filtered out too many, add some back
-            const minTrios = Math.min(10, validTrios.length);
-            if (availableTrios.length < minTrios) {
-                // Add back some of the most frequent trios that were filtered out
-                validTrios.forEach((trio, index) => {
-                    if (availableTrios.length < minTrios && !availableTrios.includes(trio)) {
-                        availableTrios.push(trio);
-                    }
-                });
+            // Get all trios that have appeared at most 2 times
+            const validTrios = window.sortedTriplets.filter(trio => trio[1] <= 2);
+        
+            if (validTrios.length < 2) {
+                console.log('Not enough trios with frequency <= 2, using all available trios');
+                validTrios.push(...window.sortedTriplets);
             }
-            
-            // Sort available trios by frequency (highest first)
-            availableTrios.sort((a, b) => b[1] - a[1]);
-            
-            // Use the available trios
-            const topTrios = availableTrios.slice(0, Math.min(50, availableTrios.length));
+        
+            console.log('Using', validTrios.length, 'valid trios for overlapping (frequency <= 2)');
             
             // Try to find two trios that share one or two numbers
             let trio1, trio2, commonNumbers = [];
@@ -683,32 +661,24 @@
             
             while (attempts < maxAttempts) {
                 // Pick two different random trios
-                const index1 = Math.floor(Math.random() * topTrios.length);
+                const index1 = Math.floor(Math.random() * validTrios.length);
                 let index2;
                 do {
-                    index2 = Math.floor(Math.random() * topTrios.length);
+                    index2 = Math.floor(Math.random() * validTrios.length);
                 } while (index2 === index1);
                 
-                const trio1Nums = topTrios[index1][0].split('-').map(Number);
-                const trio2Nums = topTrios[index2][0].split('-').map(Number);
+                const trio1Nums = validTrios[index1][0].split('-').map(Number);
+                const trio2Nums = validTrios[index2][0].split('-').map(Number);
                 
                 // Find common numbers between the two trios
                 commonNumbers = trio1Nums.filter(num => trio2Nums.includes(num));
                 
                 if (commonNumbers.length === 1 || commonNumbers.length === 2) {
                     // Found two trios with one or two common numbers
-                    trio1 = topTrios[index1];
-                    trio2 = topTrios[index2];
-                    
-                    // Mark these trios as used by finding their original indices
-                    const trio1Index = validTrios.findIndex(t => t[0] === trio1[0]);
-                    const trio2Index = validTrios.findIndex(t => t[0] === trio2[0]);
-                    
-                    if (trio1Index !== -1) usedTrios.add(trio1Index);
-                    if (trio2Index !== -1) usedTrios.add(trio2Index);
+                    trio1 = validTrios[index1];
+                    trio2 = validTrios[index2];
                     
                     console.log(`Found trios with ${commonNumbers.length} common numbers:`, commonNumbers);
-                    console.log('Used trios count:', usedTrios.size);
                     break;
                 }
                 
@@ -718,14 +688,14 @@
             if (!trio1 || !trio2) {
                 console.log('Could not find overlapping trios, falling back to random trios');
                 // Fall back to any two trios and take their union
-                const index1 = Math.floor(Math.random() * topTrios.length);
+                const index1 = Math.floor(Math.random() * validTrios.length);
                 let index2;
                 do {
-                    index2 = Math.floor(Math.random() * topTrios.length);
+                    index2 = Math.floor(Math.random() * validTrios.length);
                 } while (index2 === index1);
                 
-                trio1 = topTrios[index1];
-                trio2 = topTrios[index2];
+                trio1 = validTrios[index1];
+                trio2 = validTrios[index2];
                 
                 const trio1Nums = trio1[0].split('-').map(Number);
                 const trio2Nums = trio2[0].split('-').map(Number);
@@ -872,20 +842,32 @@
         const headerRow = document.createElement('tr');
         headerRow.style.backgroundColor = '#f8f9fa';
         
-        const th1 = document.createElement('th');
-        th1.textContent = '#';
-        th1.style.textAlign = 'center';
-        th1.style.padding = '12px 8px';
-        th1.style.border = 'none';
-        th1.style.borderRadius = '8px 0 0 8px';
-        headerRow.appendChild(th1);
+        let th2;
         
-        const th2 = document.createElement('th');
-        th2.textContent = 'Numbers';
-        th2.style.textAlign = 'left';
-        th2.style.padding = '12px 8px';
-        th2.style.border = 'none';
-        headerRow.appendChild(th2);
+        if (!useOverlappingTrios) {
+            const th1 = document.createElement('th');
+            th1.textContent = '#';
+            th1.style.textAlign = 'center';
+            th1.style.padding = '12px 8px';
+            th1.style.border = 'none';
+            th1.style.borderRadius = '8px 0 0 8px';
+            headerRow.appendChild(th1);
+            
+            th2 = document.createElement('th');
+            th2.textContent = 'Numbers';
+            th2.style.textAlign = 'left';
+            th2.style.padding = '12px 8px';
+            th2.style.border = 'none';
+            headerRow.appendChild(th2);
+        } else {
+            th2 = document.createElement('th');
+            th2.textContent = 'Numbers';
+            th2.style.textAlign = 'left';
+            th2.style.padding = '12px 8px';
+            th2.style.border = 'none';
+            th2.style.borderRadius = '8px 0 0 8px';
+            headerRow.appendChild(th2);
+        }
         
         if (useFrequentTrios) {
             const th3 = document.createElement('th');
@@ -932,16 +914,18 @@
                 tr.style.margin = '0';
                 tr.style.display = 'table-row';
                 
-                // Add row number
-                const td1 = document.createElement('td');
-                td1.textContent = i + 1;
-                td1.style.padding = '12px 8px';
-                td1.style.textAlign = 'center';
-                td1.style.color = '#666';
-                td1.style.border = 'none';
-                td1.style.borderRight = '1px solid #eee';
-                td1.style.borderRadius = '8px 0 0 8px';
-                tr.appendChild(td1);
+                // Add row number if not using overlapping trios
+                if (!useOverlappingTrios) {
+                    const td1 = document.createElement('td');
+                    td1.textContent = i + 1;
+                    td1.style.padding = '12px 8px';
+                    td1.style.textAlign = 'center';
+                    td1.style.color = '#666';
+                    td1.style.border = 'none';
+                    td1.style.borderRight = '1px solid #eee';
+                    td1.style.borderRadius = '8px 0 0 8px';
+                    tr.appendChild(td1);
+                }
                 
                 // Add numbers
                 const td2 = document.createElement('td');
@@ -950,8 +934,11 @@
                 td2.style.fontWeight = 'bold';
                 td2.style.color = '#2c3e50';
                 td2.style.border = 'none';
+                td2.style.whiteSpace = 'nowrap';  // Prevent line breaks in numbers
                 
-                if (!useFrequentTrios && !useOverlappingTrios) {
+                if (useOverlappingTrios) {
+                    td2.style.borderRadius = '8px 0 0 8px';  // Rounded left corners for first cell
+                } else if (!useFrequentTrios) {
                     td2.style.borderRadius = '0 8px 8px 0';
                 }
                 tr.appendChild(td2);
