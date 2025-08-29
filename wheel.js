@@ -76,12 +76,17 @@ function setupEventListeners() {
 
 // Generate default values for testing
 function generateDefaultValues() {
-    const testNumbers = [7, 10, 15, 22, 28, 33, 40, 44, 52, 61];
+    // First number (A*) is the Powerball (1-26), others are regular numbers (1-69)
+    const testNumbers = [12, 10, 15, 22, 28, 33, 40, 44, 52, 61];
     
     LETTERS.forEach((letter, index) => {
         const input = document.querySelector(`#num-${letter.replace('*', '')}`);
         if (input && testNumbers[index] !== undefined) {
             input.value = testNumbers[index];
+            // Trigger validation to ensure Powerball is within 1-26
+            if (letter === 'A*') {
+                validateNumberInput(input);
+            }
         }
     });
     
@@ -92,6 +97,7 @@ function generateDefaultValues() {
 // Validate number input
 function validateNumberInput(input) {
     let value = input.value;
+    const isPowerball = input.dataset.letter === 'A*';
     
     // Allow empty input (for backspace/delete)
     if (value === '') return;
@@ -105,18 +111,34 @@ function validateNumberInput(input) {
         return;
     }
     
-    // Ensure value is between 1 and 69
-    if (numValue < 1) {
-        input.value = '1';
-    } else if (numValue > 69) {
-        input.value = '69';
+    // Set range based on whether it's the Powerball or not
+    if (isPowerball) {
+        // Powerball (A*) range: 1-26
+        if (numValue < 1) {
+            input.value = '1';
+            alert('Powerball number must be between 1 and 26');
+        } else if (numValue > 26) {
+            input.value = '26';
+            alert('Powerball number must be between 1 and 26');
+        } else {
+            input.value = numValue.toString();
+        }
+        // Skip duplicate check for Powerball as it can match other numbers
+        return;
     } else {
-        input.value = numValue.toString();
+        // Regular numbers range: 1-69
+        if (numValue < 1) {
+            input.value = '1';
+        } else if (numValue > 69) {
+            input.value = '69';
+        } else {
+            input.value = numValue.toString();
+        }
     }
     
-    // Only check for duplicates when we have a complete number
-    if (input.value.length > 0) {
-        const inputs = document.querySelectorAll('.number-inputs input');
+    // Only check for duplicates when we have a complete number and it's not the Powerball
+    if (input.value.length > 0 && !isPowerball) {
+        const inputs = document.querySelectorAll('.number-inputs input:not([data-letter="A*"])');
         const currentValue = input.value;
         
         // Check for duplicate values (exact match only)
