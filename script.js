@@ -761,15 +761,26 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         // UI header and buttons
         resultsDiv.innerHTML = `
-            <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;margin-bottom:18px;gap:12px;">
-                <h2 style="margin:0;color:#3498db;font-size:1.3em;font-weight:700;letter-spacing:1px;">Powerball Trio Generator (2015-2025)</h2>
-                <div style="display:flex;gap:10px;">
-                    <button id="trio-generate-btn" style="padding:10px 20px;font-size:1.1em;border-radius:8px;border:1.5px solid #3498db;background:#fff;color:#3498db;cursor:pointer;font-weight:600;transition:all 0.18s;white-space:nowrap;">
-                        Generate Trios
-                    </button>
-                    <button id="trio-17-generate-btn" style="padding:10px 20px;font-size:1.1em;border-radius:8px;border:1.5px solid #e67e22;background:#fff;color:#e67e22;cursor:pointer;font-weight:600;transition:all 0.18s;white-space:nowrap;">
-                        Generate 17-Based Trios
-                    </button>
+            <div style="margin-bottom: 20px;">
+                <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;margin-bottom:15px;gap:12px;">
+                    <h2 style="margin:0;color:#3498db;font-size:1.3em;font-weight:700;letter-spacing:1px;">Powerball Trio Generator (2015-2025)</h2>
+                    <div style="display:flex;gap:10px;">
+                        <button id="trio-generate-btn" style="padding:10px 20px;font-size:1.1em;border-radius:8px;border:1.5px solid #3498db;background:#fff;color:#3498db;cursor:pointer;font-weight:600;transition:all 0.18s;white-space:nowrap;">
+                            Generate Trios
+                        </button>
+                        <button id="trio-17-generate-btn" style="padding:10px 20px;font-size:1.1em;border-radius:8px;border:1.5px solid #e67e22;background:#fff;color:#e67e22;cursor:pointer;font-weight:600;transition:all 0.18s;white-space:nowrap;">
+                            Generate 17-Based Trios
+                        </button>
+                    </div>
+                </div>
+                <div style="background:#f8f9fa;padding:15px;border-radius:8px;margin-bottom:15px;">
+                    <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:10px;">
+                        <input type="text" id="trio-input-numbers" placeholder="Enter up to 3 numbers (e.g., 5, 12, 23)" style="flex:1;min-width:200px;padding:10px;border:1px solid #ddd;border-radius:4px;">
+                        <button id="trio-generate-from-input" style="padding:10px 20px;font-size:1em;border-radius:8px;border:none;background:#27ae60;color:white;cursor:pointer;font-weight:600;white-space:nowrap;">
+                            Generate from Input
+                        </button>
+                    </div>
+                    <div style="font-size:0.9em;color:#666;">Enter 1-3 numbers to generate combinations using duos that share one number with your input.</div>
                 </div>
             </div>
             <div id="trio-cards-container"></div>
@@ -800,6 +811,155 @@ document.addEventListener('DOMContentLoaded', async function() {
             cardsHtml += `</div>`;
             document.getElementById('trio-cards-container').innerHTML = cardsHtml;
         }
+        // Generate combinations from input numbers
+        document.getElementById('trio-generate-from-input').addEventListener('click', function() {
+            const inputText = document.getElementById('trio-input-numbers').value.trim();
+            if (!inputText) {
+                alert('Please enter at least one number');
+                return;
+            }
+            
+            // Parse input numbers (1-69, max 3 numbers)
+            const inputNumbers = inputText.split(',')
+                .map(num => parseInt(num.trim(), 10))
+                .filter(num => !isNaN(num) && num >= 1 && num <= 69)
+                .slice(0, 3);
+                
+            if (inputNumbers.length === 0) {
+                alert('Please enter valid numbers between 1 and 69');
+                return;
+            }
+            
+            console.log('Generating combinations for input numbers:', inputNumbers);
+            
+            // Find all duos that share at least one number with input
+            const validDuos = [];
+            const duoMap = new Map(); // duo string -> Set of dates
+            
+            // First pass: collect all valid duos that share a number with input
+            draws.forEach(draw => {
+                if (draw.mainArr && draw.mainArr.length === 5) {
+                    const numbers = draw.mainArr;
+                    
+                    // Generate all possible duos from this draw
+                    for (let i = 0; i < numbers.length; i++) {
+                        for (let j = i + 1; j < numbers.length; j++) {
+                            const duo = [numbers[i], numbers[j]].sort((a, b) => a - b);
+                            const duoKey = duo.join(':');
+                            
+                            // Check if this duo shares at least one number with input
+                            const sharesNumber = duo.some(num => inputNumbers.includes(num));
+                            
+                            if (sharesNumber) {
+                                if (!duoMap.has(duoKey)) {
+                                    duoMap.set(duoKey, new Set());
+                                }
+                                duoMap.get(duoKey).add(draw.date);
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Convert to array of {numbers, dates} objects
+            const duos = Array.from(duoMap.entries()).map(([duoKey, dates]) => ({
+                numbers: duoKey.split(':').map(Number),
+                dates: Array.from(dates)
+            }));
+            
+            if (duos.length < 2) {
+                document.getElementById('trio-cards-container').innerHTML = 
+                    '<div style="color:#e74c3c;padding:20px;text-align:center;">Not enough matching duos found for the input numbers.</div>';
+                return;
+            }
+            
+            // Generate combinations by combining duos that don't share numbers (except the input)
+            const results = [];
+            const usedPairs = new Set();
+            
+            for (let i = 0; i < Math.min(20, duos.length); i++) {
+                const duo1 = duos[i];
+                
+                // Find a second duo that doesn't share non-input numbers with duo1
+                for (let j = 0; j < duos.length; j++) {
+                    if (i === j) continue;
+                    
+                    const duo2 = duos[j];
+                    const key = `${duo1.numbers.join(':')}|${duo2.numbers.join(':')}`;
+                    
+                    if (usedPairs.has(key)) continue;
+                    
+                    // Check if duos can be combined (no number conflicts except possibly input numbers)
+                    const allNumbers = [...new Set([...duo1.numbers, ...duo2.numbers])];
+                    
+                    // If combined numbers are 3-5 unique numbers, it's a valid combination
+                    if (allNumbers.length >= 3 && allNumbers.length <= 5) {
+                        // Fill remaining numbers randomly if needed
+                        while (allNumbers.length < 5) {
+                            const randomNum = Math.floor(Math.random() * 69) + 1;
+                            if (!allNumbers.includes(randomNum)) {
+                                allNumbers.push(randomNum);
+                            }
+                        }
+                        
+                        const combo = allNumbers.sort((a, b) => a - b);
+                        const comboKey = combo.join(':');
+                        
+                        if (!usedPairs.has(comboKey)) {
+                            usedPairs.add(comboKey);
+                            results.push({
+                                combo: combo,
+                                sourceDuos: [duo1, duo2],
+                                dates: [...new Set([...duo1.dates, ...duo2.dates])]
+                            });
+                            
+                            if (results.length >= 20) break;
+                        }
+                    }
+                }
+                
+                if (results.length >= 20) break;
+            }
+            
+            // Display results
+            if (results.length > 0) {
+                let cardsHtml = `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:18px;">`;
+                
+                results.forEach((result, index) => {
+                    const combo = result.combo;
+                    const sourceNumbers = [...new Set([...result.sourceDuos[0].numbers, ...result.sourceDuos[1].numbers])];
+                    const sourceDates = result.dates;
+                    
+                    cardsHtml += `
+                        <div style="background:#f8faff;border-radius:13px;box-shadow:0 2px 12px rgb(44 62 80 / 10%);padding:22px 18px 18px 18px;display:flex;flex-direction:column;align-items:center;">
+                            <div style="font-size:1.15em;font-weight:600;color:#234;letter-spacing:0.5px;margin-bottom:6px;">
+                                From Input: <span style='color:#e67e22;'>${inputNumbers.join(', ')}</span>
+                            </div>
+                            <div style="margin-bottom:8px;font-size:1.08em;color:#555;width:100%;">
+                                <div style="margin-bottom:5px;">Source Numbers: <span style='color:#3498db;'>${sourceNumbers.join(', ')}</span></div>
+                                <div style="font-size:0.9em;color:#666;margin-top:5px;">
+                                    <div>Draw Dates:</div>
+                                    <div style="max-height:80px;overflow-y:auto;background:#f0f4f8;padding:8px;border-radius:4px;margin-top:4px;border:1px solid #e0e6ed;">
+                                        ${sourceDates.slice(0, 10).map(date => `<div>${date}</div>`).join('')}
+                                        ${sourceDates.length > 10 ? `<div>...and ${sourceDates.length - 10} more</div>` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                            <div style="margin:10px 0 0 0;font-size:1.18em;font-weight:700;letter-spacing:1.2px;background:#27ae60;color:#fff;padding:8px 18px;border-radius:7px;">
+                                ${combo.join('-')}
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                cardsHtml += `</div>`;
+                document.getElementById('trio-cards-container').innerHTML = cardsHtml;
+            } else {
+                document.getElementById('trio-cards-container').innerHTML = 
+                    '<div style="color:#e74c3c;padding:20px;text-align:center;">No valid combinations found for the input numbers.</div>';
+            }
+        });
+        
         // Generate 17-based trios function
         function generate17BasedTrios() {
             if (pairsWith17.length < 2) {
