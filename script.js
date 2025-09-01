@@ -962,58 +962,115 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         // Generate 17-based trios function
         function generate17BasedTrios() {
-            if (pairsWith17.length < 1) {
+            if (pairsWith17.length < 2) {
                 document.getElementById('trio-cards-container').innerHTML = 
-                    '<div style="color:#e74c3c;padding:20px;text-align:center;">No pairs containing 17 found in the data.</div>';
+                    '<div style="color:#e74c3c;padding:20px;text-align:center;">Not enough pairs containing 17 found to generate combinations.</div>';
                 return;
             }
 
-            // Create a map to track all unique trios and their occurrences
+            // Create a map to track all unique trios containing 17
             const trioMap = new Map();
             
-            // Find all possible trios containing 17
+            // First, find all trios containing 17
             draws.forEach(draw => {
                 if (draw.mainArr && draw.mainArr.includes(17)) {
-                    // Get all combinations of 3 numbers that include 17
                     const otherNumbers = draw.mainArr.filter(n => n !== 17);
                     for (let i = 0; i < otherNumbers.length; i++) {
                         for (let j = i + 1; j < otherNumbers.length; j++) {
                             const num1 = otherNumbers[i];
                             const num2 = otherNumbers[j];
                             const trio = [17, num1, num2].sort((a, b) => a - b);
-                            const trioKey = trio.join('-');
+                            const trioKey = trio.join(':');
                             
                             if (!trioMap.has(trioKey)) {
                                 trioMap.set(trioKey, {
-                                    trio: trio,
-                                    dates: new Set(),
-                                    sourcePairs: [
-                                        { numbers: [17, num1].sort((a, b) => a - b), dates: new Set() },
-                                        { numbers: [17, num2].sort((a, b) => a - b), dates: new Set() },
-                                        { numbers: [num1, num2].sort((a, b) => a - b), dates: new Set() }
-                                    ]
+                                    numbers: trio,
+                                    dates: new Set([draw.date])
                                 });
+                            } else {
+                                trioMap.get(trioKey).dates.add(draw.date);
                             }
-                            
-                            // Add this date to the trio and its pairs
-                            const trioData = trioMap.get(trioKey);
-                            trioData.dates.add(draw.date);
-                            
-                            // Update dates for each pair in the trio
-                            trioData.sourcePairs[0].dates.add(draw.date); // 17-num1
-                            trioData.sourcePairs[1].dates.add(draw.date); // 17-num2
-                            trioData.sourcePairs[2].dates.add(draw.date); // num1-num2
                         }
                     }
                 }
             });
             
-            // Convert the map to an array and sort by number of occurrences (most frequent first)
-            let results = Array.from(trioMap.values())
-                .sort((a, b) => b.dates.size - a.dates.size);
+            const allTrios = Array.from(trioMap.values());
+            if (allTrios.length < 2) {
+                document.getElementById('trio-cards-container').innerHTML = 
+                    '<div style="color:#e74c3c;padding:20px;text-align:center;">Not enough unique trios containing 17 found.</div>';
+                return;
+            }
+            
+            // Now find combinations of 2-3 trios that share 17 and together form 5 unique numbers
+            const results = [];
+            const usedCombinations = new Set();
+            
+            // Try combinations of 2 trios first (sharing 17 and one other number)
+            for (let i = 0; i < allTrios.length; i++) {
+                const trio1 = allTrios[i];
+                const nums1 = new Set(trio1.numbers);
                 
-            // Limit to top 20 most frequent trios
-            results = results.slice(0, 20);
+                for (let j = i + 1; j < allTrios.length; j++) {
+                    const trio2 = allTrios[j];
+                    const combo = new Set([...trio1.numbers, ...trio2.numbers]);
+                    
+                    // Check if combination has exactly 5 unique numbers (including 17)
+                    if (combo.size === 5 && combo.has(17)) {
+                        const comboKey = Array.from(combo).sort((a, b) => a - b).join(':');
+                        
+                        if (!usedCombinations.has(comboKey)) {
+                            usedCombinations.add(comboKey);
+                            results.push({
+                                numbers: Array.from(combo).sort((a, b) => a - b),
+                                trios: [trio1, trio2],
+                                sharedNumber: 17,
+                                dates: new Set([...trio1.dates, ...trio2.dates])
+                            });
+                            
+                            // Limit to 20 combinations
+                            if (results.length >= 20) break;
+                        }
+                    }
+                }
+                if (results.length >= 20) break;
+            }
+            
+            // If we don't have enough combinations with 2 trios, try combinations of 3 trios
+            if (results.length < 20) {
+                for (let i = 0; i < allTrios.length; i++) {
+                    const trio1 = allTrios[i];
+                    
+                    for (let j = i + 1; j < allTrios.length; j++) {
+                        const trio2 = allTrios[j];
+                        
+                        for (let k = j + 1; k < allTrios.length; k++) {
+                            const trio3 = allTrios[k];
+                            const combo = new Set([...trio1.numbers, ...trio2.numbers, ...trio3.numbers]);
+                            
+                            // Check if combination has exactly 5 unique numbers (including 17)
+                            if (combo.size === 5 && combo.has(17)) {
+                                const comboKey = Array.from(combo).sort((a, b) => a - b).join(':');
+                                
+                                if (!usedCombinations.has(comboKey)) {
+                                    usedCombinations.add(comboKey);
+                                    results.push({
+                                        numbers: Array.from(combo).sort((a, b) => a - b),
+                                        trios: [trio1, trio2, trio3],
+                                        sharedNumber: 17,
+                                        dates: new Set([...trio1.dates, ...trio2.dates, ...trio3.dates])
+                                    });
+                                    
+                                    // Limit to 20 combinations total
+                                    if (results.length >= 20) break;
+                                }
+                            }
+                        }
+                        if (results.length >= 20) break;
+                    }
+                    if (results.length >= 20) break;
+                }
+            }
             
             if (results.length === 0) {
                 document.getElementById('trio-cards-container').innerHTML = 
@@ -1024,31 +1081,60 @@ document.addEventListener('DOMContentLoaded', async function() {
             // Display the results
             let cardsHtml = `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(350px,1fr));gap:20px;">`;
             
-            results.forEach(result => {
-                const { trio, dates, sourcePairs } = result;
-                const random2 = generateUniqueNumbers(2, 1, 69, trio);
-                const combo = [...trio, ...random2].sort((a, b) => a - b);
+            results.forEach((result, index) => {
+                const { numbers, trios, dates } = result;
+                const powerball = Math.floor(Math.random() * 26) + 1; // Random powerball 1-26
                 
                 cardsHtml += `
                     <div style="background:#f8faff;border-radius:13px;box-shadow:0 2px 12px rgb(44 62 80 / 10%);padding:20px;display:flex;flex-direction:column;">
                         <div style="text-align:center;margin-bottom:12px;">
-                            <div style="font-size:1.2em;font-weight:700;color:#e67e22;margin-bottom:5px;">Trio: ${trio.join('-')}</div>
-                            <div style="display:flex;justify-content:center;gap:15px;margin-bottom:10px;">
-                                <span style="background:#f0f7ff;padding:3px 8px;border-radius:4px;font-size:0.9em;">
-                                    ${sourcePairs[0].numbers.join('-')}
-                                </span>
-                                <span style="background:#f0f7ff;padding:3px 8px;border-radius:4px;font-size:0.9em;">
-                                    ${sourcePairs[1].numbers.join('-')}
+                            <div style="font-size:1.2em;font-weight:700;color:#e67e22;margin-bottom:10px;">
+                                Combination #${index + 1}
+                            </div>
+                            
+                            <div style="display:flex;justify-content:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+                                ${numbers.map(num => 
+                                    `<span style="display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:50%;background:${num === 17 ? '#e74c3c' : '#3498db'};color:white;font-weight:bold;">
+                                        ${num}
+                                    </span>`
+                                ).join('')}
+                                <span style="display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:50%;background:#e67e22;color:white;font-weight:bold;">
+                                    ${powerball}
                                 </span>
                             </div>
-                            <div style="margin:8px 0;font-size:1.1em;font-weight:700;color:#27ae60;">
-                                ${combo.join('-')}
+                            
+                            <div style="margin:10px 0;font-size:0.9em;color:#555;">
+                                <div style="margin-bottom:6px;font-weight:600;">Composition:</div>
+                                <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(100px, 1fr));gap:8px;margin-bottom:8px;">
+                                    ${trios.map((trio, i) => {
+                                        const trioNums = trio.numbers.sort((a, b) => a - b);
+                                        return `
+                                            <div style="background:#f0f7ff;padding:6px;border-radius:6px;text-align:center;">
+                                                <div style="font-size:0.8em;color:#3498db;margin-bottom:4px;">Trio ${i+1}</div>
+                                                <div style="display:flex;justify-content:center;gap:4px;">
+                                                    ${trioNums.map(n => 
+                                                        `<span style="display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:${n === 17 ? '#e74c3c' : '#3498db'};color:white;font-size:0.8em;font-weight:bold;">
+                                                            ${n}
+                                                        </span>`
+                                                    ).join('')}
+                                                </div>
+                                            </div>
+                                        `;
+                                    }).join('')}
+                                </div>
                             </div>
                         </div>
-                        <div style="margin-top:auto;font-size:0.9em;color:#666;max-height:150px;overflow-y:auto;border-top:1px solid #eee;padding-top:10px;">
-                            <div style="font-weight:600;margin-bottom:5px;color:#444;">Appeared on:</div>
-                            <div style="max-height:100px;overflow-y:auto;">
-                                ${Array.from(dates).map(date => `<div>${date}</div>`).join('')}
+                        
+                        <div style="margin-top:auto;font-size:0.85em;color:#666;max-height:120px;overflow-y:auto;border-top:1px solid #eee;padding-top:10px;">
+                            <div style="font-weight:600;margin-bottom:5px;color:#444;">Appeared in draws:</div>
+                            <div style="max-height:80px;overflow-y:auto;font-size:0.9em;">
+                                ${Array.from(dates).slice(0, 5).map(date => 
+                                    `<div style="padding:2px 0;border-bottom:1px solid #f0f0f0;">${date}</div>`
+                                ).join('')}
+                                ${dates.size > 5 ? 
+                                    `<div style="color:#7f8c8d;font-style:italic;margin-top:4px;">+ ${dates.size - 5} more...</div>` : 
+                                    ''
+                                }
                             </div>
                         </div>
                     </div>
