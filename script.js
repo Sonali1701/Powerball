@@ -962,70 +962,58 @@ document.addEventListener('DOMContentLoaded', async function() {
         
         // Generate 17-based trios function
         function generate17BasedTrios() {
-            if (pairsWith17.length < 2) {
+            if (pairsWith17.length < 1) {
                 document.getElementById('trio-cards-container').innerHTML = 
-                    '<div style="color:#e74c3c;padding:20px;text-align:center;">Not enough pairs containing 17 found to generate trios.</div>';
+                    '<div style="color:#e74c3c;padding:20px;text-align:center;">No pairs containing 17 found in the data.</div>';
                 return;
             }
 
-            // Shuffle the pairs
-            const shuffledPairs = [...pairsWith17].sort(() => Math.random() - 0.5);
+            // Create a map to track all unique trios and their occurrences
+            const trioMap = new Map();
             
-            // Create a set to track used pairs to ensure we don't reuse the same pair
-            const usedIndices = new Set();
-            const results = [];
-            
-            // Try to create up to 20 unique trios
-            for (let i = 0; i < Math.min(20, Math.floor(pairsWith17.length / 2)); i++) {
-                // Find two different pairs that haven't been used yet
-                let pair1Index, pair2Index;
-                
-                // Try to find a valid pair combination
-                for (let j = 0; j < shuffledPairs.length && !pair1Index; j++) {
-                    if (!usedIndices.has(j)) {
-                        for (let k = j + 1; k < shuffledPairs.length; k++) {
-                            if (!usedIndices.has(k)) {
-                                // Check if these pairs can form a valid trio (all numbers must be unique except 17)
-                                const num1 = shuffledPairs[j].numbers.find(n => n !== 17);
-                                const num2 = shuffledPairs[k].numbers.find(n => n !== 17);
-                                if (num1 !== num2) {
-                                    pair1Index = j;
-                                    pair2Index = k;
-                                    break;
-                                }
+            // Find all possible trios containing 17
+            draws.forEach(draw => {
+                if (draw.mainArr && draw.mainArr.includes(17)) {
+                    // Get all combinations of 3 numbers that include 17
+                    const otherNumbers = draw.mainArr.filter(n => n !== 17);
+                    for (let i = 0; i < otherNumbers.length; i++) {
+                        for (let j = i + 1; j < otherNumbers.length; j++) {
+                            const num1 = otherNumbers[i];
+                            const num2 = otherNumbers[j];
+                            const trio = [17, num1, num2].sort((a, b) => a - b);
+                            const trioKey = trio.join('-');
+                            
+                            if (!trioMap.has(trioKey)) {
+                                trioMap.set(trioKey, {
+                                    trio: trio,
+                                    dates: new Set(),
+                                    sourcePairs: [
+                                        { numbers: [17, num1].sort((a, b) => a - b), dates: new Set() },
+                                        { numbers: [17, num2].sort((a, b) => a - b), dates: new Set() },
+                                        { numbers: [num1, num2].sort((a, b) => a - b), dates: new Set() }
+                                    ]
+                                });
                             }
+                            
+                            // Add this date to the trio and its pairs
+                            const trioData = trioMap.get(trioKey);
+                            trioData.dates.add(draw.date);
+                            
+                            // Update dates for each pair in the trio
+                            trioData.sourcePairs[0].dates.add(draw.date); // 17-num1
+                            trioData.sourcePairs[1].dates.add(draw.date); // 17-num2
+                            trioData.sourcePairs[2].dates.add(draw.date); // num1-num2
                         }
                     }
                 }
+            });
+            
+            // Convert the map to an array and sort by number of occurrences (most frequent first)
+            let results = Array.from(trioMap.values())
+                .sort((a, b) => b.dates.size - a.dates.size);
                 
-                if (pair1Index !== undefined && pair2Index !== undefined) {
-                    const pair1 = shuffledPairs[pair1Index];
-                    const pair2 = shuffledPairs[pair2Index];
-                    
-                    // Extract the other number from each pair (the one that's not 17)
-                    const num1 = pair1.numbers.find(n => n !== 17);
-                    const num2 = pair2.numbers.find(n => n !== 17);
-                    
-                    // Create the trio (17, num1, num2)
-                    const trio = [17, num1, num2].sort((a, b) => a - b);
-                    
-                    // Combine dates from both pairs
-                    const combinedDates = new Set([...pair1.dates, ...pair2.dates]);
-                    
-                    results.push({
-                        trio: trio,
-                        dates: combinedDates,
-                        sourcePairs: [
-                            { numbers: [17, num1], dates: pair1.dates },
-                            { numbers: [17, num2], dates: pair2.dates }
-                        ]
-                    });
-                    
-                    // Mark these pairs as used
-                    usedIndices.add(pair1Index);
-                    usedIndices.add(pair2Index);
-                }
-            }
+            // Limit to top 20 most frequent trios
+            results = results.slice(0, 20);
             
             if (results.length === 0) {
                 document.getElementById('trio-cards-container').innerHTML = 
