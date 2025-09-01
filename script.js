@@ -930,6 +930,196 @@ document.addEventListener('DOMContentLoaded', async function() {
         console.log('Initializing Trio tab with', window.filteredDrawRows ? window.filteredDrawRows.length : 0, 'draws');
         if (window.filteredDrawRows && window.filteredDrawRows.length > 0) {
             renderTrioTab();
+            
+            // Add event listeners for the new search functionality
+            const searchBtn = document.getElementById('trio-search-btn');
+            const clearBtn = document.getElementById('clear-trio-search');
+            
+            if (searchBtn) {
+                searchBtn.addEventListener('click', searchTrios);
+                
+                // Allow searching with Enter key
+                const searchInputs = [
+                    document.getElementById('trio-search-1'),
+                    document.getElementById('trio-search-2'),
+                    document.getElementById('trio-search-3')
+                ];
+                
+                searchInputs.forEach(input => {
+                    if (input) {
+                        input.addEventListener('keypress', function(e) {
+                            if (e.key === 'Enter') {
+                                searchTrios();
+                            }
+                        });
+                    }
+                });
+            }
+            
+            if (clearBtn) {
+                clearBtn.addEventListener('click', clearTrioSearch);
+            }
+        }
+    }
+    
+    // Function to search for trios containing the specified numbers
+    function searchTrios() {
+        const numbers = [];
+        
+        // Get numbers from all three search inputs
+        for (let i = 1; i <= 3; i++) {
+            const input = document.getElementById(`trio-search-${i}`);
+            if (input && input.value) {
+                const num = parseInt(input.value);
+                if (!isNaN(num) && num >= 1 && num <= 69) {
+                    numbers.push(num);
+                }
+            }
+        }
+        
+        if (numbers.length === 0) {
+            alert('Please enter at least one valid number between 1 and 69');
+            return;
+        }
+        
+        // Find all trios that contain all the specified numbers
+        const allTrios = new Map();
+        
+        // Process each draw to find trios
+        window.filteredDrawRows.forEach(draw => {
+            if (!draw.mainArr || !Array.isArray(draw.mainArr) || draw.mainArr.length < 3) return;
+            
+            // Get all possible trios from this draw
+            const drawTrios = getCombos(draw.mainArr, 3);
+            
+            drawTrios.forEach(trio => {
+                // Check if this trio contains all the search numbers
+                const containsAllSearchNumbers = numbers.every(num => trio.includes(num));
+                
+                if (containsAllSearchNumbers) {
+                    const key = trio.sort((a, b) => a - b).join(':');
+                    
+                    if (!allTrios.has(key)) {
+                        allTrios.set(key, {
+                            numbers: [...trio],
+                            dates: new Set(),
+                            sum: trio.reduce((a, b) => a + b, 0)
+                        });
+                    }
+                    
+                    if (draw.date) {
+                        allTrios.get(key).dates.add(draw.date);
+                    }
+                }
+            });
+        });
+        
+        // Convert to array and sort by frequency (number of occurrences)
+        const results = Array.from(allTrios.values())
+            .map(trio => ({
+                ...trio,
+                frequency: trio.dates.size
+            }))
+            .sort((a, b) => b.frequency - a.frequency || a.sum - b.sum);
+        
+        // Display results
+        displayTrioSearchResults(results, numbers);
+    }
+    
+    // Display the trio search results
+    function displayTrioSearchResults(results, searchNumbers) {
+        const resultsDiv = document.getElementById('trio-results') || document.createElement('div');
+        const summaryDiv = document.getElementById('trio-search-summary');
+        const countSpan = document.getElementById('trio-search-results-count');
+        
+        if (countSpan) {
+            countSpan.textContent = `${results.length} ${results.length === 1 ? 'result' : 'results'} found`;
+        }
+        
+        if (summaryDiv) {
+            summaryDiv.style.display = 'block';
+        }
+        
+        if (results.length === 0) {
+            resultsDiv.innerHTML = `
+                <div style="color:#e74c3c; padding:20px; text-align:center; background:#fff5f5; border-radius:8px; margin:10px 0;">
+                    No trios found containing the specified number(s): ${searchNumbers.join(', ')}
+                </div>`;
+            return;
+        }
+        
+        // Generate HTML for results
+        let html = `
+            <div style="margin: 16px 0;">
+                <h3 style="color:#2c3e50; margin-bottom:16px; font-size:1.2em;">
+                    Trios containing: ${searchNumbers.map(n => `<span style="display:inline-block; background:#3498db; color:white; padding:2px 8px; border-radius:12px; margin:0 2px; font-size:0.9em;">${n}</span>`).join(' ')}
+                </h3>
+                <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:16px;">
+        `;
+        
+        results.forEach((trio, index) => {
+            const datesList = Array.from(trio.dates).slice(0, 5).map(date => 
+                `<div style="font-size:0.85em; color:#7f8c8d; margin-top:4px;">${date}</div>`
+            ).join('');
+            
+            html += `
+                <div style="background:white; border-radius:10px; padding:16px; box-shadow:0 2px 6px rgba(0,0,0,0.08);">
+                    <div style="display:flex; justify-content:center; gap:8px; margin-bottom:12px;">
+                        ${trio.numbers.map(num => {
+                            const isSearchNum = searchNumbers.includes(num);
+                            return `
+                                <div style="
+                                    width:36px; height:36px; border-radius:50%; 
+                                    background:${isSearchNum ? '#e74c3c' : '#9b59b6'}; 
+                                    color:white; display:flex; align-items:center; 
+                                    justify-content:center; font-weight:bold;
+                                    border: ${isSearchNum ? '2px solid #c0392b' : 'none'};
+                                    box-shadow: ${isSearchNum ? '0 0 0 2px rgba(231, 76, 60, 0.3)' : 'none'};
+                                ">
+                                    ${num}
+                                </div>`;
+                        }).join('')}
+                    </div>
+                    <div style="font-size:0.9em; color:#7f8c8d; margin-bottom:8px;">
+                        <div>Frequency: <strong>${trio.frequency} time${trio.frequency !== 1 ? 's' : ''}</strong></div>
+                        <div>Sum: <strong>${trio.sum}</strong></div>
+                    </div>
+                    <div style="max-height:120px; overflow-y:auto; border-top:1px solid #eee; padding-top:8px;">
+                        ${datesList}
+                        ${trio.dates.size > 5 ? 
+                            `<div style="font-size:0.8em; color:#7f8c8d; margin-top:4px;">
+                                ...and ${trio.dates.size - 5} more
+                            </div>` : ''
+                        }
+                    </div>
+                </div>`;
+        });
+        
+        html += `
+                </div>
+            </div>`;
+            
+        resultsDiv.innerHTML = html;
+    }
+    
+    // Clear the trio search
+    function clearTrioSearch() {
+        // Clear input fields
+        for (let i = 1; i <= 3; i++) {
+            const input = document.getElementById(`trio-search-${i}`);
+            if (input) input.value = '';
+        }
+        
+        // Hide summary
+        const summaryDiv = document.getElementById('trio-search-summary');
+        if (summaryDiv) {
+            summaryDiv.style.display = 'none';
+        }
+        
+        // Clear results
+        const resultsDiv = document.getElementById('trio-results');
+        if (resultsDiv) {
+            resultsDiv.innerHTML = '';
         }
     }
     
@@ -940,6 +1130,12 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (isNaN(customNumber) || customNumber < 1 || customNumber > 69) {
             alert('Please enter a valid number between 1 and 69');
             return;
+        }
+        
+        // Clear any existing search results
+        const summaryDiv = document.getElementById('trio-search-summary');
+        if (summaryDiv) {
+            summaryDiv.style.display = 'none';
         }
         
         // Find all pairs that include the custom number
@@ -2268,12 +2464,12 @@ if (genComboBtn && genSingleBtn && genResult) {
         const whiteBalls = generateUniqueNumbers(5, 1, 69);
         const redBall = getRandomInt(1, 26);
         genResult.innerHTML =
-            whiteBalls.map(n => `<span class='generated-ball'>${n}</span>`).join('') +
-            `<span class='generated-ball red'>${redBall}</span>`;
+            whiteBalls.map(n => `<span class='generated-ball' style='font-weight: bold;'>${n}</span>`).join('') +
+            `<span class='generated-ball red' style='font-weight: bold;'>${redBall}</span>`;
     };
     genSingleBtn.onclick = function() {
         const n = getRandomInt(1, 69);
-        genResult.innerHTML = `<span class='generated-ball'>${n}</span>`;
+        genResult.innerHTML = `<span class='generated-ball' style='font-weight: bold;'>${n}</span>`;
     };
 }
 
