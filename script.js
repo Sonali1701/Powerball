@@ -1597,8 +1597,11 @@ document.addEventListener('DOMContentLoaded', async function() {
                             drawRows.push(drawObj);
                             // Add to all draws
                             allDraws.push(drawObj);
-                            // Keep only recent draws for other tabs
-                            if (recentDraws.length < 50) {
+                            // Filter draws from 2016 to 2025
+                            const dateStr = drawObj.date || '';
+                            const parts = dateStr.split('/');
+                            const year = parts.length === 3 ? parseInt(parts[2], 10) : 0;
+                            if (year >= 2016 && year <= 2025) {
                                 recentDraws.push(drawObj);
                             }
                         }
