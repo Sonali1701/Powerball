@@ -528,31 +528,102 @@
               <div style="margin-top:18px; color:#888; font-size:1.05em;">Each combination: 5 unique numbers (1-69).</div>
             </div>
           </section>
-          <!-- Section 2: Create Combination from 2 Duos (dropdown UI) -->
+          <!-- Section 2: Create Combination from 2 Duos (Enhanced) -->
           <section class="generator-section">
-            <div class="generator-panel" id="duo-builder-panel">
-              <h2>2. Create Combination from 2 Duos</h2>
-              <label for="duo1-select" class="duo-select-label">Select Duo 1:</label>
-              <select id="duo1-select" class="duo-select"></select>
-              <label for="duo2-select" class="duo-select-label">Select Duo 2:</label>
-              <select id="duo2-select" class="duo-select"></select>
-              <button id="build-duo-combo-btn" class="freq-gen-btn" disabled>Generate from Two Duos</button>
-<button id="clear-duo-selection-btn" class="multi-gen-btn" style="margin-top:8px; background: #eee; color: #217dbb; border: 1.5px solid #b3d6f2;">Clear Selection</button>
-<div id="built-duo-combo-result"></div>
+            <div class="generator-panel" id="duo-builder-panel" style="background: linear-gradient(135deg, #f8faff 0%, #f0f7ff 100%); border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+              <h2 style="color: #2c3e50; font-size: 1.3em; margin: 0 0 18px 0; padding-bottom: 10px; border-bottom: 2px solid #e0e6ed; display: flex; align-items: center;">
+                <i class="fas fa-random" style="margin-right: 10px; color: #3498db;"></i>
+                2. Create Combination from 2 Duos
+              </h2>
+              
+              <div class="search-container" style="margin-bottom: 20px;">
+                <div style="position: relative; margin-bottom: 15px;">
+                  <label for="duo1-select" class="search-label">Select Duo 1:</label>
+                  <div class="custom-select" style="position: relative;">
+                    <select id="duo1-select" class="enhanced-select" style="width: 100%; padding: 12px 40px 12px 15px; font-size: 1.1em; font-weight: bold; border: 2px solid #d1d8e0; border-radius: 8px; background-color: white; appearance: none; -webkit-appearance: none; -moz-appearance: none; cursor: pointer; transition: all 0.2s ease;" onfocus="this.style.borderColor='#3498db'; this.style.boxShadow='0 0 0 3px rgba(52, 152, 219, 0.2)';" onblur="this.style.borderColor='#d1d8e0'; this.style.boxShadow='none';">
+                      <option value="">Search or select a duo...</option>
+                    </select>
+                    <div class="select-arrow" style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); pointer-events: none; color: #7f8c8d;">
+                      <i class="fas fa-chevron-down"></i>
+                    </div>
+                  </div>
+                </div>
+                
+                <div style="position: relative; margin-bottom: 20px;">
+                  <label for="duo2-select" class="search-label">Select Duo 2:</label>
+                  <div class="custom-select" style="position: relative;">
+                    <select id="duo2-select" class="enhanced-select" style="width: 100%; padding: 12px 40px 12px 15px; font-size: 1.1em; font-weight: bold; border: 2px solid #d1d8e0; border-radius: 8px; background-color: white; appearance: none; -webkit-appearance: none; -moz-appearance: none; cursor: pointer; transition: all 0.2s ease;" onfocus="this.style.borderColor='#3498db'; this.style.boxShadow='0 0 0 3px rgba(52, 152, 219, 0.2)';" onblur="this.style.borderColor='#d1d8e0'; this.style.boxShadow='none';">
+                      <option value="">Search or select a duo...</option>
+                    </select>
+                    <div class="select-arrow" style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); pointer-events: none; color: #7f8c8d;">
+                      <i class="fas fa-chevron-down"></i>
+                    </div>
+                  </div>
+                </div>
+                
+                <div style="display: flex; gap: 10px; margin-top: 5px;">
+                  <button id="build-duo-combo-btn" class="action-btn" style="flex: 1; background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);" disabled>
+                    <i class="fas fa-magic"></i> Generate Combo
+                  </button>
+                  <button id="clear-duo-selection-btn" class="action-btn" style="flex: 0 0 auto; background: #e74c3c; color: white;" title="Clear selection">
+                    <i class="fas fa-times"></i> Clear
+                  </button>
+                </div>
+              </div>
+              
+              <div id="built-duo-combo-result" style="margin-top: 15px; padding: 15px; background: white; border-radius: 8px; border: 1px solid #e0e6ed; min-height: 60px; display: flex; align-items: center; justify-content: center; font-size: 1.1em; color: #7f8c8d;">
+                Your generated combinations will appear here
+              </div>
             </div>
           </section>
-          <!-- Section 3: Create Combination from 1 Duo and 1 Trio -->
+          
+          <!-- Section 3: Create Combination from 1 Duo and 1 Trio (Enhanced) -->
           <section class="generator-section">
-            <div class="generator-panel" id="combo-builder-panel">
-  <h2>3. Create Combination from 1 Duo and 1 Trio</h2>
-  <label for="combo-duo-select" class="duo-select-label">Select Duo:</label>
-  <select id="combo-duo-select" class="duo-select"></select>
-  <label for="combo-trio-select" class="duo-select-label">Select Trio:</label>
-  <select id="combo-trio-select" class="duo-select"></select>
-  <button id="build-combo-btn" class="freq-gen-btn" style="margin-top:8px;" disabled>Generate from Duo + Trio</button>
-  <button id="clear-combo-selection-btn" class="multi-gen-btn" style="margin-top:8px; background: #eee; color: #217dbb; border: 1.5px solid #b3d6f2;">Clear Selection</button>
-  <div id="built-combo-result" style="margin-top:18px;"></div>
-</div>
+            <div class="generator-panel" id="combo-builder-panel" style="background: linear-gradient(135deg, #f8faff 0%, #f0f7ff 100%); border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05);">
+              <h2 style="color: #2c3e50; font-size: 1.3em; margin: 0 0 18px 0; padding-bottom: 10px; border-bottom: 2px solid #e0e6ed; display: flex; align-items: center;">
+                <i class="fas fa-random" style="margin-right: 10px; color: #9b59b6;"></i>
+                3. Create Combination from Duo + Trio
+              </h2>
+              
+              <div class="search-container" style="margin-bottom: 20px;">
+                <div style="position: relative; margin-bottom: 15px;">
+                  <label for="combo-duo-select" class="search-label">Select Duo:</label>
+                  <div class="custom-select" style="position: relative;">
+                    <select id="combo-duo-select" class="enhanced-select" style="width: 100%; padding: 12px 40px 12px 15px; font-size: 1.1em; font-weight: bold; border: 2px solid #d1d8e0; border-radius: 8px; background-color: white; appearance: none; -webkit-appearance: none; -moz-appearance: none; cursor: pointer; transition: all 0.2s ease;" onfocus="this.style.borderColor='#9b59b6'; this.style.boxShadow='0 0 0 3px rgba(155, 89, 182, 0.2)';" onblur="this.style.borderColor='#d1d8e0'; this.style.boxShadow='none';">
+                      <option value="">Search or select a duo...</option>
+                    </select>
+                    <div class="select-arrow" style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); pointer-events: none; color: #7f8c8d;">
+                      <i class="fas fa-chevron-down"></i>
+                    </div>
+                  </div>
+                </div>
+                
+                <div style="position: relative; margin-bottom: 20px;">
+                  <label for="combo-trio-select" class="search-label">Select Trio:</label>
+                  <div class="custom-select" style="position: relative;">
+                    <select id="combo-trio-select" class="enhanced-select" style="width: 100%; padding: 12px 40px 12px 15px; font-size: 1.1em; font-weight: bold; border: 2px solid #d1d8e0; border-radius: 8px; background-color: white; appearance: none; -webkit-appearance: none; -moz-appearance: none; cursor: pointer; transition: all 0.2s ease;" onfocus="this.style.borderColor='#9b59b6'; this.style.boxShadow='0 0 0 3px rgba(155, 89, 182, 0.2)';" onblur="this.style.borderColor='#d1d8e0'; this.style.boxShadow='none';">
+                      <option value="">Search or select a trio...</option>
+                    </select>
+                    <div class="select-arrow" style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); pointer-events: none; color: #7f8c8d;">
+                      <i class="fas fa-chevron-down"></i>
+                    </div>
+                  </div>
+                </div>
+                
+                <div style="display: flex; gap: 10px; margin-top: 5px;">
+                  <button id="build-combo-btn" class="action-btn" style="flex: 1; background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);" disabled>
+                    <i class="fas fa-magic"></i> Generate Combo
+                  </button>
+                  <button id="clear-combo-selection-btn" class="action-btn" style="flex: 0 0 auto; background: #e74c3c; color: white;" title="Clear selection">
+                    <i class="fas fa-times"></i> Clear
+                  </button>
+                </div>
+              </div>
+              
+              <div id="built-combo-result" style="margin-top: 15px; padding: 15px; background: white; border-radius: 8px; border: 1px solid #e0e6ed; min-height: 60px; display: flex; align-items: center; justify-content: center; font-size: 1.1em; color: #7f8c8d;">
+                Your generated combinations will appear here
+              </div>
+            </div>
           </section>
         </div>
 
@@ -1022,6 +1093,69 @@
         console.log('Container dimensions:', container.offsetWidth, 'x', container.offsetHeight);
     }
     
+    // Handle generate from two duos button
+    document.getElementById('build-duo-combo-btn').addEventListener('click', function() {
+      const duo1Key = document.getElementById('duo1-select').value;
+      const duo2Key = document.getElementById('duo2-select').value;
+      
+      if (!duo1Key || !duo2Key) return;
+      
+      const combination = generateFromTwoDuos(duo1Key, duo2Key);
+      const resultDiv = document.getElementById('built-duo-combo-result');
+      
+      // Format the result with styling and bolder numbers
+      resultDiv.innerHTML = `
+        <div class="result-container">
+          <div class="result-title">
+            <i class="fas fa-star"></i>
+            <span style="font-weight: 700; font-size: 1.1em;">Generated Combination</span>
+          </div>
+          <div style="margin: 15px 0; display: flex; flex-wrap: wrap; gap: 5px; justify-content: center;">
+            ${formatCombination(combination)}
+          </div>
+          <div style="font-size: 0.9em; color: #7f8c8d; margin-top: 15px; padding-top: 10px; border-top: 1px solid #eee;">
+            <i class="fas fa-info-circle"></i> This combination was generated from the selected duos.
+          </div>
+        </div>
+      `;
+    });
+    
+    // Handle generate from duo + trio button
+    document.getElementById('build-combo-btn').addEventListener('click', function() {
+      const duoKey = document.getElementById('combo-duo-select').value;
+      const trioKey = document.getElementById('combo-trio-select').value;
+      
+      if (!duoKey || !trioKey) return;
+      
+      const combination = generateFromDuoAndTrio(duoKey, trioKey);
+      const resultDiv = document.getElementById('built-combo-result');
+      
+      // Get the selected duo and trio for display
+      const duo = duoKey.split(':').map(n => formatNumber(parseInt(n))).join(' - ');
+      const trio = trioKey.split(':').map(n => formatNumber(parseInt(n))).join(' - ');
+      
+      // Format the result with styling and bolder numbers
+      resultDiv.innerHTML = `
+        <div class="result-container">
+          <div class="result-title">
+            <i class="fas fa-star"></i>
+            <span style="font-weight: 700; font-size: 1.1em;">Generated Combination</span>
+          </div>
+          <div style="margin: 15px 0; display: flex; flex-wrap: wrap; gap: 5px;justify-content: center;">
+            ${formatCombination(combination)}
+          </div>
+          <div style="font-size: 0.95em; color: #7f8c8d; margin-top: 15px; padding-top: 10px; border-top: 1px solid #eee;">
+            <div style="margin-bottom: 6px;"><i class="fas fa-random"></i> <strong style="font-weight: 700;">Source Duo:</strong> 
+              <span style="font-weight: 700; color: #2c3e50;">${duo}</span>
+            </div>
+            <div><i class="fas fa-random"></i> <strong style="font-weight: 700;">Source Trio:</strong> 
+              <span style="font-weight: 700; color: #2c3e50;">${trio}</span>
+            </div>
+          </div>
+        </div>
+      `;
+    });
+    
     // Handle regular number generation buttons
     document.querySelectorAll('.multi-gen-btn:not(#generate-from-trios):not(#generate-from-overlapping-trios)').forEach(btn => {
         btn.onclick = function() {
@@ -1305,6 +1439,7 @@
                 const option1 = document.createElement('option');
                 option1.value = pairKey;
                 option1.textContent = `${pairKey.replace(/-/g, ' - ')} (${count}×)`;
+                option1.style.fontWeight = '700'; // Make numbers bolder
                 duo1Select.appendChild(option1.cloneNode(true));
                 duo2Select.appendChild(option1);
             });
@@ -1319,12 +1454,14 @@
                 const option = document.createElement('option');
                 option.value = pairKey;
                 option.textContent = `${pairKey.replace(/-/g, ' - ')} (${count}×)`;
+                option.style.fontWeight = '700'; // Make numbers bolder
                 comboDuoSelect.appendChild(option);
             });
             sortedTriplets.forEach(([trioKey, count]) => {
                 const option = document.createElement('option');
                 option.value = trioKey;
                 option.textContent = `${trioKey.replace(/-/g, ' - ')} (${count}×)`;
+                option.style.fontWeight = '700'; // Make numbers bolder
                 comboTrioSelect.appendChild(option);
             });
             comboDuoSelect.selectedIndex = -1;
