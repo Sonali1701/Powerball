@@ -930,196 +930,6 @@ document.addEventListener('DOMContentLoaded', async function() {
         console.log('Initializing Trio tab with', window.filteredDrawRows ? window.filteredDrawRows.length : 0, 'draws');
         if (window.filteredDrawRows && window.filteredDrawRows.length > 0) {
             renderTrioTab();
-            
-            // Add event listeners for the new search functionality
-            const searchBtn = document.getElementById('trio-search-btn');
-            const clearBtn = document.getElementById('clear-trio-search');
-            
-            if (searchBtn) {
-                searchBtn.addEventListener('click', searchTrios);
-                
-                // Allow searching with Enter key
-                const searchInputs = [
-                    document.getElementById('trio-search-1'),
-                    document.getElementById('trio-search-2'),
-                    document.getElementById('trio-search-3')
-                ];
-                
-                searchInputs.forEach(input => {
-                    if (input) {
-                        input.addEventListener('keypress', function(e) {
-                            if (e.key === 'Enter') {
-                                searchTrios();
-                            }
-                        });
-                    }
-                });
-            }
-            
-            if (clearBtn) {
-                clearBtn.addEventListener('click', clearTrioSearch);
-            }
-        }
-    }
-    
-    // Function to search for trios containing the specified numbers
-    function searchTrios() {
-        const numbers = [];
-        
-        // Get numbers from all three search inputs
-        for (let i = 1; i <= 3; i++) {
-            const input = document.getElementById(`trio-search-${i}`);
-            if (input && input.value) {
-                const num = parseInt(input.value);
-                if (!isNaN(num) && num >= 1 && num <= 69) {
-                    numbers.push(num);
-                }
-            }
-        }
-        
-        if (numbers.length === 0) {
-            alert('Please enter at least one valid number between 1 and 69');
-            return;
-        }
-        
-        // Find all trios that contain all the specified numbers
-        const allTrios = new Map();
-        
-        // Process each draw to find trios
-        window.filteredDrawRows.forEach(draw => {
-            if (!draw.mainArr || !Array.isArray(draw.mainArr) || draw.mainArr.length < 3) return;
-            
-            // Get all possible trios from this draw
-            const drawTrios = getCombos(draw.mainArr, 3);
-            
-            drawTrios.forEach(trio => {
-                // Check if this trio contains all the search numbers
-                const containsAllSearchNumbers = numbers.every(num => trio.includes(num));
-                
-                if (containsAllSearchNumbers) {
-                    const key = trio.sort((a, b) => a - b).join(':');
-                    
-                    if (!allTrios.has(key)) {
-                        allTrios.set(key, {
-                            numbers: [...trio],
-                            dates: new Set(),
-                            sum: trio.reduce((a, b) => a + b, 0)
-                        });
-                    }
-                    
-                    if (draw.date) {
-                        allTrios.get(key).dates.add(draw.date);
-                    }
-                }
-            });
-        });
-        
-        // Convert to array and sort by frequency (number of occurrences)
-        const results = Array.from(allTrios.values())
-            .map(trio => ({
-                ...trio,
-                frequency: trio.dates.size
-            }))
-            .sort((a, b) => b.frequency - a.frequency || a.sum - b.sum);
-        
-        // Display results
-        displayTrioSearchResults(results, numbers);
-    }
-    
-    // Display the trio search results
-    function displayTrioSearchResults(results, searchNumbers) {
-        const resultsDiv = document.getElementById('trio-results') || document.createElement('div');
-        const summaryDiv = document.getElementById('trio-search-summary');
-        const countSpan = document.getElementById('trio-search-results-count');
-        
-        if (countSpan) {
-            countSpan.textContent = `${results.length} ${results.length === 1 ? 'result' : 'results'} found`;
-        }
-        
-        if (summaryDiv) {
-            summaryDiv.style.display = 'block';
-        }
-        
-        if (results.length === 0) {
-            resultsDiv.innerHTML = `
-                <div style="color:#e74c3c; padding:20px; text-align:center; background:#fff5f5; border-radius:8px; margin:10px 0;">
-                    No trios found containing the specified number(s): ${searchNumbers.join(', ')}
-                </div>`;
-            return;
-        }
-        
-        // Generate HTML for results
-        let html = `
-            <div style="margin: 16px 0;">
-                <h3 style="color:#2c3e50; margin-bottom:16px; font-size:1.2em;">
-                    Trios containing: ${searchNumbers.map(n => `<span style="display:inline-block; background:#3498db; color:white; padding:2px 8px; border-radius:12px; margin:0 2px; font-size:0.9em;">${n}</span>`).join(' ')}
-                </h3>
-                <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:16px;">
-        `;
-        
-        results.forEach((trio, index) => {
-            const datesList = Array.from(trio.dates).slice(0, 5).map(date => 
-                `<div style="font-size:0.85em; color:#7f8c8d; margin-top:4px;">${date}</div>`
-            ).join('');
-            
-            html += `
-                <div style="background:white; border-radius:10px; padding:16px; box-shadow:0 2px 6px rgba(0,0,0,0.08);">
-                    <div style="display:flex; justify-content:center; gap:8px; margin-bottom:12px;">
-                        ${trio.numbers.map(num => {
-                            const isSearchNum = searchNumbers.includes(num);
-                            return `
-                                <div style="
-                                    width:36px; height:36px; border-radius:50%; 
-                                    background:${isSearchNum ? '#e74c3c' : '#9b59b6'}; 
-                                    color:white; display:flex; align-items:center; 
-                                    justify-content:center; font-weight:bold;
-                                    border: ${isSearchNum ? '2px solid #c0392b' : 'none'};
-                                    box-shadow: ${isSearchNum ? '0 0 0 2px rgba(231, 76, 60, 0.3)' : 'none'};
-                                ">
-                                    ${num}
-                                </div>`;
-                        }).join('')}
-                    </div>
-                    <div style="font-size:0.9em; color:#7f8c8d; margin-bottom:8px;">
-                        <div>Frequency: <strong>${trio.frequency} time${trio.frequency !== 1 ? 's' : ''}</strong></div>
-                        <div>Sum: <strong>${trio.sum}</strong></div>
-                    </div>
-                    <div style="max-height:120px; overflow-y:auto; border-top:1px solid #eee; padding-top:8px;">
-                        ${datesList}
-                        ${trio.dates.size > 5 ? 
-                            `<div style="font-size:0.8em; color:#7f8c8d; margin-top:4px;">
-                                ...and ${trio.dates.size - 5} more
-                            </div>` : ''
-                        }
-                    </div>
-                </div>`;
-        });
-        
-        html += `
-                </div>
-            </div>`;
-            
-        resultsDiv.innerHTML = html;
-    }
-    
-    // Clear the trio search
-    function clearTrioSearch() {
-        // Clear input fields
-        for (let i = 1; i <= 3; i++) {
-            const input = document.getElementById(`trio-search-${i}`);
-            if (input) input.value = '';
-        }
-        
-        // Hide summary
-        const summaryDiv = document.getElementById('trio-search-summary');
-        if (summaryDiv) {
-            summaryDiv.style.display = 'none';
-        }
-        
-        // Clear results
-        const resultsDiv = document.getElementById('trio-results');
-        if (resultsDiv) {
-            resultsDiv.innerHTML = '';
         }
     }
     
@@ -1130,12 +940,6 @@ document.addEventListener('DOMContentLoaded', async function() {
         if (isNaN(customNumber) || customNumber < 1 || customNumber > 69) {
             alert('Please enter a valid number between 1 and 69');
             return;
-        }
-        
-        // Clear any existing search results
-        const summaryDiv = document.getElementById('trio-search-summary');
-        if (summaryDiv) {
-            summaryDiv.style.display = 'none';
         }
         
         // Find all pairs that include the custom number
@@ -1254,10 +1058,19 @@ document.addEventListener('DOMContentLoaded', async function() {
         cardsContainer.innerHTML = cardsHtml;
     }
 
-    // Helper function to parse date string into Date object
+    // Format date for display (moved up for reuse)
+    function formatDate(date) {
+        if (!(date instanceof Date)) date = new Date(date);
+        return (date.getUTCMonth() + 1) + '/' + date.getUTCDate() + '/' + date.getUTCFullYear();
+    }
+    
+    // Helper function to parse date string into Date object at noon to avoid timezone issues
     function parseDrawDate(dateStr) {
         const [month, day, year] = dateStr.split('/').map(Number);
-        return new Date(2000 + year, month - 1, day);
+        // Handle both 2-digit and 4-digit years
+        const fullYear = year > 1900 ? year : (year < 100 ? 2000 + year : year);
+        // Create date at noon to avoid timezone/DST issues
+        return new Date(Date.UTC(fullYear, month - 1, day, 12, 0, 0));
     }
 
     // Render the Trio 2 tab results (uses nearby dates when same-day not available)
@@ -1270,11 +1083,13 @@ document.addEventListener('DOMContentLoaded', async function() {
             return;
         }
 
-        // First, log the raw filteredDrawRows for debugging
-        console.log('Raw filteredDrawRows:', window.filteredDrawRows ? window.filteredDrawRows.slice(0, 5) : 'No filteredDrawRows');
+        // Get all available draws for Trio 2 tab
+        const allDraws = window.allDraws || window.filteredDrawRows || [];
+        console.log('Total draws available:', allDraws.length);
+        console.log('Sample draws:', allDraws.slice(0, 2));
 
         // Filter draws from 2015 to 2025 and ensure they have valid numbers
-        const validDraws = (window.filteredDrawRows || [])
+        const validDraws = allDraws
             .filter(draw => {
                 try {
                     if (!draw || !draw.mainArr || !Array.isArray(draw.mainArr) || draw.mainArr.length !== 5) {
@@ -1341,21 +1156,59 @@ document.addEventListener('DOMContentLoaded', async function() {
             console.log('Last valid draw:', validDraws[validDraws.length - 1]);
         }
 
-        // Create a sliding window of 3 consecutive draws to find combinations
+        // Create date-based windows of exactly 2 weeks (14 days)
         const eligibleTrios = [];
-        const windowSize = 3; // Look at 3 consecutive draws for combinations
+        // First, ensure all draws have Date objects and sort them by date
+        const drawsWithDates = validDraws.map(draw => ({
+            ...draw,
+            dateObj: parseDrawDate(draw.date)
+        })).sort((a, b) => a.dateObj - b.dateObj);
         
-        for (let i = 0; i <= validDraws.length - windowSize; i++) {
-            const windowDraws = validDraws.slice(i, i + windowSize);
-            const windowDates = new Set(windowDraws.map(d => d.date));
+        // For each draw, find other draws within a 2-week window
+        for (let i = 0; i < drawsWithDates.length; i++) {
+            const currentDraw = drawsWithDates[i];
+            // Set window start at 00:00:00 of the current draw's date
+            const windowStart = new Date(currentDraw.dateObj);
+            windowStart.setUTCHours(0, 0, 0, 0);
+            // Set window end to exactly 14 days later at 23:59:59.999
+            const windowEnd = new Date(windowStart);
+            windowEnd.setUTCDate(windowEnd.getUTCDate() + 14);
+            windowEnd.setUTCHours(23, 59, 59, 999);
             
-            // Collect all numbers from this window
+            // Debug: Log the window dates
+            console.log('Current draw date:', currentDraw.dateObj);
+            console.log('Window start:', windowStart);
+            console.log('Window end:', windowEnd);
+            
+            // Find all draws within this 2-week window (inclusive of both start and end dates)
+            const windowDraws = [currentDraw];
+            for (let j = i + 1; j < drawsWithDates.length; j++) {
+                const nextDraw = drawsWithDates[j];
+                if (nextDraw.dateObj > windowEnd) break;
+                windowDraws.push(nextDraw);
+            }
+            
+            // Debug: Log the window details
+            if (windowDraws.length > 1) {
+                console.group('Draws in window:');
+                console.log('Window:', formatDate(windowStart), 'to', formatDate(windowEnd));
+                console.log('Draws found:', windowDraws.length);
+                windowDraws.forEach((draw, idx) => {
+                    console.log(`${idx + 1}. ${draw.date} (${formatDate(draw.dateObj)}) - ${draw.mainArr.join('-')}`);
+                });
+                console.groupEnd();
+            }
+            
+            // Skip if we don't have enough draws in the window
+            if (windowDraws.length < 2) continue;
+            
+            // Collect all numbers from this 2-week window
             const allNumbers = new Set();
             windowDraws.forEach(draw => {
                 draw.mainArr.forEach(num => allNumbers.add(num));
             });
             
-            // Try to create combinations using numbers from different draws
+            // Try to create combinations using numbers from different draws within the 2-week window
             windowDraws.forEach((draw, drawIndex) => {
                 const otherDraws = [...windowDraws];
                 otherDraws.splice(drawIndex, 1); // Remove current draw
@@ -1368,11 +1221,18 @@ document.addEventListener('DOMContentLoaded', async function() {
                     const otherNumbers = Array.from(allNumbers).filter(n => !trioSet.has(n));
                     
                     if (otherNumbers.length >= 2) {
+                        // Calculate days difference for display
+                        const daysDiff = Math.floor((windowEnd - windowStart) / (1000 * 60 * 60 * 24));
+                        const actualEndDate = new Date(windowEnd - 1);
+                        
+                        // Debug: Log the window details
+                        console.log('Window:', formatDate(windowStart), 'to', formatDate(actualEndDate), `(${daysDiff} days)`);
+                        
                         eligibleTrios.push({
                             trio: trio,
                             date: draw.date,
                             otherNumbers: otherNumbers,
-                            source: `Draws from ${windowDraws[0].date} to ${windowDraws[windowDraws.length-1].date}`
+                            source: `2-week window: ${formatDate(windowStart)} to ${formatDate(actualEndDate)} (${daysDiff} days)`
                         });
                     }
                 });
@@ -1397,7 +1257,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 <h2 style="margin:0;color:#3498db;font-size:1.3em;font-weight:700;letter-spacing:1px;">
                     Powerball Trio Generator (2015-2025)
                     <div style="font-size:0.8em;color:#666;font-weight:normal;margin-top:4px;">
-                        Using numbers from nearby draws when same-day not available
+                        Using numbers from 2-week window when same-day not available
                     </div>
                 </h2>
                 <button id="trio2-generate-btn" style="padding:10px 28px;font-size:1.13em;border-radius:8px;border:1.5px solid #3498db;background:#fff;color:#3498db;cursor:pointer;font-weight:600;transition:background 0.18s;">
@@ -1489,9 +1349,13 @@ document.addEventListener('DOMContentLoaded', async function() {
                     for (let n = 1; n <= 69; n++) {
                         numberStats[n] = { count: 0, dates: [] };
                     }
+                    // Store all draws for the Trio 2 tab
+                    const allDraws = [];
+                    // Store recent draws for other tabs
+                    const recentDraws = [];
                     // Store draw rows for highlighting and filtering
                     const drawRows = [];
-                    window.filteredDrawRows = []; // Initialize the global filteredDrawRows array
+                    
                     for (let i = 0; i < data.length; i++) {
                         const row = data[i];
                         // Get the raw winning numbers without modifying the case
@@ -1571,14 +1435,18 @@ document.addEventListener('DOMContentLoaded', async function() {
                             
                             // Add to draw rows for highlighting
                             drawRows.push(drawObj);
-                            // Also add to filteredDrawRows for the 2x tab
-                            window.filteredDrawRows.push(drawObj);
+                            // Add to all draws
+                            allDraws.push(drawObj);
+                            // Keep only recent draws for other tabs
+                            if (recentDraws.length < 50) {
+                                recentDraws.push(drawObj);
+                            }
                         }
                     }
-                    // Use all available draw data
-                    window.filteredDrawRows = drawRows;
-                    console.log('[DEBUG] window.filteredDrawRows length:', window.filteredDrawRows.length);
-                    if (window.filteredDrawRows.length > 0) console.log('[DEBUG] Sample window.filteredDrawRows:', window.filteredDrawRows.slice(0, 2));
+                    // Store all draws and recent draws
+                    window.allDraws = allDraws;
+                    window.filteredDrawRows = recentDraws; // Keep recent draws for other tabs
+                    console.log('Loaded draws - All:', allDraws.length, 'Recent:', recentDraws.length);
                     // After filteredDrawRows is ready, render the combo table if present
                     if (document.getElementById('combo-results')) {
                         renderComboResultsHome([]);
