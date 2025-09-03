@@ -1091,12 +1091,19 @@
                     mainNumbers = generateCombination().mainNumbers;
                 }
 
+                const comboCard = document.createElement('div');
+                comboCard.className = 'combo-card';
+                comboCard.setAttribute('data-pattern', combo.pattern);
+                comboCard.setAttribute('data-trio', combo.basedOnTrio);
+                comboCard.style.border = '1px solid #e0e0e0';
+                comboCard.style.borderRadius = '8px';
+                comboCard.style.padding = '15px';
+                comboCard.style.marginBottom = '15px';
+                comboCard.style.background = '#fff';
+                comboCard.style.boxShadow = '0 2px 8px rgba(0,0,0,0.05)';
+                comboCard.style.position = 'relative';
+
                 const tr = document.createElement('tr');
-                tr.style.borderBottom = '1px solid #f5f5f5';
-                tr.style.backgroundColor = 'white';
-                tr.style.borderRadius = '8px';
-                tr.style.boxShadow = '0 2px 8px rgba(0,0,0,0.05)';
-                tr.style.margin = '0';
                 tr.style.display = 'table-row';
                 
                 // Add numbers cell
@@ -1497,6 +1504,49 @@
         return combination.every(num => isSingleDigit(num));
     }
     
+    // Function to format combinations for download
+    function formatCombinationsForDownload(combinations) {
+        const patternNames = [
+            '2 Odd, 3 Even',
+            '3 Odd, 2 Even',
+            '2 Low (1-39), 3 High (40-69)',
+            '3 Low (1-39), 2 High (40-69)',
+            'No Double Digits (1-9)'
+        ];
+        
+        let text = 'Powerball Enhanced Trio Generator - Generated Combinations\n';
+        text += 'Generated on: ' + new Date().toLocaleString() + '\n\n';
+        
+        combinations.forEach((combo, index) => {
+            const patternName = patternNames[combo.pattern] || 'Custom Pattern';
+            const numbers = combo.numbers.join(', ');
+            const powerball = combo.powerball;
+            const basedOnTrio = combo.basedOnTrio || 'Overlapping Trios';
+            
+            text += `Combination ${index + 1}:\n`;
+            text += `Numbers: ${numbers}\n`;
+            text += `Powerball: ${powerball}\n`;
+            text += `Pattern: ${patternName}\n`;
+            text += `Based on: ${basedOnTrio}\n`;
+            text += '-----------------------------------\n\n';
+        });
+        
+        return text;
+    }
+    
+    // Function to download text as file
+    function downloadTextAsFile(text, filename) {
+        const blob = new Blob([text], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+    
     // Render the enhanced combinations
     function renderEnhancedCombinations(combinations) {
         const container = document.getElementById('generated-table');
@@ -1513,7 +1563,12 @@
         let html = '<div class="enhanced-combinations">';
         html += `
         <div style="margin-bottom: 20px;">
-            <h3 style="margin: 0 0 10px 0; color: #2c3e50; font-size: 1.2em;">Enhanced Trio Combinations (Using Overlapping Trios)</h3>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <h3 style="margin: 0; color: #2c3e50; font-size: 1.2em;">Enhanced Trio Combinations (Using Overlapping Trios)</h3>
+                <button id="download-combinations" class="btn btn-primary" style="background: linear-gradient(90deg, #4CAF50 0%, #2E7D32 100%); border: none; color: white; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.9em; display: flex; align-items: center; gap: 5px;">
+                    <i class="fas fa-download"></i> Download
+                </button>
+            </div>
             <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px;">
                 <span style="background: #e8f5e9; color: #27ae60; padding: 4px 10px; border-radius: 15px; font-size: 0.85em;">
                     <i class="fas fa-sync-alt"></i> Cycling through patterns
@@ -1756,8 +1811,42 @@
         container.innerHTML = html;
     }
     
-    // Add event listener for the enhanced trio generator button
+    // Add event listeners
     document.getElementById('generate-enhanced-trios')?.addEventListener('click', generateEnhancedTrioCombinations);
+    
+    // Add download button event listener
+    document.addEventListener('click', function(e) {
+        if (e.target && e.target.id === 'download-combinations') {
+            const container = document.querySelector('.enhanced-combinations');
+            if (!container) return;
+            
+            const combinations = [];
+            const comboElements = container.querySelectorAll('.combo-card');
+            
+            comboElements.forEach(comboEl => {
+                const numbers = Array.from(comboEl.querySelectorAll('.ball')).map(ball => parseInt(ball.textContent));
+                const powerball = parseInt(comboEl.querySelector('.powerball')?.textContent || '0');
+                const pattern = comboEl.getAttribute('data-pattern') || '0';
+                const basedOnTrio = comboEl.getAttribute('data-trio') || 'Overlapping Trios';
+                
+                combinations.push({
+                    numbers: numbers,
+                    powerball: powerball,
+                    pattern: parseInt(pattern),
+                    basedOnTrio: basedOnTrio
+                });
+            });
+            
+            if (combinations.length > 0) {
+                const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+                const filename = `powerball-combinations-${timestamp}.txt`;
+                const text = formatCombinationsForDownload(combinations);
+                downloadTextAsFile(text, filename);
+            } else {
+                alert('No combinations to download. Please generate some combinations first.');
+            }
+        }
+    });
     
     // Handle frequent trios button
     function initializeTrioButton() {
