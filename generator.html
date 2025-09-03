@@ -663,10 +663,15 @@
                             let winNumbers = row['Winning Numbers'].replace(/®/g, '').replace(/Powerball.*Numbers\s*/i, '').trim();
                             let mainArr = winNumbers.split(' - ').map(x => parseInt(x.trim(), 10)).filter(n => n >= 1 && n <= 69);
                             if (mainArr.length === 5) {
+                                const drawDate = row.Date ? new Date(row.Date).toLocaleDateString() : 'Unknown date';
                                 historicalCombos.push({
                                     combo: mainArr.slice().sort((a,b)=>a-b).join('-')
                                 });
-                                allMainDraws.push({ arr: mainArr, year });
+                                allMainDraws.push({ 
+                                    arr: mainArr, 
+                                    year,
+                                    date: drawDate
+                                });
                             }
                             // Check next row for Double Play
                             if (i + 1 < data.length) {
@@ -675,7 +680,12 @@
                                     let doubleNumbers = nextRow['Winning Numbers'].replace(/®/g, '').replace(/Double Play.*Numbers\s*/i, '').trim();
                                     let doubleArr = doubleNumbers.split(' - ').map(x => parseInt(x.trim(), 10)).filter(n => n >= 1 && n <= 69);
                                     if (doubleArr.length === 5) {
-                                        allMainDraws.push({ arr: doubleArr, year });
+                                        const drawDate = nextRow.Date ? new Date(nextRow.Date).toLocaleDateString() : 'Unknown date';
+                                        allMainDraws.push({ 
+                                            arr: doubleArr, 
+                                            year,
+                                            date: drawDate + ' (Double Play)'
+                                        });
                                     }
                                 }
                             }
@@ -1247,10 +1257,10 @@
             if (usedEnhancedTrios.has(trioKey)) continue;
             
             // Determine pattern based on combination index
-            const pattern = combinations.length % 4;
+            const pattern = combinations.length % 5; // Now 5 patterns (0-4)
             
             // Adjust numbers to match the desired pattern
-            const adjustedCombination = [...baseCombination];
+            let adjustedCombination = [...baseCombination];
             
             // Ensure the combination matches the pattern
             switch (pattern) {
@@ -1266,6 +1276,14 @@
                 case 3: // 3 low (1-39), 2 high (40-69)
                     adjustRange(adjustedCombination, 3, 2);
                     break;
+                case 4: // No double digits (1-9, 10-19, 20-29, etc.)
+                    adjustedCombination = adjustedCombination.map(num => {
+                        // Convert to single digit by taking modulo 9 + 1 (1-9)
+                        return ((num - 1) % 9) + 1;
+                    });
+                    // Ensure we still have unique numbers
+                    if (new Set(adjustedCombination).size < 5) continue;
+                    break;
             }
             
             // Ensure no duplicates and valid range
@@ -1278,7 +1296,8 @@
             const uniqueEndings = new Set(endings);
             
             // Skip if we don't have at least one duplicate ending
-            if (uniqueEndings.size >= 5) continue;
+            // Except for the no-double-digits pattern
+            if (pattern !== 4 && uniqueEndings.size >= 5) continue;
             
             // Add to combinations
             combinations.push({
@@ -1468,6 +1487,16 @@
         }
     }
     
+    // Helper function to check if a number is a single digit
+    function isSingleDigit(num) {
+        return num >= 1 && num <= 9;
+    }
+    
+    // Helper function to check if all numbers in a combination are single digits
+    function hasNoDoubleDigits(combination) {
+        return combination.every(num => isSingleDigit(num));
+    }
+    
     // Render the enhanced combinations
     function renderEnhancedCombinations(combinations) {
         const container = document.getElementById('generated-table');
@@ -1477,7 +1506,8 @@
             '2 Odd, 3 Even',
             '3 Odd, 2 Even',
             '2 Low (1-39), 3 High (40-69)',
-            '3 Low (1-39), 2 High (40-69)'
+            '3 Low (1-39), 2 High (40-69)',
+            'No Double Digits (1-9)'
         ];
         
         let html = '<div class="enhanced-combinations">';
@@ -1513,13 +1543,49 @@
             const pattern = combo.pattern || 0;
             
             // Check if this combination has been drawn before and get draw dates
-            const comboKey = combo.numbers.slice().sort((a, b) => a - b).join('-');
-            const drawnBefore = allMainDraws.filter(d => {
-                const drawKey = d.arr.slice().sort((a, b) => a - b).join('-');
-                return drawKey === comboKey;
+            const sortedCombo = [...combo.numbers].sort((a, b) => a - b);
+            const comboKey = sortedCombo.join(',');
+            
+            const drawnBefore = [];
+            const partialMatches = [];
+            
+            allMainDraws.forEach(d => {
+                const sortedDraw = [...d.arr].sort((a, b) => a - b);
+                
+                // Count how many numbers match
+                const matchingNumbers = sortedCombo.filter(num => sortedDraw.includes(num));
+                const matchCount = matchingNumbers.length;
+                
+                // If all numbers match (exact match)
+                if (matchCount === 5) {
+                    drawnBefore.push({
+                        date: d.date || 'Unknown date',
+                        numbers: sortedDraw,
+                        matchType: 'exact',
+                        matchCount: 5
+                    });
+                }
+                // If 4 numbers match (partial match)
+                else if (matchCount >= 4) {
+                    partialMatches.push({
+                        date: d.date || 'Unknown date',
+                        numbers: sortedDraw,
+                        matchType: 'partial',
+                        matchCount: matchCount,
+                        matchingNumbers: matchingNumbers
+                    });
+                }
             });
-            const isDrawnBefore = drawnBefore.length > 0;
-            const drawDates = drawnBefore.map(d => d.date).join(', ');
+            
+            // Show partial matches if no exact matches found
+            const matchesToShow = drawnBefore.length > 0 ? drawnBefore : partialMatches;
+            const isDrawnBefore = matchesToShow.length > 0;
+            const drawDates = matchesToShow.map(d => {
+                const matchInfo = d.matchType === 'partial' && d.matchingNumbers
+                    ? ` (${d.matchCount} numbers: ${d.matchingNumbers.join(', ')})` 
+                    : '';
+                return d.date ? `${d.date}${matchInfo}` : null;
+            }).filter(Boolean).join(', ');
             
             html += `
             <div class="combo-card" style="background: #fff; border-radius: 12px; padding: 16px; margin-bottom: 20px; box-shadow: 0 3px 10px rgba(0,0,0,0.08); border-left: 5px solid ${isDrawnBefore ? '#e74c3c' : '#2ecc70'}; position: relative;">
@@ -1530,30 +1596,41 @@
                             <i class="fas ${pattern === 0 || pattern === 1 ? 'fa-exchange-alt' : 'fa-arrows-alt-v'}" style="margin-right: 6px;"></i>
                             ${patternName}
                         </span>
-                        ${isDrawnBefore ? 
-                            `<span style="background: #ffebee; color: #e74c3c; padding: 5px 12px; border-radius: 15px; font-size: 0.8em; display: flex; align-items: center; gap: 6px;" 
-                              title="Drawn on: ${drawDates}">
-                                <i class="fas fa-exclamation-triangle"></i> Drawn ${drawnBefore.length} time${drawnBefore.length > 1 ? 's' : ''}
-                            </span>` : 
-                            ''
-                        }
                     </div>
                     
-                    <div style="display: flex; gap: 8px;">
-                        <div style="display: flex; align-items: center; background: #f8f9fa; padding: 4px 12px; border-radius: 12px; font-size: 0.8em; border: 1px solid #eee;">
-                            <span style="color: #ffc107; font-weight: 500;">${oddCount} Odd</span> | 
-                            <span style="color: #4caf50; font-weight: 500;"> ${evenCount} Even</span>
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                        <div style="display: flex; align-items: center; background: #f8f9fa; padding: 4px 12px; border-radius: 12px; font-size: 0.85em; border: 1px solid #e0e0e0; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                            <span style="color: #e65100; font-weight: 600;">${oddCount} Odd</span> 
+                            <span style="margin: 0 6px; color: #bdbdbd;">|</span>
+                            <span style="color: #1b5e20; font-weight: 600;">${evenCount} Even</span>
                         </div>
-                        <div style="display: flex; align-items: center; background: #f8f9fa; padding: 4px 12px; border-radius: 12px; font-size: 0.8em; border: 1px solid #eee;">
-                            <span style="color: #e91e63; font-weight: 500;">${lowCount} Low</span> | 
-                            <span style="color: #2196f3; font-weight: 500;"> ${highCount} High</span>
-                        </div>
-                        <div style="display: flex; align-items: center; background: #f8f9fa; padding: 4px 12px; border-radius: 12px; font-size: 0.8em; border: 1px solid #eee;">
-                            <span style="color: #2c3e50; font-weight: 500;">Appeared Before:</span>
-                            <span style="color: ${isDrawnBefore ? '#e74c3c' : '#2ecc70'}; font-weight: 600; margin-left: 6px;">${isDrawnBefore ? 'Yes' : 'No'}</span>
+                        <div style="display: flex; align-items: center; background: #f8f9fa; padding: 4px 12px; border-radius: 12px; font-size: 0.85em; border: 1px solid #e0e0e0; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                            <span style="color: #b71c1c; font-weight: 600;">${lowCount} Low</span> 
+                            <span style="margin: 0 6px; color: #bdbdbd;">|</span>
+                            <span style="color: #0d47a1; font-weight: 600;">${highCount} High</span>
                         </div>
                     </div>
                 </div>
+                
+                <!-- Match Info -->
+                ${matchesToShow.length > 0 ? 
+                    `<div style="background: #ffebee; color: #e74c3c; padding: 10px 15px; border-radius: 10px; margin: 10px 0; font-size: 0.85em;">
+                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-weight: 600;">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <span>Drawn ${matchesToShow.length} time${matchesToShow.length !== 1 ? 's' : ''}</span>
+                        </div>
+                        <div style="font-size: 0.95em; color: #b71c1c; line-height: 1.5;">
+                            ${matchesToShow.map(d => {
+                                const numbers = d.numbers.join(', ');
+                                const matchInfo = d.matchType === 'partial' && d.matchingNumbers
+                                    ? ` (${d.matchCount} matching: ${d.matchingNumbers.join(', ')})` 
+                                    : '';
+                                return `• ${d.date || 'Unknown date'}: ${numbers}${matchInfo}`;
+                            }).join('<br>')}
+                        </div>
+                    </div>` : 
+                    ''
+                }
                 
                 <!-- Numbers -->
                 <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 12px 0 16px 0;">
@@ -1563,9 +1640,10 @@
                     const isLow = num <= 39;
                     const isOdd = num % 2 !== 0;
                     
-                    // New color scheme
-                    let bgColor = isLow ? '#ffebee' : '#e3f2fd'; // Pink for low, blue for high
-                    let textColor = isOdd ? '#ffc107' : '#4caf50'; // Yellow for odd, green for even
+                    // Color scheme matching indicators
+                    let bgColor = isLow ? '#ffebee' : '#e3f2fd'; // Light pink for low, light blue for high
+                    let textColor = isOdd ? '#e65100' : '#1b5e20'; // Dark orange for odd, dark green for even
+                    let borderColor = isLow ? '#b71c1c' : '#0d47a1'; // Dark red for low, dark blue for high
                     
                     return `
                     <div style="
@@ -1579,8 +1657,8 @@
                         font-weight: 700;
                         background: ${bgColor};
                         color: ${textColor};
-                        border: 2px solid ${isDuplicate ? '#f1c40f' : 'transparent'};
-                        box-shadow: ${isDuplicate ? '0 0 0 2px #f1c40f' : '0 2px 4px rgba(0,0,0,0.1)'};
+                        border: 2px solid ${isDuplicate ? '#f1c40f' : borderColor};
+                        box-shadow: ${isDuplicate ? '0 0 0 2px #f1c40f' : '0 2px 4px rgba(0,0,0,0.2)'};
                         position: relative;
                         transition: all 0.2s ease;
                     ">
