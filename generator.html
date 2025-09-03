@@ -784,29 +784,27 @@
         }
         
         try {
-            // 1. Get all trios regardless of frequency
-            const validTrios = [...window.sortedTriplets];
+            // Filter trios that appear more than 3 times
+            const frequentTrios = window.sortedTriplets.filter(t => t[1] > 3);
+            // Also include some less frequent trios (1-3 occurrences)
+            const additionalTrios = window.sortedTriplets.filter(t => t[1] <= 3 && t[1] >= 1);
+            
+            // Combine both lists, with frequent trios first
+            const validTrios = [...frequentTrios, ...additionalTrios];
             
             if (validTrios.length < 2) {
-                console.log('Not enough trios available, using all available trios');
-                validTrios.push(...window.sortedTriplets);
+                console.error('Not enough trios available');
+                alert('Not enough valid trios found in the data. Try with a larger date range or different settings.');
+                return { combination: [1, 2, 3, 4, 5], basedOnTrio: 'Default (not enough valid trios)', isOverlap: false };
             }
             
-            // Reset used indices if we've used all trios
-            if (usedTrioIndices.size >= validTrios.length) {
-                console.log('Resetting used trios for round-robin');
-                usedTrioIndices.clear();
-            }
-        
-            console.log('Using', validTrios.length, 'valid trios for overlapping');
-            
+            // Strategy 1: Find one full trio that shares one or two numbers with another trio
             let selectedTrios = [];
             let commonNumbers = [];
             const maxAttempts = 200;
             let attempts = 0;
             let foundMatch = false;
             
-            // Strategy 1: Find one full trio that shares one number with another trio
             while (attempts < maxAttempts && !foundMatch) {
                 // Pick a random trio that hasn't been used recently
                 let baseTrioIndex;
@@ -819,7 +817,7 @@
                 const baseTrio = validTrios[baseTrioIndex];
                 const baseNums = baseTrio[0].split('-').map(Number);
                 
-                // Find another trio that shares exactly one number with the base trio
+                // Find another trio that shares one or two numbers with the base trio
                 for (let i = 0; i < validTrios.length; i++) {
                     if (i === baseTrioIndex) continue;
                     
@@ -829,8 +827,8 @@
                     // Find common numbers
                     const common = baseNums.filter(num => otherNums.includes(num));
                     
-                    // If they share exactly one number
-                    if (common.length === 1) {
+                    // If they share one or two numbers
+                    if (common.length === 1 || common.length === 2) {
                         // Use the full base trio and the other two numbers from the other trio
                         const otherTwoNums = otherNums.filter(num => !baseNums.includes(num));
                         // Ensure we use all base numbers plus additional unique numbers
@@ -847,9 +845,12 @@
                         usedTrioIndices.add(baseTrioIndex);
                         lastUsedTrioIndex = baseTrioIndex;
                         
+                        const freq1 = baseTrio[1];
+                        // Use the other trio's full numbers and frequency
+                        const freq2 = otherTrio[1];
                         return {
                             combination: [...combination].sort((a, b) => a - b),
-                            basedOnTrio: `Base: ${baseTrio[0]}, Shared: ${common[0]}`,
+                            basedOnTrio: `${baseTrio[0]} (${freq1}x) & ${otherTrio[0]} (${freq2}x)`,
                             isOverlap: true
                         };
                     }
@@ -860,53 +861,53 @@
             
             // Strategy 2: Find one trio that shares numbers with two other trios
             attempts = 0;
-            while (attempts < maxAttempts / 2 && !foundMatch) {
-                // Pick a random trio that hasn't been used recently
-                let baseTrioIndex;
-                do {
-                    baseTrioIndex = Math.floor(Math.random() * validTrios.length);
-                } while (usedTrioIndices.has(baseTrioIndex) && attempts++ < maxAttempts);
-                
-                if (attempts >= maxAttempts) break;
+            while (attempts < maxAttempts) {
+                // Find a trio that shares numbers with two other trios
+                const baseTrioIndex = getNextTrioIndex(validTrios, usedTrioIndices, lastUsedTrioIndex);
+                if (baseTrioIndex === -1) break;
                 
                 const baseTrio = validTrios[baseTrioIndex];
                 const baseNums = baseTrio[0].split('-').map(Number);
                 
-                // Find two other trios that each share a number with the base trio
-                for (let i = 0; i < validTrios.length && !foundMatch; i++) {
+                // Find two other trios that share 1 or 2 numbers with the base trio
+                const commonTrios = [];
+                
+                for (let i = 0; i < validTrios.length; i++) {
                     if (i === baseTrioIndex) continue;
                     
-                    const trio1 = validTrios[i];
-                    const nums1 = trio1[0].split('-').map(Number);
-                    const common1 = baseNums.filter(num => nums1.includes(num));
+                    const otherTrio = validTrios[i];
+                    const otherNums = otherTrio[0].split('-').map(Number);
+                    const common = baseNums.filter(num => otherNums.includes(num));
                     
-                    if (common1.length === 1) {
-                        // Look for a second trio that shares a different number
-                        for (let j = i + 1; j < validTrios.length; j++) {
-                            if (j === baseTrioIndex) continue;
-                            
-                            const trio2 = validTrios[j];
-                            const nums2 = trio2[0].split('-').map(Number);
-                            const common2 = baseNums.filter(num => nums2.includes(num));
-                            
-                            // Make sure we're not using the same number as the first common
-                            if (common2.length === 1 && common2[0] !== common1[0]) {
-                                // Get the unique numbers from all three trios
-                                const allNums = [...new Set([...baseNums, ...nums1, ...nums2])];
-                                
-                                if (allNums.length <= 5) {
-                                    // Mark this trio as used
-                                    usedTrioIndices.add(baseTrioIndex);
-                                    lastUsedTrioIndex = baseTrioIndex;
-                                    
-                                    return {
-                                        combination: allNums,
-                                        basedOnTrio: `Base: ${baseTrio[0]}, Shared: ${common1[0]},${common2[0]}`,
-                                        isOverlap: true
-                                    };
-                                }
-                            }
-                        }
+                    // Accept trios that share 1 or 2 numbers
+                    if (common.length === 1 || common.length === 2) {
+                        commonTrios.push({ trio: otherTrio, common });
+                        if (commonTrios.length >= 2) break;
+                    }
+                }
+                
+                if (commonTrios.length >= 2) {
+                    const [trio1, trio2] = commonTrios;
+                    const nums1 = trio1.trio[0].split('-').map(Number);
+                    const nums2 = trio2.trio[0].split('-').map(Number);
+                    
+                    // Get all unique numbers from the three trios
+                    const allNums = [...new Set([...baseNums, ...nums1, ...nums2])];
+                    
+                    if (allNums.length <= 5) {
+                        // Mark this trio as used
+                        usedTrioIndices.add(baseTrioIndex);
+                        lastUsedTrioIndex = baseTrioIndex;
+                        
+                        const freq1 = baseTrio[1];
+                        const freq2 = trio1.trio[1];
+                        const freq3 = trio2.trio[1];
+                        
+                        return {
+                            combination: allNums.sort((a, b) => a - b),
+                            basedOnTrio: `${baseTrio[0]} (${freq1}x) & ${trio1.trio[0]} (${freq2}x) & ${trio2.trio[0]} (${freq3}x)`,
+                            isOverlap: true
+                        };
                     }
                 }
                 
@@ -931,9 +932,10 @@
                         usedTrioIndices.add(i);
                         lastUsedTrioIndex = i;
                         
+                        const freq = validTrios[i][1];
                         return {
                             combination,
-                            basedOnTrio: `Base: ${validTrios[i][0]}, Extra: ${extraNumber}`,
+                            basedOnTrio: `${validTrios[i][0]} (${freq}x) + ${extraNumber}`,
                             isOverlap: true
                         };
                     }
@@ -979,15 +981,11 @@
             // Sort the final combination
             combination = combination.slice(0, 5).sort((a, b) => a - b);
             
-            // Create the description
+            // Create the description showing each trio with its frequency
             basedOnTrio = selectedTrios.map(trio => {
                 const [nums, freq] = trio;
-                return `Trio (${freq}x): ${nums}`;
+                return `${nums} (${freq}x)`;
             }).join(' & ');
-            
-            if (commonNumbers.length > 0) {
-                basedOnTrio += ` (${commonNumbers.length} common)`;
-            }
             
             return {
                 combination,
@@ -1003,7 +1001,7 @@
         }
     }
     
-    function renderCombinations(n, useFrequentTrios = false, useOverlappingTrios = false) {
+    function renderCombinations(n, useFrequentTrios = false, useOverlappingTrios = false, combo = null) {
         // Ensure n is a valid number
         const count = parseInt(n, 10);
         if (isNaN(count) || count <= 0) {
@@ -1093,8 +1091,11 @@
 
                 const comboCard = document.createElement('div');
                 comboCard.className = 'combo-card';
-                comboCard.setAttribute('data-pattern', combo.pattern);
-                comboCard.setAttribute('data-trio', combo.basedOnTrio);
+                // Only set these attributes if combo object exists
+                if (combo) {
+                    comboCard.setAttribute('data-pattern', combo.pattern || '0');
+                    comboCard.setAttribute('data-trio', combo.basedOnTrio || 'Overlapping Trios');
+                }
                 comboCard.style.border = '1px solid #e0e0e0';
                 comboCard.style.borderRadius = '8px';
                 comboCard.style.padding = '15px';
@@ -1226,7 +1227,12 @@
     
     // Handle overlapping trios button
     document.getElementById('generate-from-overlapping-trios').addEventListener('click', function() {
-        renderCombinations(5, false, true);
+        // Create a dummy combo object for the renderCombinations function
+        const combo = {
+            pattern: 0, // Default pattern
+            basedOnTrio: 'Overlapping Trios'
+        };
+        renderCombinations(5, false, true, combo);
     });
 
     // Track used enhanced trios for round-robin
@@ -1311,7 +1317,7 @@
                 numbers: [...adjustedCombination].sort((a, b) => a - b),
                 powerball: getRandomInt(1, 26),
                 pattern: pattern,
-                basedOnTrio: overlappingResult.basedOnTrio || 'Overlapping Trios'
+                basedOnTrio: overlappingResult.basedOnTrio || 'Random Trio'
             });
             
             // Add to used trios for round-robin
