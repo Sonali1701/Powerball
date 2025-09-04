@@ -519,7 +519,8 @@
               <div style="margin-bottom: 18px;">
                 <button id="generate-from-trios" class="multi-gen-btn" style="background: #9b59b6; color: white; margin-bottom: 8px;">From Frequent Trios</button>
                 <button id="generate-from-overlapping-trios" class="multi-gen-btn" style="background: #e74c3c; color: white; margin-bottom: 8px;">From Overlapping Trios</button>
-                <button id="generate-enhanced-trios" class="multi-gen-btn" style="background: #27ae60; color: white;">Enhanced Trio Generator</button>
+                <button id="generate-enhanced-trios" class="multi-gen-btn" style="background: #27ae60; color: white; margin-bottom: 8px;">Enhanced Trio Generator</button>
+                <button id="generate-patterned-trios" class="multi-gen-btn" style="background: #9b59b6; color: white;">Patterned Trio Generator</button>
               </div>
               <div id="generated-table" style="margin-top:18px; min-height: 200px; border: 1px solid #e0e0e0; border-radius: 8px; padding: 15px; background: white; box-shadow: 0 2px 8px rgba(0,0,0,0.05);"></div>
               <div id="csv-loading" style="margin-top:10px; color:#888; font-size:1.05em;"></div>
@@ -1240,7 +1241,641 @@
     let enhancedTrioIndex = 0;
 
     // Enhanced trio generator function using overlapping trios
-    function generateEnhancedTrioCombinations() {
+    // Track used advanced trios for round-robin
+let usedAdvancedTrios = new Set();
+let advancedTrioIndex = 0;
+
+// Advanced trio generator function with different patterns
+function generateAdvancedTrioCombinations() {
+    const combinations = [];
+    const maxAttempts = 1000;
+    let attempts = 0;
+    
+    // Generate 5 combinations with different patterns
+    while (combinations.length < 5 && attempts < maxAttempts) {
+        attempts++;
+        
+        // Get overlapping trios from historical data
+        let overlappingResult;
+        try {
+            overlappingResult = generateFromOverlappingTrios();
+            if (!overlappingResult || !overlappingResult.combination) {
+                console.error('Failed to generate overlapping trios');
+                continue;
+            }
+        } catch (error) {
+            console.error('Error in generateFromOverlappingTrios:', error);
+            continue;
+        }
+        
+        // Get the base combination from overlapping trios
+        const baseCombination = [...overlappingResult.combination];
+        const trioKey = baseCombination.slice(0, 3).sort((a, b) => a - b).join(',');
+        
+        // Skip if we've used this trio before
+        if (usedAdvancedTrios.has(trioKey)) continue;
+        
+        // Determine pattern based on combination index
+        const pattern = combinations.length % 5; // 5 different patterns
+        
+        // Adjust numbers to match the desired pattern
+        let adjustedCombination = [...baseCombination];
+        
+        // Advanced pattern matching
+        switch (pattern) {
+            case 0: // Alternating high/low
+                adjustedCombination = adjustedCombination.map((num, i) => {
+                    if (i % 2 === 0) return Math.min(35, num); // Lower numbers for even indices
+                    return Math.max(36, num); // Higher numbers for odd indices
+                });
+                break;
+                
+            case 1: // All numbers in same decade (10s, 20s, etc.)
+                const decade = Math.floor(Math.random() * 6) * 10; // 0, 10, 20, 30, 40, 50
+                adjustedCombination = adjustedCombination.map(() => {
+                    return Math.max(1, Math.min(69, decade + Math.floor(Math.random() * 9) + 1));
+                });
+                break;
+                
+            case 2: // Consecutive numbers
+                const start = Math.max(1, Math.min(65, adjustedCombination[0]));
+                adjustedCombination = [start, start + 1, start + 2, start + 3, start + 4];
+                break;
+                
+            case 3: // All odd or all even
+                const allEven = Math.random() > 0.5;
+                adjustedCombination = adjustedCombination.map(num => {
+                    let n = Math.max(1, Math.min(69, num));
+                    if (allEven && n % 2 !== 0) return n + 1 <= 69 ? n + 1 : n - 1;
+                    if (!allEven && n % 2 === 0) return n + 1 <= 69 ? n + 1 : n - 1;
+                    return n;
+                });
+                break;
+                
+            case 4: // Fibonacci sequence based
+                const fibStart = [1, 2, 3, 5, 8, 13, 21, 34, 55, 89].filter(n => n <= 69);
+                const startIdx = Math.floor(Math.random() * (fibStart.length - 5));
+                adjustedCombination = fibStart.slice(startIdx, startIdx + 5);
+                break;
+        }
+        
+        // Ensure no duplicates and valid range
+        const uniqueNums = new Set(adjustedCombination);
+        if (uniqueNums.size !== 5) continue;
+        if (Math.min(...adjustedCombination) < 1 || Math.max(...adjustedCombination) > 69) continue;
+        
+        // Add to combinations
+        combinations.push({
+            numbers: [...adjustedCombination].sort((a, b) => a - b),
+            powerball: getNextPowerball(),
+            pattern: pattern,
+            basedOnTrio: overlappingResult.basedOnTrio || 'Advanced Trio',
+            patternName: ['Alternating High/Low', 'Same Decade', 'Consecutive', 
+                         combinations[combinations.length-1]?.numbers.every(n => n % 2 === 0) ? 'All Even' : 'All Odd', 
+                         'Fibonacci'][pattern]
+        });
+        
+        // Add to used trios for round-robin
+        usedAdvancedTrios.add(trioKey);
+        advancedTrioIndex++;
+        
+        // Reset if we've used all trios
+        if (advancedTrioIndex >= 100) {
+            usedAdvancedTrios.clear();
+            advancedTrioIndex = 0;
+        }
+    }
+    
+    // Render the combinations with a different style
+    renderAdvancedCombinations(combinations);
+}
+
+
+// Track used patterned trios for round-robin
+let usedPatternedTrios = new Set();
+let patternedTrioIndex = 0;
+
+// Store historical Powerball numbers
+let historicalPowerballs = [];
+let currentPowerballIndex = 0;
+
+// Function to load historical Powerball numbers from CSV
+async function loadHistoricalPowerballs() {
+    try {
+        const response = await fetch('powerball.csv');
+        const csvData = await response.text();
+        
+        // Parse CSV data
+        const lines = csvData.split('\n');
+        const powerballs = [];
+        
+        for (const line of lines) {
+            // Match Powerball numbers in the format "1 - 2 - 3 - 4 - 5" or "1 2 3 4 5"
+            const match = line.match(/Powerball® Numbers\s+([\d\s-]+)","\s*(\d+)/);
+            if (match && match[2]) {
+                const powerball = parseInt(match[2].trim(), 10);
+                if (powerball >= 1 && powerball <= 26) {
+                    powerballs.push(powerball);
+                }
+            }
+            
+            // Alternative format matching for older data
+            const altMatch = line.match(/"\s*(\d+)\s+-\s+\d+\s+-\s+\d+\s+-\s+\d+\s+-\s+\d+\s+","\s*(\d+)/);
+            if (altMatch && altMatch[2]) {
+                const powerball = parseInt(altMatch[2].trim(), 10);
+                if (powerball >= 1 && powerball <= 26) {
+                    powerballs.push(powerball);
+                }
+            }
+        }
+        
+        // If we found any powerballs, use them; otherwise, fall back to a default set
+        if (powerballs.length > 0) {
+            historicalPowerballs = powerballs;
+        } else {
+            // Fallback to all possible powerballs if none found in the file
+            historicalPowerballs = Array.from({length: 26}, (_, i) => i + 1);
+        }
+        
+        // Shuffle the powerballs to avoid patterns
+        historicalPowerballs = historicalPowerballs.sort(() => Math.random() - 0.5);
+        
+    } catch (error) {
+        console.error('Error loading historical powerballs:', error);
+        // Fallback to all possible powerballs if there's an error
+        historicalPowerballs = Array.from({length: 26}, (_, i) => i + 1);
+    }
+}
+
+// Function to get the next historical powerball
+function getNextPowerball() {
+    if (historicalPowerballs.length === 0) {
+        // Fallback if no historical data is available
+        return Math.floor(Math.random() * 26) + 1;
+    }
+    
+    const powerball = historicalPowerballs[currentPowerballIndex];
+    currentPowerballIndex = (currentPowerballIndex + 1) % historicalPowerballs.length;
+    return powerball;
+}
+
+// Load historical powerballs when the script loads
+loadHistoricalPowerballs();
+
+// Track trio occurrences (1x, 2x, 3x)
+const trioOccurrences = [
+    { count: 1, index: 0 }, // 1x1
+    { count: 1, index: 0 }, // 1x2
+    { count: 2, index: 0 }, // 2x1
+    { count: 2, index: 0 }, // 2x2
+    { count: 2, index: 0 }, // 2x3
+    { count: 3, index: 0 }, // 3x1
+    { count: 3, index: 0 }, // 3x2
+    { count: 3, index: 0 }  // 3x3
+];
+let currentTrioOccurrenceIndex = 0;
+
+// Function to get trio occurrence info in the format "1x1", "1x2", etc.
+function getTrioOccurrenceInfo() {
+    const occurrence = trioOccurrences[currentTrioOccurrenceIndex];
+    const occurrenceCount = occurrence.count;
+    const occurrenceNumber = ++occurrence.index;
+    
+    // Move to next occurrence for next time
+    currentTrioOccurrenceIndex = (currentTrioOccurrenceIndex + 1) % trioOccurrences.length;
+    
+    return {
+        text: `${occurrenceCount}x`,
+        count: occurrenceCount
+    };
+}
+
+// Patterned trio generator with specific odd/even and high/low patterns
+function generatePatternedTrioCombinations() {
+    const combinations = [];
+    const maxAttempts = 1500;
+    let attempts = 0;
+    
+    // Define our patterns
+    const patterns = [
+        { name: '2 Odd, 3 Even', odds: 2, evens: 3 },
+        { name: '3 Odd, 2 Even', odds: 3, evens: 2 },
+        { name: '2 Low, 3 High', lows: 2, highs: 3 },
+        { name: '3 Low, 2 High', lows: 3, highs: 2 },
+        { name: 'Mixed Pattern', mixed: true }
+    ];
+    
+        // Track trios used in this generation
+    const currentGenTrios = [];
+    
+    // Generate 5 combinations with different patterns
+    while (combinations.length < 5 && attempts < maxAttempts) {
+        attempts++;
+        
+        // Get first overlapping trio from historical data
+        let firstTrioResult;
+        try {
+            firstTrioResult = generateFromOverlappingTrios();
+            if (!firstTrioResult || !firstTrioResult.combination) {
+                continue;
+            }
+        } catch (error) {
+            console.error('Error in generateFromOverlappingTrios:', error);
+            continue;
+        }
+        
+        // Get the first trio
+        const firstTrio = [...firstTrioResult.combination.slice(0, 3)].sort((a, b) => a - b);
+        const firstTrioKey = firstTrio.join(',');
+        
+        // Skip if we've used this trio before
+        if (usedPatternedTrios.has(firstTrioKey)) continue;
+        
+        // Find a second trio that shares exactly one number with the first trio
+        let secondTrio = null;
+        let secondTrioKey = '';
+        let sharedNumber = null;
+        let secondTrioResult = null;
+        
+        // Try to find a matching second trio
+        for (let i = 0; i < 50; i++) { // Limit attempts to find matching trio
+            try {
+                secondTrioResult = generateFromOverlappingTrios();
+                if (!secondTrioResult || !secondTrioResult.combination) continue;
+                
+                const potentialTrio = [...secondTrioResult.combination.slice(0, 3)].sort((a, b) => a - b);
+                const potentialKey = potentialTrio.join(',');
+                
+                // Check if this trio shares exactly one number with the first trio
+                const sharedNumbers = firstTrio.filter(num => potentialTrio.includes(num));
+                
+                if (sharedNumbers.length === 1 && !usedPatternedTrios.has(potentialKey) && potentialKey !== firstTrioKey) {
+                    secondTrio = potentialTrio;
+                    secondTrioKey = potentialKey;
+                    sharedNumber = sharedNumbers[0];
+                    break;
+                }
+            } catch (error) {
+                console.error('Error finding matching trio:', error);
+                continue;
+            }
+        }
+        
+        // If we couldn't find a matching second trio, skip this attempt
+        if (!secondTrio) continue;
+        
+        // Get current pattern based on number of combinations generated
+        const pattern = patterns[combinations.length % patterns.length];
+        
+        // Get the trio occurrence info for both trios (same occurrence for both)
+        const trioOccurrence = getTrioOccurrenceInfo();
+        
+        // Track only these two trios for this combination
+        const currentPair = [
+            {
+                numbers: [...firstTrio],
+                occurrence: trioOccurrence,
+                key: firstTrioKey,
+                sharedNumber: sharedNumber
+            },
+            {
+                numbers: [...secondTrio],
+                occurrence: trioOccurrence,
+                key: secondTrioKey,
+                sharedNumber: sharedNumber
+            }
+        ];
+        
+        // Clear any previous trios and add just this pair
+        currentGenTrios.length = 0;
+        currentGenTrios.push(...currentPair);
+        
+        // Create a combination that includes all unique numbers from both trios
+        const allNumbers = [...new Set([...firstTrio, ...secondTrio])];
+        
+        // If we have more than 5 numbers, remove the ones that aren't shared or in both trios
+        let combination = [...allNumbers];
+        if (combination.length > 5) {
+            // Keep the shared number and then the remaining numbers from both trios
+            combination = [sharedNumber];
+            const remainingNumbers = allNumbers.filter(n => n !== sharedNumber);
+            combination.push(...remainingNumbers.slice(0, 4));
+        }
+        
+        // Sort the combination
+        combination.sort((a, b) => a - b);
+        
+        // Adjust combination to match pattern
+        let adjusted = false;
+        
+        if (pattern.mixed) {
+            // For mixed pattern, ensure we have at least one pair with same ending
+            const endings = combination.map(n => n % 10);
+            const uniqueEndings = [...new Set(endings)];
+            
+            // If no duplicate endings, adjust one number to create a pair
+            if (uniqueEndings.length === 5) {
+                // Find a number to adjust to create a duplicate ending
+                for (let i = 0; i < combination.length; i++) {
+                    const targetEnding = combination[i] % 10;
+                    const newNum = combination[i] - targetEnding + ((targetEnding + 1) % 10);
+                    
+                    if (newNum > 0 && newNum <= 69 && !combination.includes(newNum)) {
+                        combination[i] = newNum;
+                        adjusted = true;
+                        break;
+                    }
+                }
+            }
+        } else {
+            // For other patterns, adjust to match odd/even and high/low requirements
+            combination = adjustToPattern(combination, pattern);
+            adjusted = true;
+        }
+        
+        // Ensure we have valid numbers after adjustment
+        if (adjusted && (Math.min(...combination) < 1 || Math.max(...combination) > 69)) {
+            continue;
+        }
+        
+        // Check for duplicate numbers
+        if (new Set(combination).size !== 5) continue;
+        
+        // Check for at least one pair with same ending (last digit)
+        const endings = combination.map(n => n % 10);
+        const uniqueEndings = new Set(endings);
+        
+        if (uniqueEndings.size === 5) {
+            // No duplicate endings, skip this combination
+            continue;
+        }
+        
+        // Format exactly two trios for display, showing shared number
+        if (currentGenTrios.length !== 2) continue; // Skip if we don't have exactly two trios
+        
+        const trioInfo = currentGenTrios.map(t => {
+            const numbers = t.numbers.map(n => 
+                n === t.sharedNumber ? `<strong>${n}</strong>` : n
+            );
+            return `${numbers.join('-')} (${t.occurrence.text})`;
+        }).join(' & ');
+        
+        // Add to combinations
+        combinations.push({
+            numbers: [...combination].sort((a, b) => a - b),
+            powerball: getNextPowerball(),
+            pattern: pattern.name,
+            basedOnTrio: 'Patterned Trio',
+            patternType: pattern.mixed ? 'Mixed Pattern' : pattern.name,
+            trioInfo: `Trios(${trioInfo})`
+        });
+        
+        // Add both trios to used trios for round-robin
+        usedPatternedTrios.add(firstTrioKey);
+        usedPatternedTrios.add(secondTrioKey);
+        patternedTrioIndex += 2;
+        
+        // Reset if we've used all trios
+        if (patternedTrioIndex >= 100) {
+            usedPatternedTrios.clear();
+            patternedTrioIndex = 0;
+        }
+    }
+    
+    // Render the combinations
+    renderPatternedCombinations(combinations);
+}
+
+// Helper function to adjust numbers to match pattern
+function adjustToPattern(numbers, pattern) {
+    const adjusted = [...numbers];
+    
+    // Adjust odd/even if needed
+    if (pattern.odds !== undefined && pattern.evens !== undefined) {
+        let oddCount = adjusted.filter(n => n % 2 === 1).length;
+        const targetOdds = pattern.odds;
+        
+        while (oddCount !== targetOdds) {
+            const index = Math.floor(Math.random() * adjusted.length);
+            
+            if (oddCount < targetOdds && adjusted[index] % 2 === 0) {
+                // Need more odds, change even to odd
+                adjusted[index] = Math.max(1, adjusted[index] - 1);
+                oddCount++;
+            } else if (oddCount > targetOdds && adjusted[index] % 2 === 1) {
+                // Need fewer odds, change odd to even
+                adjusted[index] = Math.min(68, adjusted[index] + 1);
+                oddCount--;
+            }
+            
+            // Ensure no duplicates
+            if (new Set(adjusted).size !== adjusted.length) {
+                adjusted[index] = numbers[index]; // Revert if duplicate created
+            }
+        }
+    }
+    
+    // Adjust high/low if needed
+    if (pattern.lows !== undefined && pattern.highs !== undefined) {
+        let lowCount = adjusted.filter(n => n <= 39).length;
+        const targetLows = pattern.lows;
+        
+        while (lowCount !== targetLows) {
+            const index = Math.floor(Math.random() * adjusted.length);
+            
+            if (lowCount < targetLows && adjusted[index] > 39) {
+                // Need more lows, change high to low
+                adjusted[index] = Math.max(1, adjusted[index] % 40 + 1);
+                lowCount++;
+            } else if (lowCount > targetLows && adjusted[index] <= 39) {
+                // Need fewer lows, change low to high
+                adjusted[index] = Math.min(69, adjusted[index] + 40);
+                lowCount--;
+            }
+            
+            // Ensure no duplicates
+            if (new Set(adjusted).size !== adjusted.length) {
+                adjusted[index] = numbers[index]; // Revert if duplicate created
+            }
+        }
+    }
+    
+    // Ensure we have at least one pair with same ending
+    const endings = adjusted.map(n => n % 10);
+    const uniqueEndings = [...new Set(endings)];
+    
+    if (uniqueEndings.length === 5) {
+        // No duplicate endings, create a pair
+        const endingToDuplicate = endings[Math.floor(Math.random() * 5)];
+        let found = false;
+        
+        for (let i = 0; i < adjusted.length && !found; i++) {
+            if (adjusted[i] % 10 !== endingToDuplicate) {
+                const newNum = (Math.floor(adjusted[i] / 10) * 10) + endingToDuplicate;
+                
+                if (newNum > 0 && newNum <= 69 && !adjusted.includes(newNum)) {
+                    adjusted[i] = newNum;
+                    found = true;
+                }
+            }
+        }
+    }
+    
+    return adjusted;
+}
+
+// Render function for patterned combinations
+function renderPatternedCombinations(combinations) {
+    const container = document.getElementById('generated-table');
+    if (!container) return;
+    
+    let html = '<div class="patterned-combinations">';
+    html += `
+    <div style="margin-bottom: 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <h3 style="margin: 0; color: #2c3e50; font-size: 1.2em;">Patterned Trio Combinations</h3>
+            <button id="download-patterned-combinations" class="btn btn-primary" style="background: linear-gradient(90deg, #9b59b6 0%, #8e44ad 100%); border: none; color: white; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.9em; display: flex; align-items: center; gap: 5px;">
+                <i class="fas fa-download"></i> Download
+            </button>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px;">
+            <span style="background: #f3e6ff; color: #8e44ad; padding: 4px 10px; border-radius: 15px; font-size: 0.85em;">
+                <i class="fas fa-project-diagram"></i> Smart Patterns
+            </span>
+            <span style="background: #e8f5e9; color: #27ae60; padding: 4px 10px; border-radius: 15px; font-size: 0.85em;">
+                <i class="fas fa-random"></i> Round-Robin Trios
+            </span>
+            <span style="background: #e3f2fd; color: #1976d2; padding: 4px 10px; border-radius: 15px; font-size: 0.85em;">
+                <i class="fas fa-sync-alt"></i> Duplicate Endings
+            </span>
+        </div>
+    `;
+    
+    combinations.forEach((combo, index) => {
+        const endings = combo.numbers.map(n => n % 10);
+        const endingCounts = {};
+        endings.forEach(e => endingCounts[e] = (endingCounts[e] || 0) + 1);
+        const duplicateEndings = Object.entries(endingCounts).filter(([e, count]) => count > 1);
+        const lowCount = combo.numbers.filter(n => n <= 39).length;
+        const oddCount = combo.numbers.filter(n => n % 2 === 1).length;
+        
+        html += `
+        <div class="patterned-card" style="background: white; border-radius: 8px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); border-left: 4px solid #9b59b6;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 10px; align-items: center;">
+                <div style="display: flex; gap: 8px; align-items: center;">
+                    <span style="font-weight: 600; color: #2c3e50;">#${index + 1}</span>
+                    <div style="display: flex; flex-direction: column; gap: 4px;">
+                        <span style="background: #f3e6ff; color: #8e44ad; padding: 2px 8px; border-radius: 12px; font-size: 0.8em; font-weight: 500;
+                            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; display: inline-block;">
+                            ${combo.patternType || combo.pattern || 'Patterned'}
+                        </span>
+                        <span style="background: #e8f5e9; color: #27ae60; padding: 2px 8px; border-radius: 12px; font-size: 0.75em;
+                            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; display: inline-block;">
+                            ${combo.trioInfo || ''}
+                        </span>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="display: flex; gap: 10px; margin-bottom: 12px; flex-wrap: wrap;">
+                ${combo.numbers.map(num => {
+                    const isLow = num <= 39;
+                    const isOdd = num % 2 === 1;
+                    const ending = num % 10;
+                    const isDuplicate = duplicateEndings.some(([e]) => parseInt(e) === ending);
+                    
+                    return `<div style="
+                        width: 36px; 
+                        height: 36px; 
+                        border-radius: 50%; 
+                        background: ${isLow ? 
+                            'linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%)' : 
+                            'linear-gradient(135deg, #3498db 0%, #2980b9 100%)'}; 
+                        color: white; 
+                        display: flex; 
+                        align-items: center; 
+                        justify-content: center; 
+                        font-weight: bold; 
+                        font-size: 1.1em; 
+                        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                        border: ${isDuplicate ? '2px solid #f1c40f' : 'none'};
+                        position: relative;
+                    ">
+                        ${num}
+                        ${isDuplicate ? `
+                            <span style="
+                                position: absolute;
+                                bottom: -5px;
+                                right: -5px;
+                                background: #f1c40f;
+                                color: #000;
+                                border-radius: 50%;
+                                width: 16px;
+                                height: 16px;
+                                display: flex;
+                                align-items: center;
+                                justify-content: center;
+                                font-size: 10px;
+                                font-weight: bold;
+                            ">${ending}</span>
+                        ` : ''}
+                    </div>`;
+                }).join('')}
+                <div style="width: 36px; height: 36px; border-radius: 50%; background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%); color: white; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 1.1em; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                    ${combo.powerball}
+                </div>
+            </div>
+            
+            <div style="display: flex; gap: 8px; font-size: 0.85em; color: #7f8c8d;">
+                <span><i class="fas fa-hashtag"></i> Sum: ${combo.numbers.reduce((a, b) => a + b, 0)}</span>
+                <span><i class="fas fa-sort-numeric-up"></i> Range: ${Math.max(...combo.numbers) - Math.min(...combo.numbers)}</span>
+                <span><i class="fas ${duplicateEndings.length > 0 ? 'fa-check-circle' : 'fa-times-circle'}" style="color: ${duplicateEndings.length > 0 ? '#27ae60' : '#e74c3c'}"></i> ${duplicateEndings.length > 0 ? 
+                    `${duplicateEndings.length} pair${duplicateEndings.length > 1 ? 's' : ''} (${duplicateEndings.map(([e, c]) => `${c}x${e}`).join(', ')})` : 
+                    'No duplicate endings'}</span>
+                <span><i class="fas fa-chart-pie"></i> ${lowCount}L/${5-lowCount}H, ${oddCount}O/${5-oddCount}E</span>
+            </div>
+        </div>`;
+    });
+    
+    html += '</div>';
+    container.innerHTML = html;
+    
+    // Add download handler for the new button
+    document.getElementById('download-patterned-combinations')?.addEventListener('click', function() {
+        const container = document.querySelector('.patterned-combinations');
+        if (!container) return;
+        
+        const combinations = [];
+        const comboElements = container.querySelectorAll('.patterned-card');
+        
+        comboElements.forEach(comboEl => {
+            const numbers = Array.from(comboEl.querySelectorAll('div[style*="background: linear-gradient"][style*="border-radius: 50%"]'))
+                .filter(el => !el.textContent.includes('PB') && !el.textContent.match(/^\d+\s*\d+$/))
+                .map(ball => parseInt(ball.textContent.trim()));
+                
+            const powerball = parseInt(comboEl.querySelector('div[style*="background: linear-gradient"][style*="border-radius: 50%"]:last-child')?.textContent || '0');
+            const pattern = comboEl.querySelector('span[style*="background: #f3e6ff"]')?.textContent.trim() || 'Patterned';
+            
+            combinations.push({
+                numbers: numbers,
+                powerball: powerball,
+                pattern: pattern,
+                basedOnTrio: ''
+            });
+        });
+        
+        if (combinations.length > 0) {
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+            const filename = `patterned-combinations-${timestamp}.txt`;
+            const text = formatCombinationsForDownload(combinations);
+            downloadTextAsFile(text, filename);
+        } else {
+            alert('No combinations to download. Please generate some combinations first.');
+        }
+    });
+}
+
+function generateEnhancedTrioCombinations() {
         const combinations = [];
         const maxAttempts = 1000;
         let attempts = 0;
@@ -1270,7 +1905,7 @@
             if (usedEnhancedTrios.has(trioKey)) continue;
             
             // Determine pattern based on combination index
-            const pattern = combinations.length % 5; // Now 5 patterns (0-4)
+            const pattern = combinations.length % 6; // Now 6 patterns (0-5) - Added no-double-digits as pattern 5
             
             // Adjust numbers to match the desired pattern
             let adjustedCombination = [...baseCombination];
@@ -1289,7 +1924,11 @@
                 case 3: // 3 low (1-39), 2 high (40-69)
                     adjustRange(adjustedCombination, 3, 2);
                     break;
-                case 4: // No double digits (1-9, 10-19, 20-29, etc.)
+                case 4: // 1-9, 10-19, 20-29, etc. (one digit from each range)
+                    // Keep the original adjustment for pattern 4
+                    adjustRange(adjustedCombination, 3, 2);
+                    break;
+                case 5: // No double digits (1-9 only)
                     adjustedCombination = adjustedCombination.map(num => {
                         // Convert to single digit by taking modulo 9 + 1 (1-9)
                         return ((num - 1) % 9) + 1;
@@ -1315,8 +1954,12 @@
             // Add to combinations
             combinations.push({
                 numbers: [...adjustedCombination].sort((a, b) => a - b),
-                powerball: getRandomInt(1, 26),
-                pattern: pattern,
+                powerball: getNextPowerball(),
+                pattern: pattern === 5 ? 'No Double Digits' : 
+                         pattern === 4 ? '3 Low, 2 High' : 
+                         pattern === 3 ? '2 Low, 3 High' : 
+                         pattern === 2 ? '3 Odd, 2 Even' : 
+                         '2 Odd, 3 Even',
                 basedOnTrio: overlappingResult.basedOnTrio || 'Random Trio'
             });
             
@@ -1533,7 +2176,6 @@
             text += `Numbers: ${numbers}\n`;
             text += `Powerball: ${powerball}\n`;
             text += `Pattern: ${patternName}\n`;
-            text += `Based on: ${basedOnTrio}\n`;
             text += '-----------------------------------\n\n';
         });
         
@@ -1819,6 +2461,8 @@
     
     // Add event listeners
     document.getElementById('generate-enhanced-trios')?.addEventListener('click', generateEnhancedTrioCombinations);
+    document.getElementById('generate-advanced-trios')?.addEventListener('click', generateAdvancedTrioCombinations);
+    document.getElementById('generate-patterned-trios')?.addEventListener('click', generatePatternedTrioCombinations);
     
     // Add download button event listener
     document.addEventListener('click', function(e) {
