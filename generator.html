@@ -666,14 +666,41 @@
                             let winNumbers = row['Winning Numbers'].replace(/®/g, '').replace(/Powerball.*Numbers\s*/i, '').trim();
                             let mainArr = winNumbers.split(' - ').map(x => parseInt(x.trim(), 10)).filter(n => n >= 1 && n <= 69);
                             if (mainArr.length === 5) {
-                                const drawDate = row.Date ? new Date(row.Date).toLocaleDateString() : 'Unknown date';
+                                let drawDate = null;
+                                let formattedDate = 'Unknown date';
+                                
+                                try {
+                                    if (row.Date) {
+                                        // Try parsing the date from various formats
+                                        const dateStr = row.Date.trim();
+                                        const dateParts = dateStr.split(/[\/\s-]/);
+                                        
+                                        if (dateParts.length >= 3) {
+                                            // Handle MM/DD/YYYY or similar formats
+                                            const month = parseInt(dateParts[0], 10) - 1; // Months are 0-based
+                                            const day = parseInt(dateParts[1], 10);
+                                            const year = parseInt(dateParts[2], 10);
+                                            
+                                            if (!isNaN(month) && !isNaN(day) && !isNaN(year)) {
+                                                drawDate = new Date(year, month, day);
+                                                if (!isNaN(drawDate.getTime())) {
+                                                    formattedDate = drawDate.toLocaleDateString();
+                                                }
+                                            }
+                                        }
+                                    }
+                                } catch (e) {
+                                    console.error('Error parsing date:', e, row.Date);
+                                }
+                                
                                 historicalCombos.push({
                                     combo: mainArr.slice().sort((a,b)=>a-b).join('-')
                                 });
                                 allMainDraws.push({ 
                                     numbers: mainArr,
-                                    year,
-                                    date: drawDate
+                                    year: drawDate ? drawDate.getFullYear() : 0,
+                                    date: drawDate,
+                                    formattedDate: formattedDate
                                 });
                                 allMainDrawsNumbers.push(mainArr);
                             }
@@ -684,11 +711,36 @@
                                     let doubleNumbers = nextRow['Winning Numbers'].replace(/®/g, '').replace(/Double Play.*Numbers\s*/i, '').trim();
                                     let doubleArr = doubleNumbers.split(' - ').map(x => parseInt(x.trim(), 10)).filter(n => n >= 1 && n <= 69);
                                     if (doubleArr.length === 5) {
-                                        const drawDate = nextRow.Date ? new Date(nextRow.Date).toLocaleDateString() : 'Unknown date';
-allMainDraws.push({ 
+                                        let drawDate = null;
+                                        let formattedDate = 'Unknown date';
+                                        
+                                        try {
+                                            if (row.Date) {  // Use the date from the main draw row
+                                                const dateStr = row.Date.trim();
+                                                const dateParts = dateStr.split(/[\/\s-]/);
+                                                
+                                                if (dateParts.length >= 3) {
+                                                    const month = parseInt(dateParts[0], 10) - 1;
+                                                    const day = parseInt(dateParts[1], 10);
+                                                    const year = parseInt(dateParts[2], 10);
+                                                    
+                                                    if (!isNaN(month) && !isNaN(day) && !isNaN(year)) {
+                                                        drawDate = new Date(year, month, day);
+                                                        if (!isNaN(drawDate.getTime())) {
+                                                            formattedDate = drawDate.toLocaleDateString() + ' (Double Play)';
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        } catch (e) {
+                                            console.error('Error parsing date for double play:', e, row.Date);
+                                        }
+                                        
+                                        allMainDraws.push({ 
                                             numbers: doubleArr,
-                                            year,
-                                            date: drawDate + ' (Double Play)'
+                                            year: drawDate ? drawDate.getFullYear() : 0,
+                                            date: drawDate,
+                                            formattedDate: formattedDate
                                         });
                                         allMainDrawsNumbers.push(doubleArr);
                                     }
@@ -733,29 +785,83 @@ allMainDraws.push({
         return historicalCombos.filter(h => h.combo === key).length;
     }
     
-    // Function to check if a combination has appeared before and get its history
+    // Function to check if at least 4 numbers from a combination have appeared before and get history
     function getComboHistory(whiteBalls) {
         if (!whiteBalls || !Array.isArray(whiteBalls) || whiteBalls.length === 0) {
             return { appeared: false };
         }
         
         const sortedBalls = [...whiteBalls].sort((a, b) => a - b);
-        const key = sortedBalls.join('-');
-        const matches = allMainDraws.filter(draw => {
-            if (!draw || !draw.numbers || !Array.isArray(draw.numbers)) return false;
-            const drawKey = [...draw.numbers].sort((a, b) => a - b).join('-');
-            return drawKey === key;
+        const matches = [];
+        
+        // Check for partial matches (at least 4 numbers)
+        allMainDraws.forEach(draw => {
+            if (!draw || !draw.numbers || !Array.isArray(draw.numbers)) return;
+            
+            const drawNumbers = [...draw.numbers].sort((a, b) => a - b);
+            const commonNumbers = sortedBalls.filter(num => drawNumbers.includes(num));
+            
+            if (commonNumbers.length >= 4) {
+                // Ensure we have a valid formatted date
+                let displayDate = 'Unknown date';
+                try {
+                    if (draw.formattedDate) {
+                        displayDate = draw.formattedDate;
+                    } else if (draw.date) {
+                        if (draw.date instanceof Date) {
+                            displayDate = draw.date.toLocaleDateString();
+                        } else if (typeof draw.date === 'string') {
+                            displayDate = draw.date;
+                        }
+                    }
+                } catch (e) {
+                    console.error('Error formatting date:', e);
+                }
+                
+                matches.push({
+                    date: draw.date,
+                    formattedDate: displayDate,
+                    matchedNumbers: commonNumbers,
+                    powerball: draw.powerball || null
+                });
+            }
         });
         
         if (matches.length === 0) {
             return { appeared: false };
         }
         
+        // Sort by most recent first (if we have valid dates)
+        try {
+            matches.sort((a, b) => {
+                const dateA = a.date instanceof Date ? a.date : new Date(a.formattedDate);
+                const dateB = b.date instanceof Date ? b.date : new Date(b.formattedDate);
+                
+                if (isNaN(dateA)) return 1;  // Invalid dates go to the end
+                if (isNaN(dateB)) return -1;  // Valid dates come first
+                
+                return dateB - dateA;  // Sort descending (newest first)
+            });
+        } catch (e) {
+            console.error('Error sorting dates:', e);
+        }
+        
+        // Prepare the dates for display
+        const displayDates = matches
+            .map(m => m.formattedDate)
+            .filter(d => d && d !== 'Unknown date')
+            .slice(0, 2); // Only show the first two dates
+        
         return {
             appeared: true,
             count: matches.length,
-            dates: matches.map(m => m.drawDate).sort().reverse(),
-            powerballs: [...new Set(matches.map(m => m.powerball))]
+            dates: displayDates,
+            powerballs: [...new Set(matches
+                .filter(m => m.powerball)
+                .map(m => m.powerball)
+                .filter(Boolean))],
+            matchedNumbers: matches[0]?.matchedNumbers || [],
+            isPartialMatch: true
         };
     }
     function generateFromFrequentTrios() {
@@ -1909,8 +2015,8 @@ function generatePatternedTrioCombinations() {
             powerball: getNextPowerball(),
             pattern: pattern.name,
             basedOnTrio: `High: ${formatTrio(higherTrio, higherTrioInfo)} | Low: ${formatTrio(lowerTrio, lowerTrioInfo)}`,
-            trioInfo: `Pattern: ${pattern.name} | High: ${formatTrio(higherTrio, higherTrioInfo)} | Low: ${formatTrio(lowerTrio, lowerTrioInfo)}`,
-            patternType: 'Optimized Trios'
+            trioInfo: `High: ${formatTrio(higherTrio, higherTrioInfo)} | Low: ${formatTrio(lowerTrio, lowerTrioInfo)}`,
+            patternType: ''
         };
         
         combinations.push(combo);
@@ -2064,11 +2170,7 @@ function renderPatternedCombinations(combinations) {
                 <div style="display: flex; gap: 8px; align-items: center;">
                     <span style="font-weight: 600; color: #2c3e50;">#${index + 1}</span>
                     <div style="display: flex; flex-direction: column; gap: 4px;">
-                        <span style="background: #f3e6ff; color: #8e44ad; padding: 2px 8px; border-radius: 12px; font-size: 0.8em; font-weight: 500;
-                            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; display: inline-block;">
-                            ${combo.patternType || combo.pattern || 'Patterned'}
-                        </span>
-                        <div style="display: flex; flex-direction: column; gap: 4px; margin-top: 5px;">
+                        <div style="display: flex; flex-direction: column; gap: 4px;">
                             <span style="background: #e3f2fd; color: #1976d2; padding: 4px 8px; border-radius: 12px; font-size: 0.8em;
                                 white-space: normal; word-break: break-word;">
                                 <i class="fas fa-project-diagram"></i> ${combo.pattern || 'Pattern'}
@@ -2079,13 +2181,36 @@ function renderPatternedCombinations(combinations) {
                             </span>
                         </div>
                         ${history.appeared ? `
-                        <div style="margin-top: 8px; padding: 8px; background: #fff8e1; border-radius: 6px; border-left: 3px solid #ffc107;">
-                            <div style="font-size: 0.85em; color: #e67e22; margin-bottom: 4px;">
-                                <i class="fas fa-history"></i> Appeared ${history.count} time${history.count > 1 ? 's' : ''} before
+                        <div style="margin-top: 8px; padding: 12px; background: #fff8e1; border-radius: 8px; border-left: 4px solid #e67e22;">
+                            <div style="font-size: 0.9em; color: #e67e22; margin-bottom: 6px; font-weight: 500;">
+                                <i class="fas fa-history"></i> ${history.isPartialMatch ? 'Partial Match' : 'Exact Match'} (${history.count} time${history.count > 1 ? 's' : ''})
                             </div>
+                            ${history.matchedNumbers ? `
+                            <div style="font-size: 0.8em; color: #7f8c8d; margin-bottom: 6px;">
+                                <strong>Matched Numbers:</strong> ${history.matchedNumbers.sort((a, b) => a - b).join(', ')}
+                            </div>` : ''}
                             ${history.dates && history.dates.length > 0 ? `
-                            <div style="font-size: 0.8em; color: #7f8c8d; margin-bottom: 4px;">
-                                <strong>Recent dates:</strong> ${history.dates.slice(0, 2).join(', ')}${history.count > 2 ? `, and ${history.count - 2} more` : ''}
+                            <div style="font-size: 0.8em; color: #7f8c8d; margin-bottom: 6px;">
+                                <strong>Recent:</strong> ${history.dates.slice(0, 2).map(d => {
+                                    try {
+                                        // If it's already a formatted string, use it as is
+                                        if (typeof d === 'string' && d.includes('/')) {
+                                            return d;
+                                        }
+                                        // If it's a Date object, format it
+                                        if (d instanceof Date) {
+                                            return d.toLocaleDateString();
+                                        }
+                                        // If it's a timestamp, convert to Date then format
+                                        if (typeof d === 'number') {
+                                            return new Date(d).toLocaleDateString();
+                                        }
+                                        return 'Unknown date';
+                                    } catch (e) {
+                                        console.error('Error formatting date:', e, d);
+                                        return 'Invalid date';
+                                    }
+                                }).filter(d => d !== 'Invalid date').join(', ')}${history.count > 2 ? `, and ${history.count - 2} more` : ''}
                             </div>` : ''}
                             ${history.powerballs && history.powerballs.length > 0 ? `
                             <div style="font-size: 0.8em; color: #7f8c8d;">
