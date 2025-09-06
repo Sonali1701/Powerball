@@ -744,16 +744,23 @@
                         }
                     }
                     csvLoading.textContent = '';
-                    console.log('CSV data loaded, analyzing frequent sets...');
                     // Now analyze frequent sets
-                    analyzeFrequentSets();
-                    console.log('Frequent sets analysis complete');
-                    
-                    // Now that we have all the data, count trio occurrences
-                    countTrioOccurrences();
+                    // Use requestIdleCallback to run non-critical tasks when the browser is idle
+                    if ('requestIdleCallback' in window) {
+                        requestIdleCallback(() => {
+                            analyzeFrequentSets();
+                            countTrioOccurrences();
+                        }, { timeout: 2000 }); // Fallback if idle doesn't happen within 2s
+                    } else {
+                        // Fallback for browsers that don't support requestIdleCallback
+                        setTimeout(() => {
+                            analyzeFrequentSets();
+                            countTrioOccurrences();
+                        }, 0);
+                    }
                 },
                 error: function(error) {
-                    console.log('Error parsing CSV:', error);
+                    console.error('Error parsing CSV:', error);
                 }
             });
         });
@@ -860,11 +867,7 @@
         };
     }
     function generateFromFrequentTrios() {
-        console.log('generateFromFrequentTrios called');
-        console.log('window.sortedTriplets:', window.sortedTriplets);
-        
         if (!window.sortedTriplets || window.sortedTriplets.length === 0) {
-            console.error('No sortedTriplets data available');
             alert('Loading frequent trios data... Please try again in a moment.');
             return [1, 2, 3, 4, 5]; // Return a default set for testing
         }
@@ -872,18 +875,14 @@
         try {
             // Get top 10 most frequent trios
             const topTrios = window.sortedTriplets.slice(0, 10);
-            console.log('Top 10 trios:', topTrios);
             
             if (topTrios.length === 0) {
-                console.error('No trios available in topTrios');
                 return [1, 2, 3, 4, 5]; // Return a default set for testing
             }
             
             const selectedTrio = topTrios[Math.floor(Math.random() * topTrios.length)];
-            console.log('Selected trio:', selectedTrio);
             
             if (!selectedTrio || !selectedTrio[0]) {
-                console.error('Invalid selectedTrio:', selectedTrio);
                 return [1, 2, 3, 4, 5]; // Return a default set for testing
             }
             
@@ -894,13 +893,11 @@
             const additionalNumbers = generateUniqueNumbers(2, 1, 69, exclude);
             
             const combination = [...[n1, n2, n3], ...additionalNumbers].sort((a, b) => a - b);
-            console.log('Generated combination:', combination);
             return {
                 combination: combination,
                 basedOnTrio: `${n1}-${n2}-${n3}`
             };
         } catch (error) {
-            console.error('Error in generateFromFrequentTrios:', error);
             return [1, 2, 3, 4, 5]; // Return a default set if there's an error
         }
     }
@@ -910,8 +907,6 @@
     let lastUsedTrioIndex = -1;
     
     function generateFromOverlappingTrios() {
-        console.log('generateFromOverlappingTrios called');
-        
         // Generate a simple combination if no trios are available
         const generateSimpleCombination = () => {
             const nums = [];
@@ -927,7 +922,6 @@
         };
         
         if (!window.sortedTriplets || window.sortedTriplets.length < 2) {
-            console.error('Not enough trios available');
             return generateSimpleCombination();
         }
         
@@ -941,8 +935,6 @@
             const validTrios = [...frequentTrios, ...additionalTrios];
             
             if (validTrios.length < 2) {
-                console.error('Not enough trios available');
-                console.error('Could not find overlapping trios after', 200, 'attempts');
                 return generateSimpleCombination();
             }
             
@@ -1063,7 +1055,6 @@
             }
             
             // Fallback: If no good matches found, use any two trios with one common number
-            console.log('No optimal trio matches found, falling back to simple overlap');
             for (let i = 0; i < Math.min(validTrios.length, 20); i++) {
                 const nums1 = validTrios[i][0].split('-').map(Number);
                 
@@ -1098,10 +1089,8 @@
             }
             
             // Final fallback: Generate a completely random combination
-            console.error('Could not find valid trios after multiple attempts, using fallback combination');
             return generateSimpleCombination();
         } catch (error) {
-            console.error('Error in generateFromOverlappingTrios:', error);
             // Fallback to regular trio generation on error
             return generateFromFrequentTrios();
         }
@@ -1111,15 +1100,11 @@
         // Ensure n is a valid number
         const count = parseInt(n, 10);
         if (isNaN(count) || count <= 0) {
-            console.error('Invalid number of combinations to render:', n);
             return;
         }
         
-        console.log(`Rendering ${count} combinations, useFrequentTrios: ${useFrequentTrios}`);
-        
         const container = document.getElementById('generated-table');
         if (!container) {
-            console.error('Could not find generated-table element');
             return;
         }
         
@@ -1155,10 +1140,9 @@
         } else {
             th2.style.borderRadius = '8px 0 0 8px';
         }
-        
         headerRow.appendChild(th2);
         
-        if (useFrequentTrios) {
+        if (useFrequentTrios || useOverlappingTrios) {
             const th3 = document.createElement('th');
             th3.textContent = 'Based On Trio';
             th3.style.textAlign = 'left';
@@ -1188,7 +1172,6 @@
                         mainNumbers = result.combination;
                         basedOnTrio = result.basedOnTrio || '';
                     } else {
-                        console.error('Failed to generate combination from trios, falling back to random');
                         mainNumbers = generateCombination().mainNumbers;
                     }
                 } else {
@@ -1261,9 +1244,6 @@
         
         // Force a reflow to ensure the table is rendered
         void container.offsetHeight;
-        
-        console.log('Table rendered with', count, 'combinations');
-        console.log('Container dimensions:', container.offsetWidth, 'x', container.offsetHeight);
     }
     
     // Handle generate from two duos button
@@ -1759,12 +1739,38 @@ function countTrioOccurrences() {
 let currentOccurrencePatternIndex = 0;
 
 // Function to get trio occurrence info based on actual historical data
+// Function to count duo occurrences in historical data
+function countDuoOccurrences(duo) {
+    if (!window.duoOccurrenceMap) {
+        // Initialize duo occurrence map if it doesn't exist
+        window.duoOccurrenceMap = new Map();
+        
+        // Count all duos in historical data
+        allMainDrawsNumbers.forEach(draw => {
+            const sortedDraw = [...draw].sort((a, b) => a - b);
+            
+            // Generate all possible duos from these 5 numbers (10 total)
+            for (let i = 0; i < sortedDraw.length; i++) {
+                for (let j = i + 1; j < sortedDraw.length; j++) {
+                    const duoKey = [sortedDraw[i], sortedDraw[j]].sort((a, b) => a - b).join(',');
+                    const currentCount = window.duoOccurrenceMap.get(duoKey) || 0;
+                    window.duoOccurrenceMap.set(duoKey, currentCount + 1);
+                }
+            }
+        });
+    }
+    
+    const duoKey = [...duo].sort((a, b) => a - b).join(',');
+    return window.duoOccurrenceMap.get(duoKey) || 0;
+}
+
 function getTrioOccurrenceInfo(trio) {
     if (!trio || !Array.isArray(trio) || trio.length !== 3) {
         console.error('Invalid trio input:', trio);
         return {
             text: '0x',
             count: 0,
+            duoCount: 0,
             numbers: []
         };
     }
@@ -1773,59 +1779,44 @@ function getTrioOccurrenceInfo(trio) {
     const sortedTrio = [...trio].sort((a, b) => a - b);
     const trioKey = sortedTrio.join(',');
     
-    // Get the count from the map
-    const count = trioOccurrenceMap.get(trioKey) || 0;
+    // Get the count from the map - ensure it's a number and not undefined
+    const count = Number(trioOccurrenceMap.get(trioKey) || 0);
     
-    // Debug: Log the trio being checked and its count
-    console.groupCollapsed(`Checking trio ${trioKey}`);
-    console.log('Historical count:', count);
+    // Calculate duo occurrences for this trio
+    let maxDuoCount = 0;
+    const duoCounts = [];
     
-    if (count === 0) {
-        console.log('This trio was not found in historical data');
-        
-        // Check if these numbers exist in any draw
-        const allNumbers = new Set();
-        allMainDrawsNumbers.forEach(draw => {
-            draw.forEach(num => allNumbers.add(num));
-        });
-        
-        const invalidNumbers = sortedTrio.filter(num => !allNumbers.has(num));
-        if (invalidNumbers.length > 0) {
-            console.log('Invalid numbers:', invalidNumbers.join(', '));
-        } else {
-            console.log('All numbers exist in historical data, but this specific trio was never drawn together');
-        }
-        
-        // Find which draws contain at least two of these numbers
-        const matchingDraws = [];
-        allMainDrawsNumbers.forEach((draw, index) => {
-            const matchCount = sortedTrio.filter(num => draw.includes(num)).length;
-            if (matchCount >= 2) {
-                matchingDraws.push({
-                    drawIndex: index,
-                    numbers: [...draw],
-                    matchedNumbers: sortedTrio.filter(num => draw.includes(num))
-                });
-            }
-        });
-        
-        if (matchingDraws.length > 0) {
-            console.log(`Found ${matchingDraws.length} draws containing at least 2 of these numbers:`);
-            matchingDraws.slice(0, 5).forEach((draw, i) => {
-                console.log(`  Draw ${draw.drawIndex + 1}: ${draw.numbers.join(', ')} (matched: ${draw.matchedNumbers.join(', ')})`);
-            });
-            if (matchingDraws.length > 5) {
-                console.log(`  ...and ${matchingDraws.length - 5} more`);
+    // Check all possible duos in this trio
+    for (let i = 0; i < 3; i++) {
+        for (let j = i + 1; j < 3; j++) {
+            const duo = [sortedTrio[i], sortedTrio[j]];
+            const duoCount = countDuoOccurrences(duo);
+            duoCounts.push(duoCount);
+            if (duoCount > maxDuoCount) {
+                maxDuoCount = duoCount;
             }
         }
-        
-        console.groupEnd();
+    }
+    
+    // Ensure we're not showing higher occurrence counts than the actual trio count
+    const adjustedDuoCounts = duoCounts.map(c => Math.min(c, count));
+    const adjustedMaxDuoCount = Math.min(maxDuoCount, count);
+    
+    // Create a more detailed text representation
+    let text = '';
+    if (count > 0) {
+        text = `${count}x`;
+        if (adjustedMaxDuoCount > 0) {
+            text += ` (Duos: ${adjustedDuoCounts.join('x, ')}x)`;
+        }
     }
     
     return {
-        text: count > 0 ? `${count}x` : '',
+        text: text,
         count: count,
-        numbers: sortedTrio
+        duoCount: adjustedMaxDuoCount,
+        numbers: sortedTrio,
+        duoCounts: adjustedDuoCounts
     };
 }
 
@@ -1835,14 +1826,28 @@ function generatePatternedTrioCombinations() {
     const maxAttempts = 1000;
     let attempts = 0;
     
-    // Define our occurrence patterns (1x-1x, 1x-2x, 1x-3x, 2x-2x, 2x-3x, 3x-3x)
+    // Define our occurrence patterns
     const occurrencePatterns = [
-        { name: '1x-1x', minOccurrences: 1, maxOccurrences: 1 },
-        { name: '1x-2x', minOccurrences: 1, maxOccurrences: 2 },
-        { name: '1x-3x', minOccurrences: 1, maxOccurrences: 3 },
-        { name: '2x-2x', minOccurrences: 2, maxOccurrences: 2 },
-        { name: '2x-3x', minOccurrences: 2, maxOccurrences: 3 },
-        { name: '3x-3x', minOccurrences: 3, maxOccurrences: 3 }
+        // Trio-Trio patterns
+        { name: '1x-1x', type: 'trio-trio', minOccurrences: 1, maxOccurrences: 1 },
+        { name: '1x-2x', type: 'trio-trio', minOccurrences: 1, maxOccurrences: 2 },
+        { name: '1x-3x', type: 'trio-trio', minOccurrences: 1, maxOccurrences: 3 },
+        { name: '2x-2x', type: 'trio-trio', minOccurrences: 2, maxOccurrences: 2 },
+        { name: '2x-3x', type: 'trio-trio', minOccurrences: 2, maxOccurrences: 3 },
+        { name: '3x-3x', type: 'trio-trio', minOccurrences: 3, maxOccurrences: 3 },
+        
+        // Trio-Duo patterns
+        { name: 'trio(1x)-duo(2x)', type: 'trio-duo', trioOccurrences: 1, duoOccurrences: 2 },
+        { name: 'trio(1x)-duo(3x)', type: 'trio-duo', trioOccurrences: 1, duoOccurrences: 3 },
+        { name: 'trio(1x)-duo(4x)', type: 'trio-duo', trioOccurrences: 1, duoOccurrences: 4 },
+        { name: 'trio(1x)-duo(5x)', type: 'trio-duo', trioOccurrences: 1, duoOccurrences: 5 },
+        { name: 'trio(2x)-duo(2x)', type: 'trio-duo', trioOccurrences: 2, duoOccurrences: 2 },
+        { name: 'trio(2x)-duo(3x)', type: 'trio-duo', trioOccurrences: 2, duoOccurrences: 3 },
+        { name: 'trio(2x)-duo(4x)', type: 'trio-duo', trioOccurrences: 2, duoOccurrences: 4 },
+        { name: 'trio(2x)-duo(5x)', type: 'trio-duo', trioOccurrences: 2, duoOccurrences: 5 },
+        { name: 'trio(3x)-duo(3x)', type: 'trio-duo', trioOccurrences: 3, duoOccurrences: 3 },
+        { name: 'trio(3x)-duo(4x)', type: 'trio-duo', trioOccurrences: 3, duoOccurrences: 4 },
+        { name: 'trio(3x)-duo(5x)', type: 'trio-duo', trioOccurrences: 3, duoOccurrences: 5 }
     ];
     
     // Track used trios for each occurrence pattern
@@ -1886,8 +1891,12 @@ function generatePatternedTrioCombinations() {
             const t1Key = t1.join(',');
             const t1Info = getTrioOccurrenceInfo(t1);
             
-            // Skip if trio1 doesn't match the min occurrences or is 0x
-            if (t1Info.count < pattern.minOccurrences || t1Info.count === 0) continue;
+            // Skip if trio1 doesn't match the pattern requirements
+            if (pattern.type === 'trio-trio' && (t1Info.count < pattern.minOccurrences || t1Info.count === 0)) {
+                continue;
+            } else if (pattern.type === 'trio-duo' && (t1Info.count !== pattern.trioOccurrences || t1Info.duoCount === 0)) {
+                continue;
+            }
             
             // Try to find a second trio that forms a valid pair
             for (let j = 0; j < 20; j++) {
@@ -1898,21 +1907,59 @@ function generatePatternedTrioCombinations() {
                 const t2Key = t2.join(',');
                 const t2Info = getTrioOccurrenceInfo(t2);
                 
-                // Skip if trio2 doesn't match the max occurrences, is 0x, or is the same as trio1
-                if (t2Info.count > pattern.maxOccurrences || t2Info.count === 0 || t1Key === t2Key) continue;
+                // Skip if the trios are the same
+                if (t1Key === t2Key) continue;
                 
-                // For patterns like 2x-3x, ensure one trio is 2x and the other is 3x
-                if (pattern.name.includes('-')) {
-                    const [min, max] = pattern.name.split('-').map(s => parseInt(s));
-                    const counts = [t1Info.count, t2Info.count].sort((a, b) => a - b);
-                    if (counts[0] !== min || counts[1] !== max) continue;
-                    
-                    // Every 3rd combination, try to include higher numbers (40-69)
-                    const shouldIncludeHighNumbers = window.highNumberCounter % 3 === 0;
-                    if (shouldIncludeHighNumbers) {
-                        const hasHighNumber = [...t1, ...t2].some(n => n >= 40);
-                        if (!hasHighNumber) continue;
+                // Check pattern-specific requirements
+                if (pattern.type === 'trio-trio') {
+                    // For trio-trio patterns, check max occurrences
+                    if (t2Info.count > pattern.maxOccurrences || t2Info.count === 0) continue;
+                } else if (pattern.type === 'trio-duo') {
+                    // For trio-duo patterns, check if one trio matches the trio count and the other matches the duo count
+                    const isTrioMatch = (t1Info.count === pattern.trioOccurrences && t2Info.duoCount === pattern.duoOccurrences) ||
+                                     (t2Info.count === pattern.trioOccurrences && t1Info.duoCount === pattern.duoOccurrences);
+                    if (!isTrioMatch) continue;
+                }
+                
+                // Handle different pattern types
+                if (pattern.type === 'trio-trio') {
+                    // For trio-trio patterns (e.g., 2x-3x)
+                    if (pattern.name.includes('-')) {
+                        const [min, max] = pattern.name.split('-').map(s => parseInt(s));
+                        const counts = [t1Info.count, t2Info.count].sort((a, b) => a - b);
+                        if (counts[0] !== min || counts[1] !== max) continue;
                     }
+                } else if (pattern.type === 'trio-duo') {
+                    // For trio-duo patterns (e.g., trio(2x)-duo(3x))
+                    // We need one trio to match the trio count and the other to match the duo count
+                    const isTrioDuoMatch = 
+                        (t1Info.count === pattern.trioOccurrences && t2Info.duoCount === pattern.duoOccurrences) ||
+                        (t2Info.count === pattern.trioOccurrences && t1Info.duoCount === pattern.duoOccurrences);
+                    
+                    if (!isTrioDuoMatch) {
+                        continue;
+                    }
+                    
+                    // Ensure we have the right trio and duo assignments
+                    if (t1Info.count === pattern.trioOccurrences) {
+                        // t1 is the trio, t2 is the duo
+                        trio1Info = t1Info;
+                        trio2Info = t2Info;
+                    } else {
+                        // t2 is the trio, t1 is the duo
+                        const temp = t1;
+                        t1 = t2;
+                        t2 = temp;
+                        trio1Info = t2Info;
+                        trio2Info = t1Info;
+                    }
+                }
+                
+                // Every 3rd combination, try to include higher numbers (40-69)
+                const shouldIncludeHighNumbers = window.highNumberCounter % 3 === 0;
+                if (shouldIncludeHighNumbers) {
+                    const hasHighNumber = [...t1, ...t2].some(n => n >= 40);
+                    if (!hasHighNumber) continue;
                 }
                 
                 // Check if these trios share at least one number
@@ -1946,95 +1993,45 @@ function generatePatternedTrioCombinations() {
             ? [trio1Info, trio2Info] 
             : [trio2Info, trio1Info];
         
-        // Start with 3 numbers from the higher occurrence trio
-        let combination = [...higherTrio].slice(0, 3);
+        // Always start with the higher occurrence trio as the base combination
+        let combination = [...higherTrio];
         
-        // Ensure we have at least one low and one high number in the initial trio
-        const hasLowNumber = combination.some(n => n <= 39);
-        const hasHighNumber = combination.some(n => n >= 40);
+        // Add numbers from the lower occurrence trio that aren't already in the combination
+        const numbersToAdd = [];
+        for (const num of lowerTrio) {
+            if (!combination.includes(num)) {
+                numbersToAdd.push(num);
+            }
+        }
         
-        // If we don't have both low and high numbers, try to adjust the combination
-        if (!hasLowNumber || !hasHighNumber) {
-            // Find a mix of low and high numbers from both trios
+        // Add as many unique numbers from the lower trio as possible (up to 2)
+        combination.push(...numbersToAdd.slice(0, 2));
+        
+        // If we still don't have 5 numbers, fill with random numbers from the lower trio
+        if (combination.length < 5) {
+            const availableNumbers = lowerTrio.filter(n => !combination.includes(n));
+            combination.push(...availableNumbers.slice(0, 5 - combination.length));
+        }
+        
+        // Ensure we have a good mix of low and high numbers
+        const lowNumbers = combination.filter(n => n <= 39);
+        const highNumbers = combination.filter(n => n >= 40);
+        
+        // If we don't have both low and high numbers, try to adjust
+        if (lowNumbers.length === 0 || highNumbers.length === 0) {
+            // Find numbers from the lower trio that can help balance the combination
             const allAvailable = [...new Set([...higherTrio, ...lowerTrio])];
-            const lowNumbers = allAvailable.filter(n => n <= 39);
-            const highNumbers = allAvailable.filter(n => n >= 40);
+            const neededType = lowNumbers.length === 0 ? n => n <= 39 : n => n >= 40;
+            const candidates = allAvailable.filter(neededType).filter(n => !combination.includes(n));
             
-            if (!hasLowNumber && lowNumbers.length > 0) {
-                // Replace one number with a low number
-                const toReplace = combination.findIndex(n => n >= 40);
-                if (toReplace !== -1 && lowNumbers.length > 0) {
-                    combination[toReplace] = lowNumbers[0];
-                }
-            }
-            
-            if (!hasHighNumber && highNumbers.length > 0) {
-                // Replace one number with a high number
-                const toReplace = combination.findIndex(n => n <= 39);
-                if (toReplace !== -1 && highNumbers.length > 0) {
-                    combination[toReplace] = highNumbers[0];
+            if (candidates.length > 0) {
+                // Remove a number of the overrepresented type and add one of the needed type
+                const toRemove = combination.findIndex(n => !neededType(n));
+                if (toRemove !== -1) {
+                    combination[toRemove] = candidates[0];
                 }
             }
         }
-        
-        // Add 2 numbers from the lower occurrence trio that aren't already in the combination
-        let availableFromLower = lowerTrio.filter(num => !combination.includes(num));
-        
-        // Ensure we maintain a mix of low and high numbers
-        
-        let numsToAdd = [];
-        const currentLowCount = combination.filter(n => n <= 39).length;
-        const currentHighCount = combination.filter(n => n >= 40).length;
-        
-        // Ensure we maintain a balance of low and high numbers
-        if (currentLowCount === 0) {
-            // If no low numbers yet, prioritize adding at least one
-            const lowNumbers = availableFromLower.filter(n => n <= 39);
-            if (lowNumbers.length > 0) {
-                numsToAdd.push(lowNumbers[0]);
-            }
-        } else if (currentHighCount === 0) {
-            // If no high numbers yet, prioritize adding at least one
-            const highNumbers = availableFromLower.filter(n => n >= 40);
-            if (highNumbers.length > 0) {
-                numsToAdd.push(highNumbers[0]);
-            }
-        }
-        
-        // Add remaining numbers to reach 2, maintaining balance
-        const remainingNeeded = 2 - numsToAdd.length;
-        if (remainingNeeded > 0) {
-            const usedNumbers = new Set([...combination, ...numsToAdd]);
-            const remainingNumbers = availableFromLower.filter(n => !usedNumbers.has(n));
-            
-            // If we still need to add more high or low numbers to maintain balance
-            const currentLowCount = [...combination, ...numsToAdd].filter(n => n <= 39).length;
-            const currentHighCount = [...combination, ...numsToAdd].filter(n => n >= 40).length;
-            
-            if (currentLowCount === 0) {
-                // Try to add low numbers first if we have none
-                const lowNumbers = remainingNumbers.filter(n => n <= 39);
-                if (lowNumbers.length > 0) {
-                    numsToAdd.push(lowNumbers[0]);
-                }
-            } else if (currentHighCount === 0) {
-                // Try to add high numbers first if we have none
-                const highNumbers = remainingNumbers.filter(n => n >= 40);
-                if (highNumbers.length > 0) {
-                    numsToAdd.push(highNumbers[0]);
-                }
-            }
-            
-            // Fill any remaining spots with any available numbers
-            const remainingSpots = 2 - numsToAdd.length;
-            if (remainingSpots > 0) {
-                const usedSet = new Set([...combination, ...numsToAdd]);
-                const available = remainingNumbers.filter(n => !usedSet.has(n));
-                numsToAdd.push(...available.slice(0, remainingSpots));
-            }
-        }
-        
-        combination.push(...numsToAdd);
         
         // If we still need more numbers (in case of overlapping trios), fill with remaining numbers
         // while ensuring we maintain at least one low and one high number
@@ -2108,23 +2105,67 @@ function generatePatternedTrioCombinations() {
         // Sort the combination
         combination = combination.sort((a, b) => a - b);
         
+        // Find the most frequent duo in a trio
+        const findMostFrequentDuo = (trio) => {
+            const sortedTrio = [...trio].sort((a, b) => a - b);
+            let maxDuo = [];
+            let maxCount = 0;
+            
+            // Check all possible duos in the trio
+            for (let i = 0; i < 3; i++) {
+                for (let j = i + 1; j < 3; j++) {
+                    const duo = [sortedTrio[i], sortedTrio[j]];
+                    const count = countDuoOccurrences(duo);
+                    if (count > maxCount) {
+                        maxCount = count;
+                        maxDuo = duo;
+                    }
+                }
+            }
+            
+            return {
+                numbers: maxDuo,
+                count: maxCount
+            };
+        };
+        
         // Format trio information for display
-        const formatTrio = (trio, info) => {
+        const formatTrio = (trio, info, isTrio = true) => {
             // Ensure we have exactly 3 numbers in the trio
             const formattedTrio = trio.slice(0, 3).sort((a, b) => a - b);
-            // Only show count if it's greater than 0
-            const countText = info.count > 0 ? ` (${info.count}x)` : '';
-            return `${formattedTrio.join('-')}${countText}`;
+            
+            // Format counts for both trio and duo
+            const trioCount = info.count > 0 ? `${info.count}x` : '0x';
+            const duoCount = info.duoCount > 0 ? `${info.duoCount}x` : '0x';
+            
+            if (pattern.type === 'trio-duo') {
+                if (isTrio) {
+                    return `trio(${trioCount})`;
+                } else {
+                    const duoInfo = findMostFrequentDuo(trio);
+                    return `${duoInfo.numbers[0]}-${duoInfo.numbers[1]} duo(${duoInfo.count}x)`;
+                }
+            }
+            return `${formattedTrio.join('-')} (${trioCount})`;
         };
         
         // Create the combination object with both trios' info
+        let displayText = '';
+        if (pattern.type === 'trio-trio') {
+            displayText = `Trio-Trio (${pattern.name}): ${formatTrio(higherTrio, higherTrioInfo)} & ${formatTrio(lowerTrio, lowerTrioInfo)}`;
+        } else {
+            const higherTrioText = formatTrio(higherTrio, higherTrioInfo, true);
+            const lowerTrioText = formatTrio(lowerTrio, lowerTrioInfo, false);
+            displayText = `${higherTrio.join('-')} ${higherTrioText} & ${lowerTrioText}`;
+        }
+        
         const combo = {
             numbers: combination,
             powerball: getNextPowerball(),
             pattern: pattern.name,
-            basedOnTrio: `High: ${formatTrio(higherTrio, higherTrioInfo)} | Low: ${formatTrio(lowerTrio, lowerTrioInfo)}`,
-            trioInfo: `High: ${formatTrio(higherTrio, higherTrioInfo)} | Low: ${formatTrio(lowerTrio, lowerTrioInfo)}`,
-            patternType: ''
+            basedOnTrio: displayText,
+            trioInfo: displayText,
+            patternType: pattern.type === 'trio-trio' ? 'Trio-Trio' : 'Trio-Duo'
         };
         
         combinations.push(combo);
@@ -2286,7 +2327,7 @@ function renderPatternedCombinations(combinations) {
                         <div style="display: flex; flex-direction: column; gap: 4px;">
                             <span style="background: #e3f2fd; color: #1976d2; padding: 4px 8px; border-radius: 12px; font-size: 0.8em;
                                 white-space: normal; word-break: break-word;">
-                                <i class="fas fa-project-diagram"></i> (${combo.pattern || 'Pattern'}) ${combo.basedOnTrio ? combo.basedOnTrio.replace('High:', 'Trios:').replace('| Low:', '&') : 'No trio info'}
+                                <i class="fas fa-project-diagram"></i> ${combo.basedOnTrio || 'No pattern info'}
                             </span>
                         </div>
                         ${history.appeared ? `
