@@ -502,6 +502,7 @@
 </head>
 <body>
     <div class="generator-container">
+      <div class="generator-title">Random Number Generator</div>
       <div id="home-tab" class="tab-content" style="display:block;">
       </div>
       <div id="history-tab" class="tab-content" style="display:none;">
@@ -1856,6 +1857,11 @@ function generatePatternedTrioCombinations() {
     if (window.currentPatternIndex === undefined) {
         window.currentPatternIndex = 0;
     }
+    
+    // Track how many times we've generated high number combinations
+    if (window.highNumberCounter === undefined) {
+        window.highNumberCounter = 0;
+    }
     // Generate combinations for each occurrence pattern in round-robin fashion
     while (combinations.length < 6 && attempts < maxAttempts) {
         attempts++;
@@ -1900,6 +1906,13 @@ function generatePatternedTrioCombinations() {
                     const [min, max] = pattern.name.split('-').map(s => parseInt(s));
                     const counts = [t1Info.count, t2Info.count].sort((a, b) => a - b);
                     if (counts[0] !== min || counts[1] !== max) continue;
+                    
+                    // Every 3rd combination, try to include higher numbers (40-69)
+                    const shouldIncludeHighNumbers = window.highNumberCounter % 3 === 0;
+                    if (shouldIncludeHighNumbers) {
+                        const hasHighNumber = [...t1, ...t2].some(n => n >= 40);
+                        if (!hasHighNumber) continue;
+                    }
                 }
                 
                 // Check if these trios share at least one number
@@ -1936,16 +1949,146 @@ function generatePatternedTrioCombinations() {
         // Start with 3 numbers from the higher occurrence trio
         let combination = [...higherTrio].slice(0, 3);
         
+        // Ensure we have at least one low and one high number in the initial trio
+        const hasLowNumber = combination.some(n => n <= 39);
+        const hasHighNumber = combination.some(n => n >= 40);
+        
+        // If we don't have both low and high numbers, try to adjust the combination
+        if (!hasLowNumber || !hasHighNumber) {
+            // Find a mix of low and high numbers from both trios
+            const allAvailable = [...new Set([...higherTrio, ...lowerTrio])];
+            const lowNumbers = allAvailable.filter(n => n <= 39);
+            const highNumbers = allAvailable.filter(n => n >= 40);
+            
+            if (!hasLowNumber && lowNumbers.length > 0) {
+                // Replace one number with a low number
+                const toReplace = combination.findIndex(n => n >= 40);
+                if (toReplace !== -1 && lowNumbers.length > 0) {
+                    combination[toReplace] = lowNumbers[0];
+                }
+            }
+            
+            if (!hasHighNumber && highNumbers.length > 0) {
+                // Replace one number with a high number
+                const toReplace = combination.findIndex(n => n <= 39);
+                if (toReplace !== -1 && highNumbers.length > 0) {
+                    combination[toReplace] = highNumbers[0];
+                }
+            }
+        }
+        
         // Add 2 numbers from the lower occurrence trio that aren't already in the combination
-        const availableFromLower = lowerTrio.filter(num => !combination.includes(num));
-        const numsToAdd = availableFromLower.slice(0, 2);
+        let availableFromLower = lowerTrio.filter(num => !combination.includes(num));
+        
+        // Ensure we maintain a mix of low and high numbers
+        
+        let numsToAdd = [];
+        const currentLowCount = combination.filter(n => n <= 39).length;
+        const currentHighCount = combination.filter(n => n >= 40).length;
+        
+        // Ensure we maintain a balance of low and high numbers
+        if (currentLowCount === 0) {
+            // If no low numbers yet, prioritize adding at least one
+            const lowNumbers = availableFromLower.filter(n => n <= 39);
+            if (lowNumbers.length > 0) {
+                numsToAdd.push(lowNumbers[0]);
+            }
+        } else if (currentHighCount === 0) {
+            // If no high numbers yet, prioritize adding at least one
+            const highNumbers = availableFromLower.filter(n => n >= 40);
+            if (highNumbers.length > 0) {
+                numsToAdd.push(highNumbers[0]);
+            }
+        }
+        
+        // Add remaining numbers to reach 2, maintaining balance
+        const remainingNeeded = 2 - numsToAdd.length;
+        if (remainingNeeded > 0) {
+            const usedNumbers = new Set([...combination, ...numsToAdd]);
+            const remainingNumbers = availableFromLower.filter(n => !usedNumbers.has(n));
+            
+            // If we still need to add more high or low numbers to maintain balance
+            const currentLowCount = [...combination, ...numsToAdd].filter(n => n <= 39).length;
+            const currentHighCount = [...combination, ...numsToAdd].filter(n => n >= 40).length;
+            
+            if (currentLowCount === 0) {
+                // Try to add low numbers first if we have none
+                const lowNumbers = remainingNumbers.filter(n => n <= 39);
+                if (lowNumbers.length > 0) {
+                    numsToAdd.push(lowNumbers[0]);
+                }
+            } else if (currentHighCount === 0) {
+                // Try to add high numbers first if we have none
+                const highNumbers = remainingNumbers.filter(n => n >= 40);
+                if (highNumbers.length > 0) {
+                    numsToAdd.push(highNumbers[0]);
+                }
+            }
+            
+            // Fill any remaining spots with any available numbers
+            const remainingSpots = 2 - numsToAdd.length;
+            if (remainingSpots > 0) {
+                const usedSet = new Set([...combination, ...numsToAdd]);
+                const available = remainingNumbers.filter(n => !usedSet.has(n));
+                numsToAdd.push(...available.slice(0, remainingSpots));
+            }
+        }
+        
         combination.push(...numsToAdd);
         
         // If we still need more numbers (in case of overlapping trios), fill with remaining numbers
+        // while ensuring we maintain at least one low and one high number
         if (combination.length < 5) {
             const allNumbers = new Set([...trio1, ...trio2]);
-            const remainingNumbers = Array.from(allNumbers).filter(n => !combination.includes(n));
-            combination.push(...remainingNumbers.slice(0, 5 - combination.length));
+            let remainingNumbers = Array.from(allNumbers).filter(n => !combination.includes(n));
+            
+            // Check if we have both low and high numbers in the current combination
+            const hasLow = combination.some(n => n <= 39);
+            const hasHigh = combination.some(n => n >= 40);
+            
+            // If we're missing either low or high numbers, prioritize adding them
+            if (!hasLow) {
+                const lowRemaining = remainingNumbers.filter(n => n <= 39);
+                if (lowRemaining.length > 0) {
+                    combination.push(lowRemaining[0]);
+                    remainingNumbers = remainingNumbers.filter(n => n !== lowRemaining[0]);
+                }
+            }
+            
+            if (!hasHigh) {
+                const highRemaining = remainingNumbers.filter(n => n >= 40);
+                if (highRemaining.length > 0) {
+                    combination.push(highRemaining[0]);
+                    remainingNumbers = remainingNumbers.filter(n => n !== highRemaining[0]);
+                }
+            }
+            
+            // Fill any remaining spots with any available numbers
+            const remainingSpots = 5 - combination.length;
+            if (remainingSpots > 0 && remainingNumbers.length > 0) {
+                combination.push(...remainingNumbers.slice(0, remainingSpots));
+            }
+            
+            // Final check to ensure we have at least one low and one high number
+            const finalLowCount = combination.filter(n => n <= 39).length;
+            const finalHighCount = combination.filter(n => n >= 40).length;
+            
+            if (finalLowCount === 0 || finalHighCount === 0) {
+                // If we still don't have both, replace one number to ensure we do
+                const allAvailable = [...trio1, ...trio2];
+                if (finalLowCount === 0) {
+                    const lowNumber = allAvailable.find(n => n <= 39);
+                    if (lowNumber !== undefined) {
+                        combination[0] = lowNumber; // Replace first number with a low number
+                    }
+                }
+                if (finalHighCount === 0) {
+                    const highNumber = allAvailable.find(n => n >= 40);
+                    if (highNumber !== undefined) {
+                        combination[1] = highNumber; // Replace second number with a high number
+                    }
+                }
+            }
         }
         
         // Ensure we have exactly 5 unique numbers
