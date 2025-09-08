@@ -1307,12 +1307,12 @@ document.addEventListener('DOMContentLoaded', async function() {
         return new Date(Date.UTC(fullYear, month - 1, day, 12, 0, 0));
     }
 
-    // Render the Trio 2 tab results (uses nearby dates when same-day not available)
+    // Render the Trio 2 tab results (shows numbers from a specific month with statistics)
     function renderTrio2Tab() {
         console.log('Rendering Trio 2 tab...');
         const resultsDiv = document.getElementById('trio2-results');
         const comboDiv = document.getElementById('trio2-combo-results');
-        if (!resultsDiv || !comboDiv) {
+        if (!resultsDiv) {
             console.error('Missing required DOM elements');
             return;
         }
@@ -1320,14 +1320,12 @@ document.addEventListener('DOMContentLoaded', async function() {
         // Get all available draws for Trio 2 tab
         const allDraws = window.allDraws || window.filteredDrawRows || [];
         console.log('Total draws available:', allDraws.length);
-        console.log('Sample draws:', allDraws.slice(0, 2));
 
-        // Filter draws from 2015 to 2025 and ensure they have valid numbers
+        // Filter draws with valid numbers and dates
         const validDraws = allDraws
             .filter(draw => {
                 try {
                     if (!draw || !draw.mainArr || !Array.isArray(draw.mainArr) || draw.mainArr.length !== 5) {
-                        console.log('Skipping invalid draw (missing/invalid mainArr):', draw);
                         return false;
                     }
                     
@@ -1338,28 +1336,20 @@ document.addEventListener('DOMContentLoaded', async function() {
                     });
                     
                     if (hasInvalidNumbers) {
-                        console.log('Skipping draw with invalid numbers:', draw);
                         return false;
                     }
                     
                     const dateStr = (draw.date || '').trim();
-                    if (!dateStr) {
-                        console.log('Skipping draw with missing date:', draw);
-                        return false;
-                    }
+                    if (!dateStr) return false;
                     
                     const parts = dateStr.split('/');
-                    if (parts.length !== 3) {
-                        console.log('Skipping draw with invalid date format:', dateStr);
-                        return false;
-                    }
+                    if (parts.length !== 3) return false;
                     
                     const month = parseInt(parts[0], 10);
                     const day = parseInt(parts[1], 10);
                     let year = parseInt(parts[2], 10);
                     
                     if (isNaN(month) || isNaN(day) || isNaN(year)) {
-                        console.log('Skipping draw with non-numeric date parts:', dateStr);
                         return false;
                     }
                     
@@ -1373,180 +1363,332 @@ document.addEventListener('DOMContentLoaded', async function() {
                     console.error('Error processing draw:', draw, error);
                     return false;
                 }
-            })
-            .sort((a, b) => {
-                // Sort draws by date
-                try {
-                    return parseDrawDate(a.date) - parseDrawDate(b.date);
-                } catch (e) {
-                    console.error('Error sorting dates:', e);
-                    return 0;
+            });
+            
+        console.log(`Found ${validDraws.length} valid draws`);
+        
+        // Group draws by year and month
+        const drawsByMonth = {};
+        validDraws.forEach(draw => {
+            try {
+                const dateParts = draw.date.split('/');
+                const month = parseInt(dateParts[0], 10);
+                const year = parseInt(dateParts[2], 10) + (parseInt(dateParts[2], 10) < 100 ? 2000 : 0);
+                const key = `${year}-${month.toString().padStart(2, '0')}`;
+                
+                if (!drawsByMonth[key]) {
+                    drawsByMonth[key] = [];
                 }
-            });
-            
-        console.log(`Found ${validDraws.length} valid draws from 2015-2025`);
-        if (validDraws.length > 0) {
-            console.log('First valid draw:', validDraws[0]);
-            console.log('Last valid draw:', validDraws[validDraws.length - 1]);
-        }
-
-        // Create date-based windows of exactly 2 weeks (14 days)
-        const eligibleTrios = [];
-        // First, ensure all draws have Date objects and sort them by date
-        const drawsWithDates = validDraws.map(draw => ({
-            ...draw,
-            dateObj: parseDrawDate(draw.date)
-        })).sort((a, b) => a.dateObj - b.dateObj);
-        
-        // For each draw, find other draws within a 2-week window
-        for (let i = 0; i < drawsWithDates.length; i++) {
-            const currentDraw = drawsWithDates[i];
-            // Set window start at 00:00:00 of the current draw's date
-            const windowStart = new Date(currentDraw.dateObj);
-            windowStart.setUTCHours(0, 0, 0, 0);
-            // Set window end to exactly 14 days later at 23:59:59.999
-            const windowEnd = new Date(windowStart);
-            windowEnd.setUTCDate(windowEnd.getUTCDate() + 14);
-            windowEnd.setUTCHours(23, 59, 59, 999);
-            
-            // Debug: Log the window dates
-            console.log('Current draw date:', currentDraw.dateObj);
-            console.log('Window start:', windowStart);
-            console.log('Window end:', windowEnd);
-            
-            // Find all draws within this 2-week window (inclusive of both start and end dates)
-            const windowDraws = [currentDraw];
-            for (let j = i + 1; j < drawsWithDates.length; j++) {
-                const nextDraw = drawsWithDates[j];
-                if (nextDraw.dateObj > windowEnd) break;
-                windowDraws.push(nextDraw);
+                drawsByMonth[key].push(draw);
+            } catch (e) {
+                console.error('Error processing draw date:', draw.date, e);
             }
-            
-            // Debug: Log the window details
-            if (windowDraws.length > 1) {
-                console.group('Draws in window:');
-                console.log('Window:', formatDate(windowStart), 'to', formatDate(windowEnd));
-                console.log('Draws found:', windowDraws.length);
-                windowDraws.forEach((draw, idx) => {
-                    console.log(`${idx + 1}. ${draw.date} (${formatDate(draw.dateObj)}) - ${draw.mainArr.join('-')}`);
-                });
-                console.groupEnd();
-            }
-            
-            // Skip if we don't have enough draws in the window
-            if (windowDraws.length < 2) continue;
-            
-            // Collect all numbers from this 2-week window
-            const allNumbers = new Set();
-            windowDraws.forEach(draw => {
-                draw.mainArr.forEach(num => allNumbers.add(num));
-            });
-            
-            // Try to create combinations using numbers from different draws within the 2-week window
-            windowDraws.forEach((draw, drawIndex) => {
-                const otherDraws = [...windowDraws];
-                otherDraws.splice(drawIndex, 1); // Remove current draw
-                
-                // Get all possible trios from current draw
-                const trios = getCombos(draw.mainArr, 3);
-                
-                trios.forEach(trio => {
-                    const trioSet = new Set(trio);
-                    const otherNumbers = Array.from(allNumbers).filter(n => !trioSet.has(n));
-                    
-                    if (otherNumbers.length >= 2) {
-                        // Calculate days difference for display
-                        const daysDiff = Math.floor((windowEnd - windowStart) / (1000 * 60 * 60 * 24));
-                        const actualEndDate = new Date(windowEnd - 1);
-                        
-                        // Debug: Log the window details
-                        console.log('Window:', formatDate(windowStart), 'to', formatDate(actualEndDate), `(${daysDiff} days)`);
-                        
-                        eligibleTrios.push({
-                            trio: trio,
-                            date: draw.date,
-                            otherNumbers: otherNumbers,
-                            source: `2-week window: ${formatDate(windowStart)} to ${formatDate(actualEndDate)} (${daysDiff} days)`
-                        });
-                    }
-                });
-            });
-        }
+        });
         
-        console.log(`Found ${eligibleTrios.length} eligible trios in nearby draws`);
-
-        if (eligibleTrios.length === 0) {
-            resultsDiv.innerHTML = `
-                <div style="color:#e74c3c; text-align:center; padding:20px;">
-                    <h3>No eligible trios found with nearby draw numbers.</h3>
-                    <p>This could be because there aren't enough consecutive draws with overlapping numbers.</p>
-                </div>
-            `;
-            return;
-        }
-
-        // UI header and button
+        // Get unique months for the dropdown
+        const months = Object.keys(drawsByMonth).sort().reverse();
+        
+        // Create month selector UI
         resultsDiv.innerHTML = `
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;gap:12px;">
-                <h2 style="margin:0;color:#3498db;font-size:1.3em;font-weight:700;letter-spacing:1px;">
-                    Powerball Trio Generator (2015-2025)
-                    <div style="font-size:0.8em;color:#666;font-weight:normal;margin-top:4px;">
-                        Using numbers from 2-week window when same-day not available
-                    </div>
+            <div style="margin-bottom: 20px;">
+                <h2 style="margin:0 0 15px 0;color:#3498db;font-size:1.3em;font-weight:700;letter-spacing:1px;">
+                    Monthly Number Analysis
                 </h2>
-                <button id="trio2-generate-btn" style="padding:10px 28px;font-size:1.13em;border-radius:8px;border:1.5px solid #3498db;background:#fff;color:#3498db;cursor:pointer;font-weight:600;transition:background 0.18s;">
-                    Generate New Combinations
-                </button>
+                <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 15px;">
+                    <label for="month-select" style="font-weight: 600;">Select Month:</label>
+                    <select id="month-select" style="padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
+                        ${months.map(month => {
+                            const [year, mon] = month.split('-');
+                            const monthName = new Date(parseInt(year), parseInt(mon) - 1, 1).toLocaleString('default', { month: 'long' });
+                            return `<option value="${month}">${monthName} ${year}</option>`;
+                        }).join('')}
+                    </select>
+                    <button id="analyze-btn" style="padding:8px 16px;background:#3498db;color:white;border:none;border-radius:4px;cursor:pointer;">
+                        Analyze
+                    </button>
+                </div>
+                <div id="monthly-stats" style="margin-top: 20px;"></div>
             </div>
             <div id="trio2-cards-container"></div>
         `;
-
-        function generateTrio2Outputs() {
-            // Shuffle and pick 20 random eligible trios
-            const shuffled = [...eligibleTrios].sort(() => 0.5 - Math.random()).slice(0, 20);
-            let cardsHtml = `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:18px;">`;
+        
+        // Function to analyze and display monthly stats
+        function analyzeMonth(monthKey) {
+            const monthlyDraws = drawsByMonth[monthKey] || [];
+            if (monthlyDraws.length === 0) {
+                document.getElementById('monthly-stats').innerHTML = '<p>No draw data available for the selected month.</p>';
+                return;
+            }
             
-            shuffled.forEach(({trio, date, otherNumbers, source}) => {
-                // Pick 2 random numbers from the other numbers
-                const random2 = [];
-                const available = [...otherNumbers];
-                for (let i = 0; i < 2 && available.length > 0; i++) {
-                    const idx = Math.floor(Math.random() * available.length);
-                    random2.push(available.splice(idx, 1)[0]);
+            // Collect all numbers from the month
+            const allNumbers = [];
+            monthlyDraws.forEach(draw => {
+                allNumbers.push(...draw.mainArr.map(n => parseInt(n, 10)));
+            });
+            
+            // Calculate statistics
+            const uniqueNumbers = [...new Set(allNumbers)];
+            const sum = allNumbers.reduce((a, b) => a + b, 0);
+            const avg = sum / allNumbers.length;
+            
+            // Count high/low (high = 35-69, low = 1-34)
+            const highCount = allNumbers.filter(n => n >= 35).length;
+            const lowCount = allNumbers.length - highCount;
+            
+            // Count odd/even
+            const oddCount = allNumbers.filter(n => n % 2 !== 0).length;
+            const evenCount = allNumbers.length - oddCount;
+            
+            // Get top 10 most frequent numbers
+            const frequencyMap = allNumbers.reduce((acc, num) => {
+                acc[num] = (acc[num] || 0) + 1;
+                return acc;
+            }, {});
+            
+            const sortedNumbers = Object.entries(frequencyMap)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 10);
+            
+            // Display the statistics
+            const [year, month] = monthKey.split('-');
+            const monthName = new Date(parseInt(year), parseInt(month) - 1, 1).toLocaleString('default', { month: 'long' });
+            
+            document.getElementById('monthly-stats').innerHTML = `
+                <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                    <h3 style="margin-top: 0; color: #2c3e50;">${monthName} ${year} Statistics</h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                        <div style="background: white; padding: 10px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                            <div style="font-size: 0.9em; color: #7f8c8d; margin-bottom: 5px;">Total Draws</div>
+                            <div style="font-size: 1.5em; font-weight: bold; color: #2c3e50;">${monthlyDraws.length}</div>
+                        </div>
+                        <div style="background: white; padding: 10px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                            <div style="font-size: 0.9em; color: #7f8c8d; margin-bottom: 5px;">Unique Numbers</div>
+                            <div style="font-size: 1.5em; font-weight: bold; color: #2c3e50;">${uniqueNumbers.length}</div>
+                        </div>
+                        <div style="background: white; padding: 10px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                            <div style="font-size: 0.9em; color: #7f8c8d; margin-bottom: 5px;">High/Low Ratio</div>
+                            <div style="font-size: 1.5em; font-weight: bold; color: #2c3e50;">
+                                ${highCount}/${lowCount} (${(highCount/allNumbers.length*100).toFixed(1)}% high)
+                            </div>
+                        </div>
+                        <div style="background: white; padding: 10px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                            <div style="font-size: 0.9em; color: #7f8c8d; margin-bottom: 5px;">Odd/Even Ratio</div>
+                            <div style="font-size: 1.5em; font-weight: bold; color: #2c3e50;">
+                                ${oddCount}/${evenCount} (${(oddCount/allNumbers.length*100).toFixed(1)}% odd)
+                            </div>
+                        </div>
+                        <div style="background: white; padding: 10px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                            <div style="font-size: 0.9em; color: #7f8c8d; margin-bottom: 5px;">Average Number</div>
+                            <div style="font-size: 1.5em; font-weight: bold; color: #2c3e50;">${avg.toFixed(1)}</div>
+                        </div>
+                        <div style="background: white; padding: 10px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                            <div style="font-size: 0.9em; color: #7f8c8d; margin-bottom: 5px;">Total Sum</div>
+                            <div style="font-size: 1.5em; font-weight: bold; color: #2c3e50;">${sum}</div>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-top: 20px;">
+                        <h4 style="margin-bottom: 10px; color: #2c3e50;">Top 10 Most Frequent Numbers</h4>
+                        <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+                            ${sortedNumbers.map(([num, count]) => `
+                                <div style="background: #e74c3c; color: white; padding: 5px 10px; border-radius: 4px; display: flex; align-items: center;">
+                                    <span style="font-weight: bold; margin-right: 5px;">${num}</span>
+                                    <span style="font-size: 0.8em; opacity: 0.9;">${count}×</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Generate random combinations using numbers from this month
+            generateRandomCombinations(uniqueNumbers, monthKey);
+        }
+        
+        // Function to check if and when a combination has appeared before
+        function getCombinationHistory(combo, allDraws) {
+            // Convert combo to a sorted array of numbers for consistent comparison
+            const comboNumbers = [...new Set(combo)].map(n => parseInt(n, 10)).sort((a, b) => a - b);
+            const history = [];
+            
+            allDraws.forEach(draw => {
+                if (!draw.mainArr || draw.mainArr.length !== 5) return;
+                
+                // Convert draw numbers to sorted array of numbers
+                const drawNumbers = draw.mainArr.map(n => parseInt(n, 10)).sort((a, b) => a - b);
+                
+                // Check if the sorted arrays match exactly
+                const isMatch = comboNumbers.length === drawNumbers.length &&
+                              comboNumbers.every((num, index) => num === drawNumbers[index]);
+                
+                if (isMatch) {
+                    history.push({
+                        date: draw.date,
+                        numbers: [...drawNumbers],
+                        fullDraw: draw.mainArr.join('-') + (draw.powerball ? ' PB:' + draw.powerball : '')
+                    });
+                }
+            });
+            
+            return {
+                appeared: history.length > 0,
+                count: history.length,
+                history: history
+            };
+        }
+
+        // Function to generate random combinations
+        function generateRandomCombinations(numbers, monthKey) {
+            const container = document.getElementById('trio2-cards-container');
+            if (!container) return;
+            
+            // Get all historical draws for checking
+            const allDraws = window.allDraws || window.filteredDrawRows || [];
+            
+            // Generate 10 random combinations
+            let html = '<h3 style="margin: 20px 0 10px 0; color: #2c3e50;">Random Combinations for Selected Month</h3>';
+            html += '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 15px;">';
+            
+            for (let i = 0; i < 10; i++) {
+                // Ensure we have enough unique numbers to generate a combination
+                if (numbers.length < 5) {
+                    console.warn('Not enough unique numbers to generate combinations');
+                    continue;
                 }
                 
-                const combo = [...trio, ...random2].sort((a, b) => a - b);
+                // Create a copy of the numbers array and shuffle it
+                const shuffled = [...numbers].sort(() => 0.5 - Math.random());
                 
-                cardsHtml += `
-                    <div style="background:#f8faff;border-radius:13px;box-shadow:0 2px 12px rgb(44 62 80 / 10%);padding:22px 18px 18px 18px;display:flex;flex-direction:column;align-items:center;">
-                        <div style="font-size:1.15em;font-weight:600;color:#234;letter-spacing:0.5px;margin-bottom:6px;">
-                            Trio: <span style='color:#e67e22;'>${trio.join('-')}</span>
+                // Pick first 5 unique numbers
+                const combo = [];
+                const usedNumbers = new Set();
+                
+                for (const num of shuffled) {
+                    if (!usedNumbers.has(num)) {
+                        combo.push(num);
+                        usedNumbers.add(num);
+                        if (combo.length === 5) break;
+                    }
+                }
+                
+                // Sort the combination
+                combo.sort((a, b) => a - b);
+                const comboSet = new Set(combo);
+                
+                // Check if this combination has appeared before
+                const comboHistory = getCombinationHistory(combo, allDraws);
+                
+                // Format history for display
+                let historyText = '';
+                if (comboHistory.appeared) {
+                    const history = comboHistory.history[0];
+                    if (comboHistory.count === 1) {
+                        historyText = `Appeared once on ${history.date}`;
+                        if (history.fullDraw) {
+                            historyText += ` (${history.fullDraw})`;
+                        }
+                    } else {
+                        const dates = comboHistory.history.map(h => 
+                            `${h.date} (${h.fullDraw || 'no PB data'})`
+                        ).join('; ');
+                        historyText = `Appeared ${comboHistory.count} times: ${dates}`;
+                    }
+                }
+                
+                // Calculate stats for this combination
+                const sum = combo.reduce((a, b) => a + b, 0);
+                const highCount = combo.filter(n => n >= 35).length;
+                const lowCount = 5 - highCount;
+                const oddCount = combo.filter(n => n % 2 !== 0).length;
+                const evenCount = 5 - oddCount;
+                
+                html += `
+                    <div style="background: white; border-radius: 8px; padding: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                            <div style="font-size: 1.2em; font-weight: bold; color: #2c3e50;">
+                                ${combo.join('-')}
+                            </div>
+                            <div style="font-size: 0.9em; color: #7f8c8d;">
+                                Sum: <strong>${sum}</strong>
+                            </div>
                         </div>
-                        <div style="margin-bottom:8px;font-size:1.08em;color:#555;">
-                            Date: <span style='color:#3498db;'>${date}</span>
+                        <div style="display: flex; justify-content: space-between; font-size: 0.85em; color: #555;">
+                            <div>High/Low: <strong>${highCount}/${lowCount}</strong></div>
+                            <div>Odd/Even: <strong>${oddCount}/${evenCount}</strong></div>
                         </div>
-                        <div style="margin-bottom:8px;font-size:0.9em;color:#888;text-align:center;font-style:italic;">
-                            ${source}
-                        </div>
-                        <div style="margin:10px 0 0 0;font-size:1.18em;font-weight:700;letter-spacing:1.2px;background:#27ae60;color:#fff;padding:8px 18px;border-radius:7px;">
-                            ${combo.join('-')}
+                        <div style="font-size: 0.9em; padding: 8px; border-radius: 4px; 
+                            background-color: ${comboHistory.appeared ? '#f8f3d4' : '#d4edda'}; 
+                            color: ${comboHistory.appeared ? '#856404' : '#155724'}; 
+                            margin-top: 8px; border-left: 3px solid ${comboHistory.appeared ? '#ffc107' : '#28a745'};">
+                            ${comboHistory.appeared ? 
+                                `⚠️ ${historyText}` : 
+                                '✅ New combination (never appeared before)'}
+                            ${comboHistory.appeared ? 
+                                `<div style="margin-top: 5px; font-size: 0.85em;">
+                                    <strong>Numbers:</strong> ${comboHistory.history[0].numbers.join('-')}
+                                </div>` : ''}
                         </div>
                     </div>
                 `;
-            });
+            }
             
-            cardsHtml += `</div>`;
-            document.getElementById('trio2-cards-container').innerHTML = cardsHtml;
+            html += '</div>';
+            container.innerHTML = html;
         }
-
-        // Initial output
-        generateTrio2Outputs();
         
-        // Button handler
-        setTimeout(() => {
-            const btn = document.getElementById('trio2-generate-btn');
-            if (btn) btn.onclick = generateTrio2Outputs;
-        }, 0);
+        // Initial analysis with the most recent month
+        if (months.length > 0) {
+            analyzeMonth(months[0]);
+        }
+        
+        // Add event listeners
+        const analyzeBtn = document.getElementById('analyze-btn');
+        if (analyzeBtn) {
+            analyzeBtn.addEventListener('click', () => {
+                const monthSelect = document.getElementById('month-select');
+                if (monthSelect) {
+                    analyzeMonth(monthSelect.value);
+                }
+            });
+        }
+        
+        // Add regenerate button handler
+        const regenerateBtn = document.createElement('button');
+        regenerateBtn.textContent = 'Generate New Combinations';
+        regenerateBtn.style.margin = '15px 0';
+        regenerateBtn.style.padding = '8px 16px';
+        regenerateBtn.style.background = '#27ae60';
+        regenerateBtn.style.color = 'white';
+        regenerateBtn.style.border = 'none';
+        regenerateBtn.style.borderRadius = '4px';
+        regenerateBtn.style.cursor = 'pointer';
+        regenerateBtn.onclick = () => {
+            const monthSelect = document.getElementById('month-select');
+            const monthKey = monthSelect.value;
+            const monthlyDraws = drawsByMonth[monthKey] || [];
+            const allNumbers = [];
+            monthlyDraws.forEach(draw => {
+                allNumbers.push(...draw.mainArr.map(n => parseInt(n, 10)));
+            });
+            const uniqueNumbers = [...new Set(allNumbers)];
+            
+            // Show loading state
+            const container = document.getElementById('trio2-cards-container');
+            if (container) {
+                container.innerHTML = '<div style="text-align: center; padding: 20px;">Generating new combinations...</div>';
+                // Small delay to allow UI to update before heavy computation
+                setTimeout(() => {
+                    generateRandomCombinations(uniqueNumbers, monthKey);
+                }, 50);
+            } else {
+                generateRandomCombinations(uniqueNumbers, monthKey);
+            }
+        };
+        
+        const monthlyStats = document.getElementById('monthly-stats');
+        if (monthlyStats) {
+            monthlyStats.after(regenerateBtn);
+        }
     }
 
     // Add a function to initialize the Trio 2 tab after data is loaded
