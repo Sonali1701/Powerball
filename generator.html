@@ -902,9 +902,10 @@
         }
     }
     
-    // Track used trios for round-robin
+    // Track used trios for round-robin and prevent duplicates
     let usedTrioIndices = new Set();
     let lastUsedTrioIndex = -1;
+    let usedTrioCombinations = new Set(); // Track full trio combinations that have been used
     
     function generateFromOverlappingTrios() {
         // Generate a simple combination if no trios are available
@@ -1055,13 +1056,37 @@
             }
             
             // Fallback: If no good matches found, use any two trios with one common number
-            for (let i = 0; i < Math.min(validTrios.length, 20); i++) {
+            // First, try to find a combination we haven't used before
+            const maxTries = Math.min(validTrios.length, 20);
+            const triedIndices = new Set();
+            
+            for (let attempt = 0; attempt < maxTries; attempt++) {
+                // Find a random trio we haven't tried yet for this attempt
+                let i;
+                do {
+                    i = Math.floor(Math.random() * validTrios.length);
+                } while (triedIndices.has(i) && triedIndices.size < maxTries);
+                
+                if (triedIndices.has(i)) continue;
+                triedIndices.add(i);
+                
                 const nums1 = validTrios[i][0].split('-').map(Number);
+                const trio1Key = nums1.sort((a, b) => a - b).join('-');
                 
                 for (let j = 0; j < Math.min(validTrios.length, 20); j++) {
                     if (i === j) continue;
                     
                     const nums2 = validTrios[j][0].split('-').map(Number);
+                    const trio2Key = nums2.sort((a, b) => a - b).join('-');
+                    
+                    // Create a unique key for this trio pair
+                    const comboKey = [trio1Key, trio2Key].sort().join('|');
+                    
+                    // Skip if we've already used this combination
+                    if (usedTrioCombinations.has(comboKey)) {
+                        continue;
+                    }
+                    
                     const common = nums1.filter(num => nums2.includes(num));
                     
                     if (common.length > 0) {
@@ -1071,17 +1096,22 @@
                         // If we don't have enough numbers, fill with random ones
                         while (combined.length < 5) {
                             const num = Math.floor(Math.random() * 69) + 1;
-                            if (!combined.includes(num)) combined.push(num);
+                            if (!combined.includes(num)) {
+                                combined.push(num);
+                            }
                         }
                         
-                        // Mark trios as used
+                        // Mark this trio combination as used
+                        usedTrioCombinations.add(comboKey);
+                        
+                        // Mark the trios as used for round-robin
                         usedTrioIndices.add(i);
                         usedTrioIndices.add(j);
                         lastUsedTrioIndex = j;
                         
                         return {
                             combination: combined.sort((a, b) => a - b),
-                            basedOnTrio: `Combined ${validTrios[i][0]} & ${validTrios[j][0]}`,
+                            basedOnTrio: `Combined ${validTrios[i][0]} (${validTrios[i][1]}x) & ${validTrios[j][0]} (${validTrios[j][1]}x)`,
                             isOverlap: true
                         };
                     }
@@ -1850,17 +1880,26 @@ function generatePatternedTrioCombinations() {
         { name: 'trio(3x)-duo(5x)', type: 'trio-duo', trioOccurrences: 3, duoOccurrences: 5 }
     ];
     
-    // Track used trios for each occurrence pattern
+    // Track used trios for round-robin and globally
     if (!window.usedTrioPatterns) {
         window.usedTrioPatterns = new Map();
+        window.allUsedTrios = new Set(); // Track all used trios across all patterns
+        window.usedTrioCombinations = new Set(); // Track all used trio combinations
         occurrencePatterns.forEach(pattern => {
             window.usedTrioPatterns.set(pattern.name, new Set());
         });
     }
     
-    // Track current pattern index for round-robin
-    if (window.currentPatternIndex === undefined) {
+    // Reset used trios tracking if we're starting a new generation
+    if (window.currentPatternIndex === undefined || window.currentPatternIndex >= occurrencePatterns.length) {
         window.currentPatternIndex = 0;
+        window.allUsedTrios.clear();
+        window.usedTrioCombinations.clear();
+        // Also clear all pattern-specific used trios
+        for (const pattern of occurrencePatterns) {
+            const usedTrios = window.usedTrioPatterns.get(pattern.name);
+            if (usedTrios) usedTrios.clear();
+        }
     }
     
     // Track how many times we've generated high number combinations
@@ -1891,7 +1930,11 @@ function generatePatternedTrioCombinations() {
             const t1Key = t1.join(',');
             const t1Info = getTrioOccurrenceInfo(t1);
             
-            // Skip if trio1 doesn't match the pattern requirements
+            // Skip if trio1 has been used before or doesn't match the pattern requirements
+            if (window.allUsedTrios.has(t1Key)) {
+                continue; // Skip if this trio has been used before
+            }
+            
             if (pattern.type === 'trio-trio' && (t1Info.count < pattern.minOccurrences || t1Info.count === 0)) {
                 continue;
             } else if (pattern.type === 'trio-duo' && (t1Info.count !== pattern.trioOccurrences || t1Info.duoCount === 0)) {
@@ -1907,8 +1950,8 @@ function generatePatternedTrioCombinations() {
                 const t2Key = t2.join(',');
                 const t2Info = getTrioOccurrenceInfo(t2);
                 
-                // Skip if the trios are the same
-                if (t1Key === t2Key) continue;
+                // Skip if the trios are the same or if t2 has been used before
+                if (t1Key === t2Key || window.allUsedTrios.has(t2Key)) continue;
                 
                 // Check pattern-specific requirements
                 if (pattern.type === 'trio-trio') {
@@ -1993,97 +2036,94 @@ function generatePatternedTrioCombinations() {
             ? [trio1Info, trio2Info] 
             : [trio2Info, trio1Info];
         
-        // Always start with the higher occurrence trio as the base combination
-        let combination = [...higherTrio];
+        // Combine both trios and create a pool of all available numbers
+        const allNumbers = [...new Set([...trio1, ...trio2])];
+        let combination = [];
         
-        // Add numbers from the lower occurrence trio that aren't already in the combination
-        const numbersToAdd = [];
-        for (const num of lowerTrio) {
-            if (!combination.includes(num)) {
-                numbersToAdd.push(num);
+        // Randomly select numbers from the combined pool, with a bias towards higher numbers
+        const pool = [...allNumbers];
+        while (combination.length < 5 && pool.length > 0) {
+            // Use a weighted random selection that favors higher numbers
+            const weights = pool.map(n => {
+                // Give higher numbers (40-69) more weight
+                if (n >= 40) return 3; // Higher weight for high numbers
+                return 1; // Standard weight for low numbers
+            });
+            
+            // Calculate total weight
+            const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
+            let random = Math.random() * totalWeight;
+            let selectedIndex = 0;
+            
+            // Find the selected index based on weights
+            for (let i = 0; i < weights.length; i++) {
+                random -= weights[i];
+                if (random <= 0) {
+                    selectedIndex = i;
+                    break;
+                }
             }
+            
+            // Add the selected number to the combination
+            combination.push(pool[selectedIndex]);
+            
+            // Remove the selected number from the pool to avoid duplicates
+            pool.splice(selectedIndex, 1);
         }
         
-        // Add as many unique numbers from the lower trio as possible (up to 2)
-        combination.push(...numbersToAdd.slice(0, 2));
+        // Ensure we have at least one high number (40-69) and one low number (1-39)
+        const hasHighNumber = combination.some(n => n >= 40);
+        const hasLowNumber = combination.some(n => n <= 39);
         
-        // If we still don't have 5 numbers, fill with random numbers from the lower trio
-        if (combination.length < 5) {
-            const availableNumbers = lowerTrio.filter(n => !combination.includes(n));
-            combination.push(...availableNumbers.slice(0, 5 - combination.length));
-        }
-        
-        // Ensure we have a good mix of low and high numbers
-        const lowNumbers = combination.filter(n => n <= 39);
-        const highNumbers = combination.filter(n => n >= 40);
-        
-        // If we don't have both low and high numbers, try to adjust
-        if (lowNumbers.length === 0 || highNumbers.length === 0) {
-            // Find numbers from the lower trio that can help balance the combination
-            const allAvailable = [...new Set([...higherTrio, ...lowerTrio])];
-            const neededType = lowNumbers.length === 0 ? n => n <= 39 : n => n >= 40;
-            const candidates = allAvailable.filter(neededType).filter(n => !combination.includes(n));
+        if (!hasHighNumber || !hasLowNumber) {
+            // Create a pool of all available numbers from both trios
+            const allAvailable = [...new Set([...trio1, ...trio2])];
+            
+            // Try to find a number of the missing type
+            const neededType = !hasHighNumber 
+                ? n => n >= 40  // Need a high number
+                : n => n <= 39; // Need a low number
+                
+            const candidates = allAvailable.filter(neededType);
             
             if (candidates.length > 0) {
-                // Remove a number of the overrepresented type and add one of the needed type
-                const toRemove = combination.findIndex(n => !neededType(n));
-                if (toRemove !== -1) {
-                    combination[toRemove] = candidates[0];
-                }
+                // Replace a random number in the combination with one of the needed type
+                const replaceIndex = Math.floor(Math.random() * combination.length);
+                const randomCandidate = candidates[Math.floor(Math.random() * candidates.length)];
+                combination[replaceIndex] = randomCandidate;
             }
         }
         
-        // If we still need more numbers (in case of overlapping trios), fill with remaining numbers
-        // while ensuring we maintain at least one low and one high number
+        // If we still need more numbers, fill with random numbers
         if (combination.length < 5) {
-            const allNumbers = new Set([...trio1, ...trio2]);
-            let remainingNumbers = Array.from(allNumbers).filter(n => !combination.includes(n));
+            const allAvailable = [...new Set([...trio1, ...trio2])];
+            const remainingNumbers = allAvailable.filter(n => !combination.includes(n));
             
-            // Check if we have both low and high numbers in the current combination
-            const hasLow = combination.some(n => n <= 39);
-            const hasHigh = combination.some(n => n >= 40);
-            
-            // If we're missing either low or high numbers, prioritize adding them
-            if (!hasLow) {
-                const lowRemaining = remainingNumbers.filter(n => n <= 39);
-                if (lowRemaining.length > 0) {
-                    combination.push(lowRemaining[0]);
-                    remainingNumbers = remainingNumbers.filter(n => n !== lowRemaining[0]);
-                }
+            // Add remaining numbers from the trios first
+            const spotsToFill = 5 - combination.length;
+            if (remainingNumbers.length > 0) {
+                // Add up to the number of spots we need to fill
+                const toAdd = Math.min(spotsToFill, remainingNumbers.length);
+                combination.push(...remainingNumbers.slice(0, toAdd));
             }
             
-            if (!hasHigh) {
-                const highRemaining = remainingNumbers.filter(n => n >= 40);
-                if (highRemaining.length > 0) {
-                    combination.push(highRemaining[0]);
-                    remainingNumbers = remainingNumbers.filter(n => n !== highRemaining[0]);
+            // If we still need more numbers, generate random ones with a bias towards high numbers
+            while (combination.length < 5) {
+                // 70% chance to generate a high number (40-69)
+                const generateHigh = Math.random() < 0.7;
+                let randomNum;
+                
+                if (generateHigh) {
+                    // Generate high number (40-69)
+                    randomNum = Math.floor(Math.random() * 30) + 40;
+                } else {
+                    // Generate low number (1-39)
+                    randomNum = Math.floor(Math.random() * 39) + 1;
                 }
-            }
-            
-            // Fill any remaining spots with any available numbers
-            const remainingSpots = 5 - combination.length;
-            if (remainingSpots > 0 && remainingNumbers.length > 0) {
-                combination.push(...remainingNumbers.slice(0, remainingSpots));
-            }
-            
-            // Final check to ensure we have at least one low and one high number
-            const finalLowCount = combination.filter(n => n <= 39).length;
-            const finalHighCount = combination.filter(n => n >= 40).length;
-            
-            if (finalLowCount === 0 || finalHighCount === 0) {
-                // If we still don't have both, replace one number to ensure we do
-                const allAvailable = [...trio1, ...trio2];
-                if (finalLowCount === 0) {
-                    const lowNumber = allAvailable.find(n => n <= 39);
-                    if (lowNumber !== undefined) {
-                        combination[0] = lowNumber; // Replace first number with a low number
-                    }
-                }
-                if (finalHighCount === 0) {
-                    const highNumber = allAvailable.find(n => n >= 40);
-                    if (highNumber !== undefined) {
-                        combination[1] = highNumber; // Replace second number with a high number
-                    }
+                
+                // Add if not already in combination
+                if (!combination.includes(randomNum)) {
+                    combination.push(randomNum);
                 }
             }
         }
