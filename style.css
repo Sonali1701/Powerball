@@ -1604,35 +1604,37 @@ body {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 38px;
-    height: 38px;
+    width: 40px;
+    height: 40px;
     border-radius: 50%;
-    background: #f0f0f0;
+    background: #f8f9fa;
     color: #333;
     font-weight: bold;
     cursor: pointer;
     margin: 2px;
     transition: all 0.2s ease;
-    border: 2px solid #ddd;
-    font-size: 1em;
+    border: 2px solid #dee2e6;
+    font-size: 16px;
 }
 
 #tab-ending-digits .ball:hover {
-    transform: scale(1.1);
-    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    transform: scale(1.05);
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.4);
 }
 
 #tab-ending-digits .ball.selected {
-    background: #3498db;
-    color: white;
-    border-color: #2980b9;
+    background: #3498db !important;
+    color: white !important;
+    border-color: #2980b9 !important;
+    transform: scale(0.95);
+    box-shadow: 0 2px 6px rgba(52, 152, 219, 0.3);
 }
 
 #ending-digits-ball-panel {
     display: flex;
     flex-wrap: wrap;
-    gap: 5px;
-    margin: 10px 0;
+    gap: 10px;
+    padding: 10px;
     justify-content: center;
 }
 
@@ -1652,13 +1654,39 @@ body {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 30px;
-    height: 30px;
+    width: 32px;
+    height: 32px;
     border-radius: 50%;
     background: #3498db;
     color: white;
     font-weight: bold;
-    font-size: 0.9em;
+    font-size: 16px;
+    position: relative;
+    margin: 3px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.digit-count {
+    position: absolute;
+    bottom: -5px;
+    right: -5px;
+    background: #e74c3c;
+    color: white;
+    border-radius: 10px;
+    font-size: 10px;
+    min-width: 16px;
+    height: 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 3px;
+    font-weight: bold;
+}
+
+.selected-digit-container {
+    display: inline-block;
+    position: relative;
+    margin: 5px;
 }
 
 .ending-digits-result-item {

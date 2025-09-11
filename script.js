@@ -1459,7 +1459,9 @@ document.addEventListener('DOMContentLoaded', async function() {
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
                         <div style="background: white; padding: 10px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
                             <div style="font-size: 0.9em; color: #7f8c8d; margin-bottom: 5px;">Total Draws</div>
-                            <div style="font-size: 1.5em; font-weight: bold; color: #2c3e50;">${monthlyDraws.length}</div>
+                            <div style="font-size: 1.5em; font-weight: bold; color: #2c3e50;">
+                                ${monthlyDraws.length * 2} (${monthlyDraws.length} × 2 for Powerball & Double Play)
+                            </div>
                         </div>
                         <div style="background: white; padding: 10px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
                             <div style="font-size: 0.9em; color: #7f8c8d; margin-bottom: 5px;">Unique Numbers</div>
@@ -1509,7 +1511,8 @@ document.addEventListener('DOMContentLoaded', async function() {
         function getCombinationHistory(combo, allDraws) {
             // Convert combo to a sorted array of numbers for consistent comparison
             const comboNumbers = [...new Set(combo)].map(n => parseInt(n, 10)).sort((a, b) => a - b);
-            const history = [];
+            const powerballHistory = [];
+            const doublePlayHistory = [];
             
             allDraws.forEach(draw => {
                 if (!draw.mainArr || draw.mainArr.length !== 5) return;
@@ -1522,18 +1525,33 @@ document.addEventListener('DOMContentLoaded', async function() {
                               comboNumbers.every((num, index) => num === drawNumbers[index]);
                 
                 if (isMatch) {
-                    history.push({
+                    const drawInfo = {
                         date: draw.date,
                         numbers: [...drawNumbers],
                         fullDraw: draw.mainArr.join('-') + (draw.powerball ? ' PB:' + draw.powerball : '')
-                    });
+                    };
+                    
+                    // Separate Powerball and Double Play draws
+                    if (draw.isDoublePlay) {
+                        doublePlayHistory.push(drawInfo);
+                    } else {
+                        powerballHistory.push(drawInfo);
+                    }
                 }
             });
             
+            const powerballCount = powerballHistory.length;
+            const doublePlayCount = doublePlayHistory.length;
+            const totalCount = powerballCount + doublePlayCount;
+            const allHistory = [...powerballHistory, ...doublePlayHistory];
+            
             return {
-                appeared: history.length > 0,
-                count: history.length,
-                history: history
+                appeared: totalCount > 0,
+                count: totalCount * 2,  // Double the count for display purposes
+                actualCount: totalCount,  // Keep the actual count for internal use
+                history: allHistory,
+                powerballCount: powerballCount,
+                doublePlayCount: doublePlayCount
             };
         }
 
@@ -1582,8 +1600,14 @@ document.addEventListener('DOMContentLoaded', async function() {
                 let historyText = '';
                 if (comboHistory.appeared) {
                     const history = comboHistory.history[0];
-                    if (comboHistory.count === 1) {
-                        historyText = `Appeared once on ${history.date}`;
+                    const powerballText = comboHistory.powerballCount > 0 ? 
+                        `${comboHistory.powerballCount * 2} Powerball` : '';
+                    const doublePlayText = comboHistory.doublePlayCount > 0 ? 
+                        `${comboHistory.doublePlayCount * 2} Double Play` : '';
+                    const countText = [powerballText, doublePlayText].filter(Boolean).join(' and ');
+                    
+                    if (comboHistory.actualCount === 1) {
+                        historyText = `Appeared once (${countText}) on ${history.date}`;
                         if (history.fullDraw) {
                             historyText += ` (${history.fullDraw})`;
                         }
@@ -1591,7 +1615,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                         const dates = comboHistory.history.map(h => 
                             `${h.date} (${h.fullDraw || 'no PB data'})`
                         ).join('; ');
-                        historyText = `Appeared ${comboHistory.count} times: ${dates}`;
+                        historyText = `Appeared ${countText} times (${comboHistory.count} total): ${dates}`;
                     }
                 }
                 
@@ -5240,9 +5264,14 @@ let selectedEndingDigits = [];
 
 // Render the ball panel for the Ending Digits tab
 function renderEndingDigitsBallPanel() {
+    console.log('Rendering ending digits ball panel...');
     const ballPanel = document.getElementById('ending-digits-ball-panel');
-    if (!ballPanel) return;
+    if (!ballPanel) {
+        console.error('Could not find ending-digits-ball-panel element');
+        return;
+    }
     
+    // Clear existing balls
     ballPanel.innerHTML = '';
     
     // Create balls for digits 0-9
@@ -5251,7 +5280,20 @@ function renderEndingDigitsBallPanel() {
         ball.className = 'ball';
         ball.textContent = i;
         ball.dataset.digit = i;
-        ball.addEventListener('click', () => toggleEndingDigitSelection(i, ball));
+        
+        // Check if this digit is already selected and set the initial state
+        if (selectedEndingDigits.includes(i)) {
+            ball.classList.add('selected');
+        }
+        
+        console.log(`Creating ball for digit ${i}`, { isSelected: ball.classList.contains('selected') });
+        
+        ball.addEventListener('click', function(e) {
+            const clickedDigit = parseInt(this.dataset.digit, 10);
+            console.log('Ball clicked:', clickedDigit, e);
+            toggleEndingDigitSelection(clickedDigit, ball);
+        });
+        
         ballPanel.appendChild(ball);
     }
     
@@ -5270,27 +5312,38 @@ function renderEndingDigitsBallPanel() {
             if (e.key === 'Enter') searchEndingDigits();
         });
     }
-    
-    updateEndingDigitsSelectedDisplay();
 }
-
-// Toggle selection of an ending digit
-function toggleEndingDigitSelection(digit, element) {
-    const index = selectedEndingDigits.indexOf(digit);
     
+function toggleEndingDigitSelection(digit, element) {
+    console.log('toggleEndingDigitSelection called with:', {digit, element});
+    
+    // Create a copy of the current selection to avoid reference issues
+    const newSelectedDigits = [...selectedEndingDigits];
+    const index = newSelectedDigits.indexOf(digit);
+    
+    // Toggle the digit in the array
     if (index === -1) {
-        selectedEndingDigits.push(digit);
-        element.classList.add('selected');
+        // Add the digit if not already selected
+        newSelectedDigits.push(digit);
+        console.log('Selection state toggled: selected');
     } else {
-        selectedEndingDigits.splice(index, 1);
-        element.classList.remove('selected');
+        // Remove the digit if already selected
+        newSelectedDigits.splice(index, 1);
+        console.log('Selection state toggled: unselected');
     }
     
+    // Update the global array
+    selectedEndingDigits = newSelectedDigits;
+    console.log('Updated selectedEndingDigits:', selectedEndingDigits);
+    
+    // Update the display of selected digits
     updateEndingDigitsSelectedDisplay();
     
+    // Trigger results update if we have selections
     if (selectedEndingDigits.length > 0) {
         renderEndingDigitsResults();
     } else {
+        // Clear results if no digits are selected
         const resultsDiv = document.getElementById('ending-digits-results');
         if (resultsDiv) {
             resultsDiv.innerHTML = `
@@ -5323,17 +5376,42 @@ function clearEndingDigitsSelection() {
 // Update the selected digits display
 function updateEndingDigitsSelectedDisplay() {
     const selectedDiv = document.getElementById('ending-digits-selected');
-    if (!selectedDiv) return;
+    if (!selectedDiv) {
+        console.error('Could not find ending-digits-selected element');
+        return;
+    }
+    
+    console.log('Updating selected digits display. Current selection:', selectedEndingDigits);
     
     if (selectedEndingDigits.length === 0) {
         selectedDiv.innerHTML = '<span style="color: #777; font-style: italic;">No digits selected</span>';
         return;
     }
     
-    selectedDiv.innerHTML = selectedEndingDigits
-        .sort((a, b) => a - b)
-        .map(digit => `<span class="ending-digit-badge">${digit}</span>`)
+    // Group digits by value and count occurrences
+    const digitCounts = {};
+    selectedEndingDigits.forEach(digit => {
+        digitCounts[digit] = (digitCounts[digit] || 0) + 1;
+    });
+    
+    // Create badge elements with count if more than one
+    selectedDiv.innerHTML = Object.entries(digitCounts)
+        .sort(([a], [b]) => a - b)
+        .map(([digit, count]) => {
+            const countBadge = count > 1 ? `<span class="digit-count">×${count}</span>` : '';
+            return `
+                <div class="selected-digit-container">
+                    <span class="ending-digit-badge">${digit}${countBadge}</span>
+                </div>`;
+        })
         .join('');
+    
+    // Update the visual state of the balls to match the selection
+    document.querySelectorAll('#ending-digits-ball-panel .ball').forEach(ball => {
+        const digit = parseInt(ball.dataset.digit, 10);
+        const isSelected = selectedEndingDigits.includes(digit);
+        ball.classList.toggle('selected', isSelected);
+    });
 }
 
 // Search for specific digit combinations
@@ -5341,8 +5419,15 @@ function searchEndingDigits() {
     const searchInput = document.getElementById('ending-digits-search');
     if (!searchInput) return;
     
-    // Clear current selection
-    clearEndingDigitsSelection();
+    // Only clear if there's search input
+    if (searchInput.value.trim() !== '') {
+        // Clear current selection if we're doing a search
+        clearEndingDigitsSelection();
+    } else {
+        // If search is empty, just update the display with current selection
+        updateEndingDigitsSelectedDisplay();
+        return;
+    }
     
     // Parse search input (e.g., "1 3 5" -> [1, 3, 5])
     const searchDigits = searchInput.value
@@ -5391,6 +5476,15 @@ function renderEndingDigitsResults() {
         return;
     }
     
+    // Check if we have any digits selected
+    if (selectedEndingDigits.length === 0) {
+        resultsDiv.innerHTML = `
+            <div style="text-align: center; color: #666; padding: 20px;">
+                <p>Select ending digits (0-9) to see matching number combinations and their frequencies.</p>
+            </div>`;
+        return;
+    }
+    
     if (window.filteredDrawRows.length === 0) {
         resultsDiv.innerHTML = `
             <div style="color:#666; margin:18px 0; padding: 15px; text-align: center;">
@@ -5417,6 +5511,9 @@ function renderEndingDigitsResults() {
     let processed = 0;
     const digitPatterns = new Map();
     
+    // Convert selected digits to numbers for comparison
+    const selectedDigits = selectedEndingDigits.map(Number);
+    
     function processChunk(startIndex) {
         const endIndex = Math.min(startIndex + CHUNK_SIZE, totalDraws);
         
@@ -5429,15 +5526,31 @@ function renderEndingDigitsResults() {
                 continue;
             }
             
-            // Get last digits using bitwise OR for faster modulo on integers
+            // Get last digits of the current draw
             const lastDigits = [];
             for (let j = 0; j < 5; j++) {
-                lastDigits[j] = draw.mainArr[j] % 10;
+                lastDigits.push(draw.mainArr[j] % 10);
             }
             lastDigits.sort((a, b) => a - b);
             
-            // Use a simple string as the key for the pattern
-            const patternKey = lastDigits.join(',');
+            // Check if any of the selected digits are in this draw's last digits
+            const hasSelectedDigit = selectedDigits.some(digit => 
+                lastDigits.includes(digit)
+            );
+            
+            // Skip this draw if it doesn't contain any of the selected digits
+            if (!hasSelectedDigit) {
+                continue; // Continue to next draw
+            }
+            
+            // Create a pattern key that only includes the selected digits that appear in this draw
+            const patternDigits = lastDigits.filter(digit => 
+                selectedDigits.includes(digit)
+            );
+            
+            if (patternDigits.length === 0) continue; // Skip if no matching digits (shouldn't happen due to hasSelectedDigit check)
+            
+            const patternKey = patternDigits.join(',');
             
             // Update pattern data
             let pattern = digitPatterns.get(patternKey);
@@ -5491,183 +5604,77 @@ function renderEndingDigitsResults() {
             progressDiv.textContent = `Processing... ${percent}% (${processed} of ${totalDraws} draws)`;
         }
         
-        // Process next chunk or finish
+        // Process the next chunk or finish
         if (processed < totalDraws) {
-            // Use requestAnimationFrame for smoother UI updates
-            requestAnimationFrame(() => processChunk(processed));
+            // Use setTimeout to allow the UI to update between chunks
+            setTimeout(() => processChunk(processed), 0);
         } else {
-            // Processing complete, render results
-            renderResults(digitPatterns);
+            // Processing complete, display results
+            displayResults();
         }
+    }
+    
+    function displayResults() {
+        // Convert the patterns map to an array and sort by frequency (descending)
+        const patternsArray = Array.from(digitPatterns.entries())
+            .map(([key, value]) => ({
+                pattern: key,
+                digits: value.digits,
+                count: value.count,
+                dates: value.dates
+            }))
+            .sort((a, b) => b.count - a.count);
+        
+        if (patternsArray.length === 0) {
+            resultsDiv.innerHTML = `
+                <div style="color:#666; margin:18px 0; padding: 15px; text-align: center;">
+                    <p>No matching patterns found for the selected digits.</p>
+                </div>`;
+            return;
+        }
+        
+        // Generate HTML for each pattern
+        const patternsHtml = patternsArray.map((pattern, index) => {
+            const lastDraw = pattern.dates.length > 0 ? pattern.dates[0] : null;
+            const lastDrawHtml = lastDraw 
+                ? `Last seen: ${lastDraw.date} (${lastDraw.numbers.join(', ')} - ${lastDraw.powerball})`
+                : 'No recent draws found';
+                
+            return `
+                <div class="pattern-result" style="margin-bottom: 20px; padding: 15px; background: #f9f9f9; border-radius: 6px; border-left: 4px solid #3498db;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <h3 style="margin: 0; color: #2c3e50;">
+                            Pattern: ${pattern.pattern.split(',').map(d => 
+                                `<span class="digit-badge" style="display: inline-block; width: 24px; height: 24px; line-height: 24px; text-align: center; background: #3498db; color: white; border-radius: 50%; margin-right: 5px;">${d}</span>`
+                            ).join('')}
+                        </h3>
+                        <span style="background: #e74c3c; color: white; padding: 2px 8px; border-radius: 10px; font-size: 0.9em;">
+                            ${pattern.count} ${pattern.count === 1 ? 'time' : 'times'}
+                        </span>
+                    </div>
+                    <div style="color: #7f8c8d; font-size: 0.9em;">
+                        ${lastDrawHtml}
+                    </div>
+                </div>`;
+        }).join('');
+        
+        // Update the results container
+        resultsDiv.innerHTML = `
+            <div style="margin-bottom: 20px;">
+                <h2 style="color: #2c3e50; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-bottom: 15px;">
+                    Results for digits: ${selectedDigits.join(', ')}
+                </h2>
+                <div style="color: #7f8c8d; margin-bottom: 20px;">
+                    Found ${patternsArray.length} unique pattern(s) across ${totalDraws} draws
+                </div>
+                <div id="patterns-container">
+                    ${patternsHtml}
+                </div>
+            </div>`;
     }
     
     // Start processing
     processChunk(0);
-    
-    function renderResults(patterns) {
-        try {
-            // Remove progress indicator
-            const progressDiv = document.getElementById('ending-digits-progress');
-            if (progressDiv) {
-                progressDiv.remove();
-            }
-            
-            // Convert selected digits to a Set for faster lookups
-            const selectedSet = new Set(selectedEndingDigits);
-            const selectedCount = selectedEndingDigits.length;
-            
-            // Filter patterns that include all selected digits
-            const matchingPatterns = [];
-            
-            // Use for...of instead of filter() for better performance with early exit
-            for (const [key, pattern] of patterns.entries()) {
-                // Skip patterns that can't possibly match
-                if (pattern.digits.length < selectedCount) continue;
-                
-                let hasAllDigits = true;
-                // Check if all selected digits are in this pattern
-                for (const digit of selectedEndingDigits) {
-                    if (!pattern.digits.includes(digit)) {
-                        hasAllDigits = false;
-                        break;
-                    }
-                }
-                
-                if (hasAllDigits) {
-                    matchingPatterns.push([key, pattern]);
-                }
-            }
-            
-            // Sort by frequency (highest first)
-            matchingPatterns.sort((a, b) => b[1].count - a[1].count);
-            
-            // Generate HTML for results
-            if (matchingPatterns.length === 0) {
-                resultsDiv.innerHTML = `
-                    <div style="text-align: center; color: #666; padding: 20px;">
-                        <p>No matching patterns found for the selected digits.</p>
-                    </div>`;
-                return;
-            }
-            
-            // Pre-sort selected digits once
-            const sortedSelected = [...selectedEndingDigits].sort((a, b) => a - b);
-            
-            // Use document fragments for better performance with large DOM updates
-            const fragment = document.createDocumentFragment();
-            
-            // Create header
-            const header = document.createElement('div');
-            header.className = 'results-header';
-            header.style.marginBottom = '20px';
-            header.style.padding = '10px';
-            header.style.background = '#f8f9fa';
-            header.style.borderRadius = '6px';
-            
-            const headerTitle = document.createElement('h3');
-            headerTitle.style.margin = '0';
-            headerTitle.style.color = '#2c3e50';
-            
-            const digitBadges = sortedSelected.map(d => 
-                `<span class="ending-digit-badge">${d}</span>`
-            ).join(' ');
-            
-            headerTitle.innerHTML = `
-                ${selectedEndingDigits.length} Digit${selectedEndingDigits.length > 1 ? 's' : ''} Selected: 
-                ${digitBadges}
-                <span style="font-size: 0.9em; color: #7f8c8d; margin-left: 10px;">
-                    (${matchingPatterns.length} pattern${matchingPatterns.length !== 1 ? 's' : ''} found)
-                </span>`;
-            
-            header.appendChild(headerTitle);
-            fragment.appendChild(header);
-            
-            // Create results container
-            const resultsContainer = document.createElement('div');
-            resultsContainer.className = 'results-container';
-            resultsContainer.style.maxHeight = '600px';
-            resultsContainer.style.overflowY = 'auto';
-            
-            // Batch DOM updates using requestAnimationFrame
-            let batchSize = 50;
-            let currentIndex = 0;
-            
-            function processBatch() {
-                const batchEnd = Math.min(currentIndex + batchSize, matchingPatterns.length);
-                const batch = document.createDocumentFragment();
-                
-                for (; currentIndex < batchEnd; currentIndex++) {
-                    const [_, data] = matchingPatterns[currentIndex];
-                    const uniqueDigits = [...new Set(data.digits)];
-                    
-                    const item = document.createElement('div');
-                    item.className = 'ending-digits-result-item';
-                    item.id = `pattern-${currentIndex}`;
-                    
-                    // Build the item HTML
-                    item.innerHTML = `
-                        <div class="ending-digits-result-header" onclick="togglePatternDetails(${currentIndex})">
-                            <div>
-                                <span class="ending-digits-combination">
-                                    ${data.digits.map(d => 
-                                        `<span class="ending-digits-number" style="${
-                                            selectedEndingDigits.includes(d) ? 'background: #3498db; color: white;' : ''
-                                        }">${d}</span>`
-                                    ).join('')}
-                                </span>
-                                <span class="ending-digits-frequency">
-                                    ${data.count} time${data.count !== 1 ? 's' : ''}
-                                </span>
-                            </div>
-                            <i class="fas fa-chevron-down" id="pattern-${currentIndex}-icon"></i>
-                        </div>
-                        <div class="ending-digits-result-content" id="pattern-${currentIndex}-content" style="display: none;">
-                            <div style="margin-bottom: 10px;">
-                                <strong>Digit Counts:</strong>
-                                ${uniqueDigits.map(digit => 
-                                    `<span style="margin: 0 10px;">
-                                        ${digit}: ${data.digits.filter(d => d === digit).length} time${data.digits.filter(d => d === digit).length !== 1 ? 's' : ''}
-                                    </span>`
-                                ).join('')}
-                            </div>
-                            <div class="ending-digits-dates">
-                                <strong>Draw Dates (${data.dates.length}):</strong>
-                                <div style="margin-top: 5px;">
-                                    ${data.dates.map(d => 
-                                        `<span class="ending-digits-date" title="${d.numbers.join(', ')} PB: ${d.powerball}">
-                                            ${d.date}
-                                        </span>`
-                                    ).join('')}
-                                </div>
-                            </div>
-                        </div>`;
-                    
-                    batch.appendChild(item);
-                }
-                
-                resultsContainer.appendChild(batch);
-                
-                // Process next batch if there are more items
-                if (currentIndex < matchingPatterns.length) {
-                    requestAnimationFrame(processBatch);
-                } else {
-                    // All items processed
-                    fragment.appendChild(resultsContainer);
-                    resultsDiv.innerHTML = '';
-                    resultsDiv.appendChild(fragment);
-                }
-            }
-            
-            // Start processing batches
-            processBatch();
-        } catch (error) {
-            console.error('Error rendering ending digits results:', error);
-            resultsDiv.innerHTML = `
-                <div style="color: #e74c3c; padding: 20px; text-align: center;">
-                    An error occurred while processing the data. Please try again.
-                </div>`;
-        }
-    }
 }
 
 // Toggle pattern details visibility
