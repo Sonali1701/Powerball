@@ -1391,9 +1391,25 @@ document.addEventListener('DOMContentLoaded', async function() {
         // Create month selector UI
         resultsDiv.innerHTML = `
             <div style="margin-bottom: 20px;">
-                <h2 style="margin:0 0 15px 0;color:#3498db;font-size:1.3em;font-weight:700;letter-spacing:1px;">
+                <h2 style="margin:0 0 10px 0;color:#3498db;font-size:1.3em;font-weight:700;letter-spacing:1px;">
                     Monthly Number Analysis
                 </h2>
+                <div style="background-color: #f8f9fa; border-left: 4px solid #3498db; padding: 12px 15px; margin: 0 0 15px 0; border-radius: 0 4px 4px 0;">
+                    <h3 style="margin: 0 0 8px 0; color: #2c3e50; font-size: 1.1em;">Monthly Number Analysis</h3>
+                    <p style="margin: 8px 0; color: #34495e; font-size: 0.9em;">
+                        This tool helps you analyze Powerball number patterns and generate potential combinations based on historical draw data. Here's what you can do:
+                    </p>
+                    <ul style="margin: 8px 0 0 0; padding-left: 20px; color: #34495e; font-size: 0.9em;">
+                        <li>Select any month to view detailed statistics</li>
+                        <li>See which numbers were drawn most frequently</li>
+                        <li>Generate 10 random combinations</li>
+                        <li>Check combinations against historical draws</li>
+                        <li>View sum, high/low, and odd/even statistics</li>
+                    </ul>
+                    <p style="margin: 8px 0 0 0; font-size: 0.85em; color: #7f8c8d; font-style: italic;">
+                        Note: Draw counts include both Powerball and Double Play. Each combination is checked against historical data.
+                    </p>
+                </div>
                 <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 15px;">
                     <label for="month-select" style="font-weight: 600;">Select Month:</label>
                     <select id="month-select" style="padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
@@ -1567,11 +1583,18 @@ document.addEventListener('DOMContentLoaded', async function() {
             let html = '<h3 style="margin: 20px 0 10px 0; color: #2c3e50;">Random Combinations for Selected Month</h3>';
             html += '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 15px;">';
             
-            for (let i = 0; i < 10; i++) {
+            // Track all generated combinations to ensure uniqueness
+            const generatedCombos = new Set();
+            const maxAttempts = 100; // Prevent infinite loops
+            let attempts = 0;
+            
+            while (generatedCombos.size < 10 && attempts < maxAttempts) {
+                attempts++;
+                
                 // Ensure we have enough unique numbers to generate a combination
                 if (numbers.length < 5) {
                     console.warn('Not enough unique numbers to generate combinations');
-                    continue;
+                    break;
                 }
                 
                 // Create a copy of the numbers array and shuffle it
@@ -1589,6 +1612,17 @@ document.addEventListener('DOMContentLoaded', async function() {
                     }
                 }
                 
+                // Sort and create a string key for the combination
+                const comboKey = combo.sort((a, b) => a - b).join(':');
+                
+                // Skip if we've already generated this combination
+                if (generatedCombos.has(comboKey)) {
+                    continue;
+                }
+                
+                // Add to our set of generated combinations
+                generatedCombos.add(comboKey);
+                
                 // Sort the combination
                 combo.sort((a, b) => a - b);
                 const comboSet = new Set(combo);
@@ -1601,22 +1635,35 @@ document.addEventListener('DOMContentLoaded', async function() {
                 if (comboHistory.appeared) {
                     const history = comboHistory.history[0];
                     const powerballText = comboHistory.powerballCount > 0 ? 
-                        `${comboHistory.powerballCount * 2} Powerball` : '';
+                        `${comboHistory.powerballCount} Powerball` : '';
                     const doublePlayText = comboHistory.doublePlayCount > 0 ? 
-                        `${comboHistory.doublePlayCount * 2} Double Play` : '';
-                    const countText = [powerballText, doublePlayText].filter(Boolean).join(' and ');
+                        `${comboHistory.doublePlayCount} Double Play` : '';
+                    // Show all occurrences with their dates
+                    const occurrences = [];
                     
-                    if (comboHistory.actualCount === 1) {
-                        historyText = `Appeared once (${countText}) on ${history.date}`;
-                        if (history.fullDraw) {
-                            historyText += ` (${history.fullDraw})`;
+                    // Add Powerball occurrences
+                    if (comboHistory.powerballCount > 0) {
+                        const pbOccurrences = comboHistory.history
+                            .filter(h => !h.isDoublePlay)
+                            .map(h => `${h.date} (${h.fullDraw || 'no PB data'})`);
+                        if (pbOccurrences.length > 0) {
+                            occurrences.push(`${pbOccurrences.length} Powerball: ${pbOccurrences.join('; ')}`);
                         }
-                    } else {
-                        const dates = comboHistory.history.map(h => 
-                            `${h.date} (${h.fullDraw || 'no PB data'})`
-                        ).join('; ');
-                        historyText = `Appeared ${countText} times (${comboHistory.count} total): ${dates}`;
                     }
+                    
+                    // Add Double Play occurrences
+                    if (comboHistory.doublePlayCount > 0) {
+                        const dpOccurrences = comboHistory.history
+                            .filter(h => h.isDoublePlay)
+                            .map(h => `${h.date} (${h.fullDraw || 'no PB data'})`);
+                        if (dpOccurrences.length > 0) {
+                            occurrences.push(`${dpOccurrences.length} Double Play: ${dpOccurrences.join('; ')}`);
+                        }
+                    }
+                    
+                    const totalOccurrences = comboHistory.powerballCount + comboHistory.doublePlayCount;
+                    const occurrenceText = totalOccurrences === 1 ? 'time' : 'times';
+                    historyText = `Appeared ${totalOccurrences} ${occurrenceText} (${occurrences.join('; ')})`;
                 }
                 
                 // Calculate stats for this combination
@@ -1657,6 +1704,14 @@ document.addEventListener('DOMContentLoaded', async function() {
             }
             
             html += '</div>';
+            
+            // Add a message if we couldn't generate enough unique combinations
+            if (generatedCombos.size < 10) {
+                html += `<div style="margin-top: 15px; color: #e74c3c; font-weight: bold;">
+                    Note: Only ${generatedCombos.size} unique combinations could be generated from the available numbers.
+                </div>`;
+            }
+            
             container.innerHTML = html;
         }
         
