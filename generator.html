@@ -1937,8 +1937,8 @@ function generatePatternedTrioCombinations() {
         function isTrioInTargetRange(trio, requireHigh=false) {
             const max = Math.max(...trio);
             if (requireHigh && targetHighRange === 60) {
-                // Require 61-69 for the 60s round
-                return max >= 61 && max <= 69;
+                // Require 60-69 for the 60s round (including 60)
+                return max >= 60 && max <= 69;
             }
             return max >= targetHighRange && max < targetHighRange + 10;
         }
@@ -2352,8 +2352,7 @@ function renderPatternedCombinations(combinations) {
     // Helper to get high ending badge for a combination
     function getHighEndingBadge(combo) {
         const max = Math.max(...combo.numbers);
-        if (max >= 61 && max <= 69) return '<span class="frequency-badge" style="background:#ffe0e6;color:#e74c3c;">High Ending: 61-69</span>';
-        if (max === 60) return '<span class="frequency-badge" style="background:#ffe0e6;color:#e74c3c;">High Ending: 60</span>';
+        if (max >= 60 && max <= 69) return '<span class="frequency-badge" style="background:#ffe0e6;color:#e74c3c;">High Ending: 60-69</span>';
         if (max >= 50 && max <= 59) return '<span class="frequency-badge" style="background:#e0f7fa;color:#00796b;">High Ending: 50s</span>';
         if (max >= 40 && max <= 49) return '<span class="frequency-badge" style="background:#fffde7;color:#fbc02d;">High Ending: 40s</span>';
         if (max >= 30 && max <= 39) return '<span class="frequency-badge" style="background:#f3e6ff;color:#8e44ad;">High Ending: 30s</span>';
