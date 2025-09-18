@@ -1852,8 +1852,19 @@ function getTrioOccurrenceInfo(trio) {
 
 // Patterned trio generator with specific occurrence patterns
 function generatePatternedTrioCombinations() {
+    // --- ROUND ROBIN HIGH ENDING LOGIC ---
+    // Always use a fixed round robin order for each batch
+    const fixedHighRanges = [60, 50, 40, 30];
+    let rrIndex = 0; // local to this generation
+    // Helper to get the next high ending range (cycles through 60,50,40,30)
+    function getNextHighEndingRange() {
+        const range = fixedHighRanges[rrIndex % fixedHighRanges.length];
+        rrIndex++;
+        return range;
+    }
+    // --- END ROUND ROBIN LOGIC ---
     const combinations = [];
-    const maxAttempts = 1000;
+    const maxAttempts = 200;
     let attempts = 0;
     
     // Define our occurrence patterns
@@ -1907,7 +1918,7 @@ function generatePatternedTrioCombinations() {
         window.highNumberCounter = 0;
     }
     // Generate combinations for each occurrence pattern in round-robin fashion
-    while (combinations.length < 6 && attempts < maxAttempts) {
+    while (combinations.length < 5 && attempts < maxAttempts) {
         attempts++;
         
         // Get the current pattern in round-robin fashion
@@ -1920,15 +1931,31 @@ function generatePatternedTrioCombinations() {
         // Find two trios that match the occurrence pattern
         let trio1 = null, trio2 = null;
         let trio1Info = null, trio2Info = null;
-        
+
+        // ---- ROUND ROBIN HIGH ENDING FILTER ----
+        const targetHighRange = getNextHighEndingRange();
+        function isTrioInTargetRange(trio, requireHigh=false) {
+            const max = Math.max(...trio);
+            if (requireHigh && targetHighRange === 60) {
+                // Require 61-69 for the 60s round
+                return max >= 61 && max <= 69;
+            }
+            return max >= targetHighRange && max < targetHighRange + 10;
+        }
+        // ---- END FILTER ----
         // Try to find a matching pair of trios
-        for (let i = 0; i < 50; i++) { // Limit attempts to find matching trios
+        for (let i = 0; i < 30; i++) { // Reduced attempts for better performance
             const result1 = generateFromOverlappingTrios();
             if (!result1 || !result1.combination) continue;
             
             const t1 = result1.combination.slice(0, 3).sort((a, b) => a - b);
             const t1Key = t1.join(',');
             const t1Info = getTrioOccurrenceInfo(t1);
+            
+            // Quick filter for target range
+            if (!isTrioInTargetRange(t1, targetHighRange === 60)) {
+                continue;
+            }
             
             // Skip if trio1 has been used before or doesn't match the pattern requirements
             if (window.allUsedTrios.has(t1Key)) {
@@ -1942,7 +1969,7 @@ function generatePatternedTrioCombinations() {
             }
             
             // Try to find a second trio that forms a valid pair
-            for (let j = 0; j < 20; j++) {
+            for (let j = 0; j < 15; j++) { // Reduced attempts for better performance
                 const result2 = generateFromOverlappingTrios();
                 if (!result2 || !result2.combination) continue;
                 
@@ -1950,6 +1977,11 @@ function generatePatternedTrioCombinations() {
                 const t2Key = t2.join(',');
                 const t2Info = getTrioOccurrenceInfo(t2);
                 
+                // Quick filter for t2 target range
+                if (!isTrioInTargetRange(t2, targetHighRange === 60)) {
+                    continue;
+                }
+                // --- END FILTER ---
                 // Skip if the trios are the same or if t2 has been used before
                 if (t1Key === t2Key || window.allUsedTrios.has(t2Key)) continue;
                 
@@ -2317,6 +2349,16 @@ function adjustToPattern(numbers, pattern) {
 
 // Render function for patterned combinations
 function renderPatternedCombinations(combinations) {
+    // Helper to get high ending badge for a combination
+    function getHighEndingBadge(combo) {
+        const max = Math.max(...combo.numbers);
+        if (max >= 61 && max <= 69) return '<span class="frequency-badge" style="background:#ffe0e6;color:#e74c3c;">High Ending: 61-69</span>';
+        if (max === 60) return '<span class="frequency-badge" style="background:#ffe0e6;color:#e74c3c;">High Ending: 60</span>';
+        if (max >= 50 && max <= 59) return '<span class="frequency-badge" style="background:#e0f7fa;color:#00796b;">High Ending: 50s</span>';
+        if (max >= 40 && max <= 49) return '<span class="frequency-badge" style="background:#fffde7;color:#fbc02d;">High Ending: 40s</span>';
+        if (max >= 30 && max <= 39) return '<span class="frequency-badge" style="background:#f3e6ff;color:#8e44ad;">High Ending: 30s</span>';
+        return '';
+    }
     const container = document.getElementById('generated-table');
     if (!container) return;
     
@@ -2369,6 +2411,7 @@ function renderPatternedCombinations(combinations) {
                                 white-space: normal; word-break: break-word;">
                                 <i class="fas fa-project-diagram"></i> ${combo.basedOnTrio || 'No pattern info'}
                             </span>
+                            ${getHighEndingBadge(combo)}
                         </div>
                         ${history.appeared ? `
                         <div style="margin-top: 6px; padding: 6px 8px; background: #fff8e1; border-radius: 4px; border-left: 3px solid #e67e22;">
