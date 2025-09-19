@@ -1962,6 +1962,11 @@ function generatePatternedTrioCombinations() {
                 continue; // Skip if this trio has been used before
             }
             
+            // Only use trios with 1x, 2x, or 3x appearances
+            if (t1Info.count === 0 || t1Info.count > 3) {
+                continue;
+            }
+            
             if (pattern.type === 'trio-trio' && (t1Info.count < pattern.minOccurrences || t1Info.count === 0)) {
                 continue;
             } else if (pattern.type === 'trio-duo' && (t1Info.count !== pattern.trioOccurrences || t1Info.duoCount === 0)) {
@@ -1981,6 +1986,12 @@ function generatePatternedTrioCombinations() {
                 if (!isTrioInTargetRange(t2, targetHighRange === 60)) {
                     continue;
                 }
+                
+                // Only use trios with 1x, 2x, or 3x appearances for t2
+                if (t2Info.count === 0 || t2Info.count > 3) {
+                    continue;
+                }
+                
                 // --- END FILTER ---
                 // Skip if the trios are the same or if t2 has been used before
                 if (t1Key === t2Key || window.allUsedTrios.has(t2Key)) continue;

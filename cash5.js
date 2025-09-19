@@ -1962,6 +1962,523 @@ function generateFromFrequentTrios() {
     }
 }
 
+// Get trio occurrence information for Cash5 patterned trio generation
+function getCash5TrioOccurrenceInfo(trio) {
+    if (!window.cash5DrawRows || !Array.isArray(window.cash5DrawRows)) {
+        return { count: 0, duoCount: 0, dates: [] };
+    }
+    
+    const trioKey = trio.sort((a, b) => a - b).join('-');
+    let count = 0;
+    let dates = [];
+    
+    // Count trio occurrences
+    for (const draw of window.cash5DrawRows) {
+        if (!draw.mainArr || !Array.isArray(draw.mainArr)) continue;
+        
+        // Check if all three numbers are in this draw
+        if (trio.every(num => draw.mainArr.includes(num))) {
+            count++;
+            if (draw.date) dates.push(draw.date);
+        }
+    }
+    
+    // Count duo occurrences (any pair from the trio)
+    let duoCount = 0;
+    const duos = [
+        [trio[0], trio[1]],
+        [trio[0], trio[2]], 
+        [trio[1], trio[2]]
+    ];
+    
+    for (const duo of duos) {
+        for (const draw of window.cash5DrawRows) {
+            if (!draw.mainArr || !Array.isArray(draw.mainArr)) continue;
+            if (duo.every(num => draw.mainArr.includes(num))) {
+                duoCount++;
+                break; // Only count once per draw for this duo
+            }
+        }
+    }
+    
+    return { count, duoCount, dates };
+}
+
+// Generate combinations from overlapping trios for Cash5
+function generateFromCash5OverlappingTrios() {
+    if (!window.sortedTriplets || window.sortedTriplets.length === 0) {
+        return null;
+    }
+    
+    try {
+        // Get a random trio from frequent trios
+        const randomIndex = Math.floor(Math.random() * Math.min(20, window.sortedTriplets.length));
+        const selectedTrio = window.sortedTriplets[randomIndex];
+        const trioNumbers = selectedTrio[0].split('-').map(Number);
+        
+        // Generate 2 additional numbers
+        const exclude = [...trioNumbers];
+        const additionalNumbers = generateCash5UniqueNumbers(2, 1, 42, exclude);
+        
+        const combination = [...trioNumbers, ...additionalNumbers].sort((a, b) => a - b);
+        
+        return {
+            combination: combination,
+            basedOnTrio: selectedTrio[0],
+            frequency: selectedTrio[1]
+        };
+    } catch (error) {
+        console.error('Error in generateFromCash5OverlappingTrios:', error);
+        return null;
+    }
+}
+
+// Cash5 Patterned Trio Generator - adapted from Powerball version
+function generateCash5PatternedTrioCombinations() {
+    // Round robin high ending logic adapted for Cash5 (1-42 range)
+    const fixedHighRanges = [35, 30, 25, 20]; // Adjusted for Cash5 range
+    let rrIndex = 0;
+    
+    function getNextHighEndingRange() {
+        const range = fixedHighRanges[rrIndex % fixedHighRanges.length];
+        rrIndex++;
+        return range;
+    }
+    
+    const combinations = [];
+    const maxAttempts = 200;
+    let attempts = 0;
+    
+    // Define occurrence patterns adapted for Cash5
+    const occurrencePatterns = [
+        // Trio-Trio patterns
+        { name: '1x-1x', type: 'trio-trio', minOccurrences: 1, maxOccurrences: 1 },
+        { name: '1x-2x', type: 'trio-trio', minOccurrences: 1, maxOccurrences: 2 },
+        { name: '1x-3x', type: 'trio-trio', minOccurrences: 1, maxOccurrences: 3 },
+        { name: '2x-2x', type: 'trio-trio', minOccurrences: 2, maxOccurrences: 2 },
+        { name: '2x-3x', type: 'trio-trio', minOccurrences: 2, maxOccurrences: 3 },
+        { name: '3x-3x', type: 'trio-trio', minOccurrences: 3, maxOccurrences: 3 },
+        
+        // Trio-Duo patterns
+        { name: 'trio(1x)-duo(2x)', type: 'trio-duo', trioOccurrences: 1, duoOccurrences: 2 },
+        { name: 'trio(1x)-duo(3x)', type: 'trio-duo', trioOccurrences: 1, duoOccurrences: 3 },
+        { name: 'trio(2x)-duo(2x)', type: 'trio-duo', trioOccurrences: 2, duoOccurrences: 2 },
+        { name: 'trio(2x)-duo(3x)', type: 'trio-duo', trioOccurrences: 2, duoOccurrences: 3 },
+        { name: 'trio(3x)-duo(3x)', type: 'trio-duo', trioOccurrences: 3, duoOccurrences: 3 }
+    ];
+    
+    // Initialize tracking variables
+    if (!window.cash5UsedTrioPatterns) {
+        window.cash5UsedTrioPatterns = new Map();
+        window.cash5AllUsedTrios = new Set();
+        window.cash5UsedTrioCombinations = new Set();
+        occurrencePatterns.forEach(pattern => {
+            window.cash5UsedTrioPatterns.set(pattern.name, new Set());
+        });
+    }
+    
+    // Reset tracking if starting new generation
+    if (window.cash5CurrentPatternIndex === undefined || window.cash5CurrentPatternIndex >= occurrencePatterns.length) {
+        window.cash5CurrentPatternIndex = 0;
+        window.cash5AllUsedTrios.clear();
+        window.cash5UsedTrioCombinations.clear();
+        for (const pattern of occurrencePatterns) {
+            const usedTrios = window.cash5UsedTrioPatterns.get(pattern.name);
+            if (usedTrios) usedTrios.clear();
+        }
+    }
+    
+    if (window.cash5HighNumberCounter === undefined) {
+        window.cash5HighNumberCounter = 0;
+    }
+    
+    // Generate combinations for each pattern
+    while (combinations.length < 5 && attempts < maxAttempts) {
+        attempts++;
+        
+        const pattern = occurrencePatterns[window.cash5CurrentPatternIndex % occurrencePatterns.length];
+        window.cash5CurrentPatternIndex++;
+        
+        const usedTrios = window.cash5UsedTrioPatterns.get(pattern.name);
+        
+        let trio1 = null, trio2 = null;
+        let trio1Info = null, trio2Info = null;
+        
+        const targetHighRange = getNextHighEndingRange();
+        function isTrioInTargetRange(trio, requireHigh = false) {
+            const max = Math.max(...trio);
+            if (requireHigh && targetHighRange === 35) {
+                return max >= 35 && max <= 42; // Cash5 high range
+            }
+            return max >= targetHighRange && max < targetHighRange + 7; // Adjusted for Cash5
+        }
+        
+        // Try to find matching pair of trios
+        for (let i = 0; i < 30; i++) {
+            const result1 = generateFromCash5OverlappingTrios();
+            if (!result1 || !result1.combination) continue;
+            
+            const t1 = result1.combination.slice(0, 3).sort((a, b) => a - b);
+            const t1Key = t1.join(',');
+            const t1Info = getCash5TrioOccurrenceInfo(t1);
+            
+            if (!isTrioInTargetRange(t1, targetHighRange === 35)) continue;
+            if (window.cash5AllUsedTrios.has(t1Key)) continue;
+            if (t1Info.count === 0 || t1Info.count > 3) continue;
+            
+            if (pattern.type === 'trio-trio' && (t1Info.count < pattern.minOccurrences || t1Info.count === 0)) {
+                continue;
+            } else if (pattern.type === 'trio-duo' && (t1Info.count !== pattern.trioOccurrences || t1Info.duoCount === 0)) {
+                continue;
+            }
+            
+            // Find second trio
+            for (let j = 0; j < 15; j++) {
+                const result2 = generateFromCash5OverlappingTrios();
+                if (!result2 || !result2.combination) continue;
+                
+                const t2 = result2.combination.slice(0, 3).sort((a, b) => a - b);
+                const t2Key = t2.join(',');
+                const t2Info = getCash5TrioOccurrenceInfo(t2);
+                
+                if (!isTrioInTargetRange(t2, targetHighRange === 35)) continue;
+                if (t2Info.count === 0 || t2Info.count > 3) continue;
+                if (t1Key === t2Key || window.cash5AllUsedTrios.has(t2Key)) continue;
+                
+                // Check pattern requirements
+                if (pattern.type === 'trio-trio') {
+                    if (t2Info.count > pattern.maxOccurrences || t2Info.count === 0) continue;
+                } else if (pattern.type === 'trio-duo') {
+                    const isTrioMatch = (t1Info.count === pattern.trioOccurrences && t2Info.duoCount === pattern.duoOccurrences) ||
+                                     (t2Info.count === pattern.trioOccurrences && t1Info.duoCount === pattern.duoOccurrences);
+                    if (!isTrioMatch) continue;
+                }
+                
+                // Check if trios share at least one number
+                const sharedNumbers = t1.filter(num => t2.includes(num));
+                if (sharedNumbers.length === 0) continue;
+                
+                const pairKey = `${t1Key}|${t2Key}`;
+                if (usedTrios.has(pairKey)) continue;
+                
+                trio1 = t1;
+                trio2 = t2;
+                trio1Info = t1Info;
+                trio2Info = t2Info;
+                usedTrios.add(pairKey);
+                break;
+            }
+            
+            if (trio1 && trio2) break;
+        }
+        
+        if (!trio1 || !trio2) continue;
+        
+        // Create combination from both trios
+        const allNumbers = [...new Set([...trio1, ...trio2])];
+        let combination = [];
+        
+        // Weighted selection favoring higher numbers for Cash5
+        const pool = [...allNumbers];
+        while (combination.length < 5 && pool.length > 0) {
+            const weights = pool.map(n => {
+                if (n >= 30) return 3; // Higher weight for numbers 30-42
+                return 1;
+            });
+            
+            const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
+            let random = Math.random() * totalWeight;
+            let selectedIndex = 0;
+            
+            for (let i = 0; i < weights.length; i++) {
+                random -= weights[i];
+                if (random <= 0) {
+                    selectedIndex = i;
+                    break;
+                }
+            }
+            
+            combination.push(pool[selectedIndex]);
+            pool.splice(selectedIndex, 1);
+        }
+        
+        // Ensure balanced high/low numbers for Cash5
+        const hasHighNumber = combination.some(n => n >= 25);
+        const hasLowNumber = combination.some(n => n <= 24);
+        
+        if (!hasHighNumber || !hasLowNumber) {
+            const allAvailable = [...new Set([...trio1, ...trio2])];
+            const neededType = !hasHighNumber ? n => n >= 25 : n => n <= 24;
+            const candidates = allAvailable.filter(neededType);
+            
+            if (candidates.length > 0) {
+                const replaceIndex = Math.floor(Math.random() * combination.length);
+                const randomCandidate = candidates[Math.floor(Math.random() * candidates.length)];
+                combination[replaceIndex] = randomCandidate;
+            }
+        }
+        
+        // Fill remaining spots if needed
+        if (combination.length < 5) {
+            const allAvailable = [...new Set([...trio1, ...trio2])];
+            const remainingNumbers = allAvailable.filter(n => !combination.includes(n));
+            
+            const spotsToFill = 5 - combination.length;
+            if (remainingNumbers.length > 0) {
+                const toAdd = Math.min(spotsToFill, remainingNumbers.length);
+                combination.push(...remainingNumbers.slice(0, toAdd));
+            }
+            
+            while (combination.length < 5) {
+                const generateHigh = Math.random() < 0.6; // 60% chance for high numbers
+                let randomNum;
+                
+                if (generateHigh) {
+                    randomNum = Math.floor(Math.random() * 18) + 25; // 25-42
+                } else {
+                    randomNum = Math.floor(Math.random() * 24) + 1; // 1-24
+                }
+                
+                if (!combination.includes(randomNum)) {
+                    combination.push(randomNum);
+                }
+            }
+        }
+        
+        // Ensure exactly 5 unique numbers
+        combination = [...new Set(combination)];
+        if (combination.length < 5) {
+            const allNumbers = new Set([...trio1, ...trio2]);
+            while (combination.length < 5) {
+                const randomNum = Math.floor(Math.random() * 42) + 1;
+                if (!allNumbers.has(randomNum)) {
+                    combination.push(randomNum);
+                    allNumbers.add(randomNum);
+                }
+            }
+        }
+        
+        combination = combination.sort((a, b) => a - b);
+        
+        // Mark trios as used
+        window.cash5AllUsedTrios.add(trio1.join(','));
+        window.cash5AllUsedTrios.add(trio2.join(','));
+        window.cash5HighNumberCounter++;
+        
+        combinations.push({
+            numbers: combination,
+            pattern: pattern.name,
+            trio1: trio1.join('-'),
+            trio2: trio2.join('-'),
+            trio1Info: trio1Info,
+            trio2Info: trio2Info
+        });
+    }
+    
+    return combinations;
+}
+
+// Function to render patterned trio combinations with detailed information
+function renderCash5PatternedCombinations() {
+    const container = document.getElementById('cash5-generated-table');
+    if (!container || !window.cash5DrawRows) return;
+    
+    container.innerHTML = `
+        <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 20px; padding: 15px; background: linear-gradient(135deg, #e67e22, #f39c12); color: white; border-radius: 10px; box-shadow: 0 4px 12px rgba(230, 126, 34, 0.3);">
+            <div style="margin-right: 15px;">
+                <div style="width: 20px; height: 20px; border: 2px solid white; border-top: 2px solid transparent; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+            </div>
+            <div style="font-weight: bold; font-size: 16px;">Generating Patterned Trio Combinations...</div>
+        </div>
+        <style>
+            @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        </style>
+    `;
+    
+    // Generate patterned combinations
+    const patternedCombos = generateCash5PatternedTrioCombinations();
+    
+    if (!patternedCombos || patternedCombos.length === 0) {
+        container.innerHTML = `
+            <div style="color: #e74c3c; padding: 30px; text-align: center; background: #fff5f5; border: 2px dashed #e74c3c; border-radius: 10px;">
+                <h3 style="margin: 0 0 10px 0; color: #e74c3c;">Unable to Generate Combinations</h3>
+                <p style="margin: 0; color: #666;">Please ensure historical data is loaded and try again.</p>
+            </div>
+        `;
+        return;
+    }
+    
+    // Create modern card-based layout
+    let cardsHtml = `<div style="display: grid; gap: 20px; margin-bottom: 30px;">`;
+    
+    patternedCombos.forEach((combo, index) => {
+        const nums = combo.numbers.sort((a, b) => a - b);
+        
+        // Count occurrences for each subset size
+        const subsets = {
+            pairs: getSubsets(nums, 2),
+            trios: getSubsets(nums, 3),
+            quads: getSubsets(nums, 4),
+            full: [nums]
+        };
+        
+        // Count pairs, trios, quads
+        const pairCounts = subsets.pairs.map(pair => ({
+            subset: pair,
+            count: countSubsetOccurrences(pair, window.cash5DrawRows)
+        })).filter(item => item.count > 0);
+        
+        const trioCounts = subsets.trios.map(trio => ({
+            subset: trio,
+            count: countSubsetOccurrences(trio, window.cash5DrawRows)
+        })).filter(item => item.count > 1);
+        
+        const quadCounts = subsets.quads.map(quad => ({
+            subset: quad,
+            count: countSubsetOccurrences(quad, window.cash5DrawRows)
+        })).filter(item => item.count > 0);
+        
+        const fullCount = countSubsetOccurrences(nums, window.cash5DrawRows);
+        
+        // Format subset strings with better styling
+        const formatSubsets = (items, color) => {
+            return items.map(item => 
+                `<span style="background: ${color}; color: white; padding: 2px 6px; border-radius: 12px; font-size: 11px; font-weight: bold; margin: 1px;">${item.subset.join('-')} (${item.count}×)</span>`
+            ).join(' ');
+        };
+        
+        // Create enhanced balls display
+        const ballsHtml = nums.map((n, i) => {
+            const isHigh = n >= 25;
+            const bgColor = isHigh ? '#e67e22' : '#3498db';
+            const delay = i * 0.1;
+            return `<span style='
+                margin: 0 2px; 
+                padding: 6px 8px; 
+                background: linear-gradient(135deg, ${bgColor}, ${isHigh ? '#f39c12' : '#5dade2'}); 
+                color: white; 
+                border-radius: 50%; 
+                font-weight: bold; 
+                display: inline-block; 
+                min-width: 20px; 
+                text-align: center;
+                box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+                animation: bounceIn 0.6s ease-out ${delay}s both;
+                font-size: 12px;
+            '>${n}</span>`;
+        }).join('');
+        
+        // Pattern info
+        const patternColor = combo.pattern.includes('trio-trio') ? '#9b59b6' : '#e67e22';
+        
+        cardsHtml += `
+            <div style="
+                background: white; 
+                border-radius: 12px; 
+                box-shadow: 0 4px 12px rgba(0,0,0,0.1); 
+                padding: 16px; 
+                border: 1px solid #f0f0f0;
+                transition: all 0.3s ease;
+                position: relative;
+                overflow: hidden;
+            " onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 6px 18px rgba(0,0,0,0.15)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 12px rgba(0,0,0,0.1)'">
+                
+                <!-- Card Header -->
+                <div style="display: flex; align-items: center; justify-content: flex-end; margin-bottom: 12px;">
+                    <div style="
+                        background: ${patternColor}; 
+                        color: white; 
+                        padding: 4px 8px; 
+                        border-radius: 16px; 
+                        font-size: 10px; 
+                        font-weight: bold;
+                        box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+                    ">${combo.pattern}</div>
+                </div>
+                
+                <!-- Numbers Display -->
+                <div style="text-align: center; margin: 16px 0;">
+                    <div style="margin-bottom: 8px; color: #7f8c8d; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px;">Your Numbers</div>
+                    <div>${ballsHtml}</div>
+                </div>
+                
+                <!-- Pattern Details -->
+                <div style="
+                    background: linear-gradient(135deg, #f8f9fa, #e9ecef); 
+                    padding: 10px; 
+                    border-radius: 8px; 
+                    margin: 12px 0;
+                    border-left: 3px solid ${patternColor};
+                ">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 12px;">
+                        <div>
+                            <div style="color: #495057; font-weight: 600; margin-bottom: 3px;">Base Trio 1</div>
+                            <div style="color: #6c757d;">${combo.trio1} <span style="background: #28a745; color: white; padding: 1px 4px; border-radius: 8px; font-size: 9px;">${combo.trio1Info.count}× hits</span></div>
+                        </div>
+                        <div>
+                            <div style="color: #495057; font-weight: 600; margin-bottom: 3px;">Base Trio 2</div>
+                            <div style="color: #6c757d;">${combo.trio2} <span style="background: #28a745; color: white; padding: 1px 4px; border-radius: 8px; font-size: 9px;">${combo.trio2Info.count}× hits</span></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Historical Analysis -->
+                <div style="margin-top: 12px;">
+                    <div style="color: #495057; font-weight: 600; margin-bottom: 8px; display: flex; align-items: center; font-size: 12px;">
+                        Historical Subset Analysis
+                    </div>
+                    
+                    ${fullCount > 0 ? `
+                        <div style="margin-bottom: 6px; padding: 6px 8px; background: #d4edda; border-radius: 6px; border-left: 2px solid #28a745; font-size: 11px;">
+                            <strong style="color: #155724;">EXACT MATCH:</strong> <span style="color: #155724;">This exact combination appeared ${fullCount} time${fullCount > 1 ? 's' : ''} in history!</span>
+                        </div>
+                    ` : ''}
+                    
+                    ${quadCounts.length > 0 ? `
+                        <div style="margin-bottom: 4px;">
+                            <span style="color: #6c757d; font-size: 11px; font-weight: 600;">4-Number Matches:</span><br>
+                            ${formatSubsets(quadCounts.sort((a, b) => b.count - a.count), '#17a2b8')}
+                        </div>
+                    ` : ''}
+                    
+                    ${trioCounts.length > 0 ? `
+                        <div style="margin-bottom: 4px;">
+                            <span style="color: #6c757d; font-size: 11px; font-weight: 600;">3-Number Matches:</span><br>
+                            ${formatSubsets(trioCounts.sort((a, b) => b.count - a.count), '#28a745')}
+                        </div>
+                    ` : ''}
+                    
+                    ${pairCounts.length > 0 ? `
+                        <div style="margin-bottom: 4px;">
+                            <span style="color: #6c757d; font-size: 11px; font-weight: 600;">2-Number Matches:</span><br>
+                            ${formatSubsets(pairCounts.sort((a, b) => b.count - a.count).slice(0, 6), '#6f42c1')}
+                            ${pairCounts.length > 6 ? `<span style="color: #6c757d; font-size: 10px;">... and ${pairCounts.length - 6} more</span>` : ''}
+                        </div>
+                    ` : ''}
+                    
+                    ${pairCounts.length === 0 && trioCounts.length === 0 && quadCounts.length === 0 && fullCount === 0 ? `
+                        <div style="color: #6c757d; font-style: italic; text-align: center; padding: 10px; background: #f8f9fa; border-radius: 6px; font-size: 11px;">
+                            This is a completely new combination pattern!
+                        </div>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+    });
+    
+    cardsHtml += `</div>
+        <style>
+            @keyframes bounceIn {
+                0% { transform: scale(0.3); opacity: 0; }
+                50% { transform: scale(1.05); }
+                70% { transform: scale(0.9); }
+                100% { transform: scale(1); opacity: 1; }
+            }
+        </style>`;
+    
+    container.innerHTML = cardsHtml;
+}
+
 // Function to render the generated combinations with subset occurrences
 function renderCash5Combinations(count, useFrequentTrios = false) {
     const container = document.getElementById('cash5-generated-table');
@@ -2203,6 +2720,18 @@ window.initCash5RandomTab = function() {
                 return;
             }
             renderCash5Combinations(5, true);
+        };
+    }
+    
+    // Patterned Trio Generator button
+    const generatePatternedTriosBtn = document.getElementById('cash5-generate-patterned-trios');
+    if (generatePatternedTriosBtn) {
+        generatePatternedTriosBtn.onclick = function() {
+            if (!window.sortedTriplets || window.sortedTriplets.length === 0) {
+                alert('Loading frequent trios data... Please try again in a moment.');
+                return;
+            }
+            renderCash5PatternedCombinations();
         };
     }
 
