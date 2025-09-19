@@ -1394,22 +1394,6 @@ document.addEventListener('DOMContentLoaded', async function() {
                 <h2 style="margin:0 0 10px 0;color:#3498db;font-size:1.3em;font-weight:700;letter-spacing:1px;">
                     Monthly Number Analysis
                 </h2>
-                <div style="background-color: #f8f9fa; border-left: 4px solid #3498db; padding: 12px 15px; margin: 0 0 15px 0; border-radius: 0 4px 4px 0;">
-                    <h3 style="margin: 0 0 8px 0; color: #2c3e50; font-size: 1.1em;">Monthly Number Analysis</h3>
-                    <p style="margin: 8px 0; color: #34495e; font-size: 0.9em;">
-                        This tool helps you analyze Powerball number patterns and generate potential combinations based on historical draw data. Here's what you can do:
-                    </p>
-                    <ul style="margin: 8px 0 0 0; padding-left: 20px; color: #34495e; font-size: 0.9em;">
-                        <li>Select any month to view detailed statistics</li>
-                        <li>See which numbers were drawn most frequently</li>
-                        <li>Generate 10 random combinations</li>
-                        <li>Check combinations against historical draws</li>
-                        <li>View sum, high/low, and odd/even statistics</li>
-                    </ul>
-                    <p style="margin: 8px 0 0 0; font-size: 0.85em; color: #7f8c8d; font-style: italic;">
-                        Note: Draw counts include both Powerball and Double Play. Each combination is checked against historical data.
-                    </p>
-                </div>
                 <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 15px;">
                     <label for="month-select" style="font-weight: 600;">Select Month:</label>
                     <select id="month-select" style="padding: 8px; border-radius: 4px; border: 1px solid #ccc;">
@@ -1470,48 +1454,34 @@ document.addEventListener('DOMContentLoaded', async function() {
             const monthName = new Date(parseInt(year), parseInt(month) - 1, 1).toLocaleString('default', { month: 'long' });
             
             document.getElementById('monthly-stats').innerHTML = `
-                <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-                    <h3 style="margin-top: 0; color: #2c3e50;">${monthName} ${year} Statistics</h3>
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
-                        <div style="background: white; padding: 10px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-                            <div style="font-size: 0.9em; color: #7f8c8d; margin-bottom: 5px;">Total Draws</div>
-                            <div style="font-size: 1.5em; font-weight: bold; color: #2c3e50;">
-                                ${monthlyDraws.length * 2} (${monthlyDraws.length} × 2 for Powerball & Double Play)
-                            </div>
+                <div style="background: #f8f9fa; padding: 8px; border-radius: 4px; margin-bottom: 10px;">
+                    <h3 style="margin: 0 0 8px 0; color: #2c3e50; font-size: 1.1em;">${monthName} ${year} Statistics</h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px;">
+                        <div style="background: white; padding: 6px; border-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">
+                            <div style="font-size: 0.75em; color: #7f8c8d; margin-bottom: 2px;">Total Draws</div>
+                            <div style="font-size: 1.1em; font-weight: bold; color: #2c3e50;">${monthlyDraws.length * 2}</div>
                         </div>
-                        <div style="background: white; padding: 10px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-                            <div style="font-size: 0.9em; color: #7f8c8d; margin-bottom: 5px;">Unique Numbers</div>
-                            <div style="font-size: 1.5em; font-weight: bold; color: #2c3e50;">${uniqueNumbers.length}</div>
+                        <div style="background: white; padding: 6px; border-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">
+                            <div style="font-size: 0.75em; color: #7f8c8d; margin-bottom: 2px;">Unique Numbers</div>
+                            <div style="font-size: 1.1em; font-weight: bold; color: #2c3e50;">${uniqueNumbers.length}</div>
                         </div>
-                        <div style="background: white; padding: 10px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-                            <div style="font-size: 0.9em; color: #7f8c8d; margin-bottom: 5px;">High/Low Ratio</div>
-                            <div style="font-size: 1.5em; font-weight: bold; color: #2c3e50;">
-                                ${highCount}/${lowCount} (${(highCount/allNumbers.length*100).toFixed(1)}% high)
-                            </div>
+                        <div style="background: white; padding: 6px; border-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">
+                            <div style="font-size: 0.75em; color: #7f8c8d; margin-bottom: 2px;">High/Low</div>
+                            <div style="font-size: 1.1em; font-weight: bold; color: #2c3e50;">${highCount}/${lowCount}</div>
                         </div>
-                        <div style="background: white; padding: 10px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-                            <div style="font-size: 0.9em; color: #7f8c8d; margin-bottom: 5px;">Odd/Even Ratio</div>
-                            <div style="font-size: 1.5em; font-weight: bold; color: #2c3e50;">
-                                ${oddCount}/${evenCount} (${(oddCount/allNumbers.length*100).toFixed(1)}% odd)
-                            </div>
-                        </div>
-                        <div style="background: white; padding: 10px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-                            <div style="font-size: 0.9em; color: #7f8c8d; margin-bottom: 5px;">Average Number</div>
-                            <div style="font-size: 1.5em; font-weight: bold; color: #2c3e50;">${avg.toFixed(1)}</div>
-                        </div>
-                        <div style="background: white; padding: 10px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
-                            <div style="font-size: 0.9em; color: #7f8c8d; margin-bottom: 5px;">Total Sum</div>
-                            <div style="font-size: 1.5em; font-weight: bold; color: #2c3e50;">${sum}</div>
+                        <div style="background: white; padding: 6px; border-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">
+                            <div style="font-size: 0.75em; color: #7f8c8d; margin-bottom: 2px;">Odd/Even</div>
+                            <div style="font-size: 1.1em; font-weight: bold; color: #2c3e50;">${oddCount}/${evenCount}</div>
                         </div>
                     </div>
                     
-                    <div style="margin-top: 20px;">
-                        <h4 style="margin-bottom: 10px; color: #2c3e50;">Top 10 Most Frequent Numbers</h4>
-                        <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+                    <div style="margin-top: 10px;">
+                        <h4 style="margin: 0 0 6px 0; color: #2c3e50; font-size: 1em;">Top 10 Most Frequent Numbers</h4>
+                        <div style="display: flex; flex-wrap: wrap; gap: 6px;">
                             ${sortedNumbers.map(([num, count]) => `
-                                <div style="background: #e74c3c; color: white; padding: 5px 10px; border-radius: 4px; display: flex; align-items: center;">
-                                    <span style="font-weight: bold; margin-right: 5px;">${num}</span>
-                                    <span style="font-size: 0.8em; opacity: 0.9;">${count}×</span>
+                                <div style="background: #e74c3c; color: white; padding: 3px 6px; border-radius: 3px; display: flex; align-items: center; font-size: 0.85em;">
+                                    <span style="font-weight: bold; margin-right: 3px;">${num}</span>
+                                    <span style="font-size: 0.75em; opacity: 0.9;">${count}×</span>
                                 </div>
                             `).join('')}
                         </div>
@@ -1579,7 +1549,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             // Get all historical draws for checking
             const allDraws = window.allDraws || window.filteredDrawRows || [];
             
-            // Generate 10 random combinations
+            // Generate 3 random combinations
             let html = '<h3 style="margin: 20px 0 10px 0; color: #2c3e50;">Random Combinations for Selected Month</h3>';
             html += '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 15px;">';
             
@@ -1588,7 +1558,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             const maxAttempts = 100; // Prevent infinite loops
             let attempts = 0;
             
-            while (generatedCombos.size < 10 && attempts < maxAttempts) {
+            while (generatedCombos.size < 3 && attempts < maxAttempts) {
                 attempts++;
                 
                 // Ensure we have enough unique numbers to generate a combination
@@ -1706,7 +1676,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             html += '</div>';
             
             // Add a message if we couldn't generate enough unique combinations
-            if (generatedCombos.size < 10) {
+            if (generatedCombos.size < 3) {
                 html += `<div style="margin-top: 15px; color: #e74c3c; font-weight: bold;">
                     Note: Only ${generatedCombos.size} unique combinations could be generated from the available numbers.
                 </div>`;
