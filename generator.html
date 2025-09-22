@@ -3193,6 +3193,10 @@ function generate15And60sTrioCombinations() {
     
     console.log('Starting 15 + Last 3 in 60s generator...');
     
+    // Track used duos and trios to prevent reuse
+    const usedDuos = new Set();
+    const usedTrios = new Set();
+    
     // Analyze historical data for patterns with 15
     const duosWithFifteen = [];
     const triosWithFifteen = [];
@@ -3260,6 +3264,9 @@ function generate15And60sTrioCombinations() {
     // Sort duos by frequency of the second number with 15
     eligibleDuos.sort((a, b) => b.count - a.count);
     
+    console.log('Available duos:', eligibleDuos.map(d => d.key));
+    console.log('Available trios:', eligibleTrios.map(t => t.key));
+    
     // Generate combinations prioritizing past duos over trios
     while (combinations.length < 6 && attempts < maxAttempts) {
         attempts++;
@@ -3268,94 +3275,120 @@ function generate15And60sTrioCombinations() {
         let sourceInfo = '';
         let patternType = '';
         
-        // 70% chance to use duos, 30% chance to use trios (prioritizing duos as requested)
-        const useDuos = Math.random() < 0.7;
+        // Check what's available
+        const availableDuos = eligibleDuos.filter(duo => !usedDuos.has(duo.key));
+        const availableTrios = eligibleTrios.filter(trio => !usedTrios.has(trio.key));
         
-        if (useDuos && eligibleDuos.length > 0) {
-            // Use duo-based generation - start with 15 and one companion number
-            const randomDuo = eligibleDuos[Math.floor(Math.random() * eligibleDuos.length)];
-            const companionNumber = randomDuo.secondNumber;
-            
-            // If companion number is in 60s, we need to be careful about placement
-            if (companionNumber >= 60 && companionNumber <= 69) {
-                combination = [15]; // Start with 15
-                // Add 3 numbers from 60-69 range (including the companion)
-                const sixtyNumbers = [companionNumber];
-                while (sixtyNumbers.length < 3) {
-                    let randomSixty;
-                    do {
-                        randomSixty = Math.floor(Math.random() * 10) + 60; // 60-69
-                    } while (sixtyNumbers.includes(randomSixty));
-                    sixtyNumbers.push(randomSixty);
-                }
-                
-                // Add one more number from 1-59 range (excluding 15)
-                let additionalNumber;
-                do {
-                    additionalNumber = Math.floor(Math.random() * 59) + 1;
-                } while (additionalNumber === 15);
-                
-                combination = [15, additionalNumber, ...sixtyNumbers];
+        // If both duos and trios are exhausted, use fallback
+        if (availableDuos.length === 0 && availableTrios.length === 0) {
+            console.log('All duos and trios exhausted, using fallback generation');
+            // Skip to fallback generation
+        } else {
+            // 70% chance to use duos, 30% chance to use trios (prioritizing duos as requested)
+            // But adjust based on availability
+            let useDuos;
+            if (availableDuos.length === 0) {
+                useDuos = false; // Force trio usage
+            } else if (availableTrios.length === 0) {
+                useDuos = true; // Force duo usage
             } else {
-                // Companion is not in 60s, so we use it as the second number
-                combination = [15, companionNumber];
-                
-                // Add 3 numbers from 60-69 range
-                const sixtyNumbers = [];
-                while (sixtyNumbers.length < 3) {
-                    let randomSixty;
-                    do {
-                        randomSixty = Math.floor(Math.random() * 10) + 60; // 60-69
-                    } while (sixtyNumbers.includes(randomSixty));
-                    sixtyNumbers.push(randomSixty);
-                }
-                combination.push(...sixtyNumbers);
+                useDuos = Math.random() < 0.7; // Normal 70/30 split
             }
             
-            sourceInfo = `Duo: 15-${companionNumber} (${randomDuo.count}x) + last 3 in 60s`;
-            patternType = 'Duo-Based';
-        } else if (eligibleTrios.length > 0) {
-            // Use trio-based generation
-            const randomTrio = eligibleTrios[Math.floor(Math.random() * eligibleTrios.length)];
-            const trioNumbers = [...randomTrio.numbers];
-            
-            // Count how many numbers from the trio are in 60s
-            const trioSixties = trioNumbers.filter(n => n >= 60 && n <= 69);
-            const trioNonSixties = trioNumbers.filter(n => n < 60);
-            
-            if (trioSixties.length >= 3) {
-                // Trio has 3+ numbers in 60s, use first 3 of them
-                combination = [15, ...trioNonSixties.filter(n => n !== 15).slice(0, 1), ...trioSixties.slice(0, 3)];
-                if (combination.length < 5) {
-                    // Add more 60s numbers if needed
-                    while (combination.length < 5) {
+            if (useDuos && availableDuos.length > 0) {
+                // Use duo-based generation - start with 15 and one companion number
+                const randomDuo = availableDuos[Math.floor(Math.random() * availableDuos.length)];
+                const companionNumber = randomDuo.secondNumber;
+                
+                // Mark this duo as used
+                usedDuos.add(randomDuo.key);
+                console.log(`Using duo: ${randomDuo.key} (${usedDuos.size}/${eligibleDuos.length} duos used)`);
+                
+                // If companion number is in 60s, we need to be careful about placement
+                if (companionNumber >= 60 && companionNumber <= 69) {
+                    combination = [15]; // Start with 15
+                    // Add 3 numbers from 60-69 range (including the companion)
+                    const sixtyNumbers = [companionNumber];
+                    while (sixtyNumbers.length < 3) {
+                        let randomSixty;
+                        do {
+                            randomSixty = Math.floor(Math.random() * 10) + 60; // 60-69
+                        } while (sixtyNumbers.includes(randomSixty));
+                        sixtyNumbers.push(randomSixty);
+                    }
+                    
+                    // Add one more number from 1-59 range (excluding 15)
+                    let additionalNumber;
+                    do {
+                        additionalNumber = Math.floor(Math.random() * 59) + 1;
+                    } while (additionalNumber === 15);
+                    
+                    combination = [15, additionalNumber, ...sixtyNumbers];
+                } else {
+                    // Companion is not in 60s, so we use it as the second number
+                    combination = [15, companionNumber];
+                    
+                    // Add 3 numbers from 60-69 range
+                    const sixtyNumbers = [];
+                    while (sixtyNumbers.length < 3) {
+                        let randomSixty;
+                        do {
+                            randomSixty = Math.floor(Math.random() * 10) + 60; // 60-69
+                        } while (sixtyNumbers.includes(randomSixty));
+                        sixtyNumbers.push(randomSixty);
+                    }
+                    combination.push(...sixtyNumbers);
+                }
+                
+                sourceInfo = `Duo: 15-${companionNumber} (${randomDuo.count}x) + last 3 in 60s`;
+                patternType = 'Duo-Based';
+            } else if (availableTrios.length > 0) {
+                // Use trio-based generation
+                const randomTrio = availableTrios[Math.floor(Math.random() * availableTrios.length)];
+                const trioNumbers = [...randomTrio.numbers];
+                
+                // Mark this trio as used
+                usedTrios.add(randomTrio.key);
+                console.log(`Using trio: ${randomTrio.key} (${usedTrios.size}/${eligibleTrios.length} trios used)`);
+                
+                // Count how many numbers from the trio are in 60s
+                const trioSixties = trioNumbers.filter(n => n >= 60 && n <= 69);
+                const trioNonSixties = trioNumbers.filter(n => n < 60);
+                
+                if (trioSixties.length >= 3) {
+                    // Trio has 3+ numbers in 60s, use first 3 of them
+                    combination = [15, ...trioNonSixties.filter(n => n !== 15).slice(0, 1), ...trioSixties.slice(0, 3)];
+                    if (combination.length < 5) {
+                        // Add more 60s numbers if needed
+                        while (combination.length < 5) {
+                            let randomSixty;
+                            do {
+                                randomSixty = Math.floor(Math.random() * 10) + 60;
+                            } while (combination.includes(randomSixty));
+                            combination.push(randomSixty);
+                        }
+                    }
+                } else {
+                    // Trio has fewer than 3 numbers in 60s, supplement with more
+                    const neededSixties = 3 - trioSixties.length;
+                    const additionalSixties = [];
+                    
+                    while (additionalSixties.length < neededSixties) {
                         let randomSixty;
                         do {
                             randomSixty = Math.floor(Math.random() * 10) + 60;
-                        } while (combination.includes(randomSixty));
-                        combination.push(randomSixty);
+                        } while (trioSixties.includes(randomSixty) || additionalSixties.includes(randomSixty));
+                        additionalSixties.push(randomSixty);
                     }
-                }
-            } else {
-                // Trio has fewer than 3 numbers in 60s, supplement with more
-                const neededSixties = 3 - trioSixties.length;
-                const additionalSixties = [];
-                
-                while (additionalSixties.length < neededSixties) {
-                    let randomSixty;
-                    do {
-                        randomSixty = Math.floor(Math.random() * 10) + 60;
-                    } while (trioSixties.includes(randomSixty) || additionalSixties.includes(randomSixty));
-                    additionalSixties.push(randomSixty);
+                    
+                    // Build combination: 15 + one non-60s number + all 60s numbers
+                    const nonSixtiesFromTrio = trioNonSixties.filter(n => n !== 15).slice(0, 1);
+                    combination = [15, ...nonSixtiesFromTrio, ...trioSixties, ...additionalSixties];
                 }
                 
-                // Build combination: 15 + one non-60s number + all 60s numbers
-                const nonSixtiesFromTrio = trioNonSixties.filter(n => n !== 15).slice(0, 1);
-                combination = [15, ...nonSixtiesFromTrio, ...trioSixties, ...additionalSixties];
+                sourceInfo = `Trio: ${randomTrio.numbers.join('-')} (${randomTrio.count}x) + last 3 in 60s`;
+                patternType = 'Trio-Based';
             }
-            
-            sourceInfo = `Trio: ${randomTrio.numbers.join('-')} (${randomTrio.count}x) + last 3 in 60s`;
-            patternType = 'Trio-Based';
         }
         
         // Fallback if no historical data
