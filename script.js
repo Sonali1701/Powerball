@@ -5779,6 +5779,9 @@ function analyzeDrawDifferences() {
                 }))
             };
             
+            // Track combination frequencies
+            const combinationFrequency = new Map();
+            
             // Process each draw and compare with the next one
             for (let i = 0; i < uniqueDraws.length - 1; i++) {
                 const currentDraw = uniqueDraws[i];
@@ -5794,39 +5797,60 @@ function analyzeDrawDifferences() {
                     continue;
                 }
                 
-                // Calculate differences between corresponding positions
+                // Calculate differences between corresponding positions with signs
                 const differences = [];
+                const signedDifferences = [];
+                const evenOddIndicators = [];
                 let hasInvalidDiff = false;
                 
                 for (let j = 0; j < 5; j++) {
-                    const diff = Math.abs(nextNums[j] - currentNums[j]);
-                    differences.push(diff);
+                    const diff = nextNums[j] - currentNums[j];
+                    const absDiff = Math.abs(diff);
+                    const sign = diff > 0 ? '+' : ''; // Single + for positive, empty string for negative (which will show -)
+                    const isEven = absDiff % 2 === 0;
                     
-                    // Update position stats
+                    differences.push(absDiff);
+                    signedDifferences.push(sign + diff); // This will show as +5 or -3
+                    evenOddIndicators.push(isEven ? 'E' : 'O');
+                    
+                    // Update position stats (using absolute values for stats)
                     const posStat = differenceStats.positionStats[j];
-                    posStat.max = Math.max(posStat.max, diff);
-                    posStat.min = Math.min(posStat.min, diff);
-                    posStat.sum += diff;
+                    posStat.max = Math.max(posStat.max, absDiff);
+                    posStat.min = Math.min(posStat.min, absDiff);
+                    posStat.sum += absDiff;
                     posStat.count++;
                     
-                    // Update global stats
-                    differenceStats.maxDifference = Math.max(differenceStats.maxDifference, diff);
-                    differenceStats.minDifference = Math.min(differenceStats.minDifference, diff);
+                    // Update global stats (using absolute values)
+                    differenceStats.maxDifference = Math.max(differenceStats.maxDifference, absDiff);
+                    differenceStats.minDifference = Math.min(differenceStats.minDifference, absDiff);
                     
-                    // Update difference counts
-                    differenceStats.differenceCounts[diff] = (differenceStats.differenceCounts[diff] || 0) + 1;
+                    // Update difference counts (using absolute values)
+                    differenceStats.differenceCounts[absDiff] = (differenceStats.differenceCounts[absDiff] || 0) + 1;
                 }
+                
+                // Track this combination
+                const comboKey = signedDifferences.join(',');
+                combinationFrequency.set(comboKey, (combinationFrequency.get(comboKey) || 0) + 1);
                 
                 if (hasInvalidDiff) continue;
                 
-                // Add to processed draws
+                // Add to processed draws with combination info
+                const comboCount = combinationFrequency.get(comboKey);
+                
                 processedDraws.push({
                     date: currentDraw.date || 'Unknown date',
                     currentNums: [...currentNums].sort((a, b) => a - b),
                     nextDate: nextDraw.date || 'Unknown date',
                     nextNums: [...nextNums].sort((a, b) => a - b),
-                    differences
+                    differences,
+                    signedDifferences,
+                    evenOddIndicators,
+                    comboKey,
+                    comboCount: comboCount + 1 // Increment count for this combo
                 });
+                
+                // Update the frequency map with the incremented count
+                combinationFrequency.set(comboKey, comboCount + 1);
                 
                 differenceStats.totalComparisons++;
             }
@@ -5872,7 +5896,28 @@ function analyzeDrawDifferences() {
                         <td>${draw.currentNums.map(n => `<span class="difference-number" style="background-color: #e74c3c;">${n}</span>`).join(' ')}</td>
                         <td>${draw.nextDate}</td>
                         <td>${draw.nextNums.map(n => `<span class="difference-number" style="background-color: #3498db;">${n}</span>`).join(' ')}</td>
-                        <td>${draw.differences.map(d => `<span class="difference-value">${d}</span>`).join(' ')}</td>
+                        <td>
+                            <div style="margin-bottom: 4px;">
+                                ${draw.signedDifferences.map((d, idx) => {
+                                    const diff = parseInt(d);
+                                    const color = diff > 0 ? '#27ae60' : diff < 0 ? '#e74c3c' : '#7f8c8d';
+                                    // Show single + for positive numbers (no double ++)
+                                    const displayNum = diff > 0 ? `+${diff}` : diff;
+                                    return `<span class="difference-value" style="color: ${color}; font-weight: bold; margin-right: 4px;">${displayNum}</span>`;
+                                }).join('')}
+                            </div>
+                            <div style="font-size: 0.9em; color: #7f8c8d;">
+                                ${draw.evenOddIndicators.map(eo => 
+                                    `<span style="margin-right: 4px;">${eo}</span>`
+                                ).join('')}
+                            </div>
+                            ${draw.comboCount > 1 ? 
+                                `<div style="font-size: 0.85em; color: #9b59b6; margin-top: 4px; font-weight: bold;">
+                                    Combo appeared ${draw.comboCount}x
+                                </div>` : 
+                                ''
+                            }
+                        </td>
                     </tr>
                 `;
             });
@@ -6007,12 +6052,12 @@ function exportDifferencesToCSV() {
             
             if (hasInvalidDiff) continue;
             
-            // Add to CSV
+            // Add to CSV with signed differences
             csvContent += `"${currentDraw.date || 'Unknown date'}",`;
             csvContent += `"${currentNums.join(', ')}",`;
             csvContent += `"${nextDraw.date || 'Unknown date'}",`;
             csvContent += `"${nextNums.join(', ')}",`;
-            csvContent += `${differences.join(',')}\n`;
+            csvContent += `"${signedDifferences.join(', ')}\n`;
         }
         
         // Create download link
