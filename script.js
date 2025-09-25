@@ -1780,6 +1780,8 @@ document.addEventListener('DOMContentLoaded', async function() {
                     const recentDraws = [];
                     // Store draw rows for highlighting and filtering
                     const drawRows = [];
+                    // Initialize doublePlayDraws array if it doesn't exist
+                    window.doublePlayDraws = window.doublePlayDraws || [];
                     
                     for (let i = 0; i < data.length; i++) {
                         const row = data[i];
@@ -1828,6 +1830,15 @@ document.addEventListener('DOMContentLoaded', async function() {
                                         }
                                     });
                                     
+                                    // Add to doublePlayDraws for draw differences analysis
+                                    if (doublePlayArr.length === 5) {
+                                        window.doublePlayDraws.push({
+                                            date: row.Date,
+                                            mainArr: doublePlayArr.map(Number).sort((a, b) => a - b),
+                                            isDoublePlay: true
+                                        });
+                                    }
+                                    
                                     // Get the Powerball number from the Double Play row
                                     const numsArr = dpNums.split(' - ');
                                     if (numsArr.length > 0) {
@@ -1838,6 +1849,15 @@ document.addEventListener('DOMContentLoaded', async function() {
                                     i++; // Skip the Double Play row in the next iteration
                                 }
                             }
+                            // Add main draw to allDraws for Trio 2 tab
+                            if (mainArr.length === 5) {
+                                allDraws.push({
+                                    date: row.Date,
+                                    mainArr: mainArr.map(Number).sort((a, b) => a - b),
+                                    isDoublePlay: false
+                                });
+                            }
+                            
                             // --- Render table row and store for highlighting ---
                             const tr = document.createElement('tr');
                             // Highlight cells if selected number is present (will be updated on click)
@@ -5732,35 +5752,102 @@ function analyzeDrawDifferences() {
     // Use setTimeout to allow UI to update
     setTimeout(() => {
         try {
-            // Get all draws from both allDraws and filteredDrawRows
-            const allDraws = [...(window.allDraws || []), ...(window.filteredDrawRows || [])];
-            // Remove duplicates by date
-            const uniqueDraws = [];
-            const seenDates = new Set();
+            // Get all main draws and double play draws
+            const allMainDraws = [];
+            const mainDates = new Set();
             
-            allDraws.forEach(draw => {
-                if (draw && draw.date && !seenDates.has(draw.date)) {
-                    seenDates.add(draw.date);
-                    uniqueDraws.push(draw);
+            // Process main draws from window.allDraws and window.filteredDrawRows
+            [...(window.allDraws || []), ...(window.filteredDrawRows || [])].forEach(draw => {
+                if (draw && draw.date && !mainDates.has(draw.date) && draw.mainArr && draw.mainArr.length === 5) {
+                    mainDates.add(draw.date);
+                    allMainDraws.push({
+                        ...draw,
+                        type: 'main',
+                        displayDate: draw.date,
+                        displayNums: [...draw.mainArr].sort((a, b) => a - b)
+                    });
                 }
             });
             
-            // Sort draws by date (newest first)
-            uniqueDraws.sort((a, b) => {
-                return new Date(b.date) - new Date(a.date);
+            // Process double play draws from window.doublePlayDraws
+            const allDoublePlayDraws = [];
+            const doublePlayDates = new Set();
+            
+            (window.doublePlayDraws || []).forEach(draw => {
+                if (draw && draw.date && !doublePlayDates.has(draw.date) && draw.mainArr && draw.mainArr.length === 5) {
+                    doublePlayDates.add(draw.date);
+                    allDoublePlayDraws.push({
+                        ...draw,
+                        type: 'double',
+                        displayDate: `${draw.date} (DP)`,
+                        displayNums: [...draw.mainArr].sort((a, b) => a - b)
+                    });
+                }
             });
-            if (uniqueDraws.length < 2) {
+            
+            console.log(`Found ${allMainDraws.length} main draws and ${allDoublePlayDraws.length} double play draws`);
+            
+            // Process all draws
+            const allDraws = [];
+            const drawMap = new Map();
+            
+            // Add main draws to the map
+            allMainDraws.forEach(draw => {
+                if (!drawMap.has(draw.date)) {
+                    drawMap.set(draw.date, []);
+                }
+                drawMap.get(draw.date).push({...draw, type: 'main'});
+            });
+            
+            // Add double play draws to the map
+            allDoublePlayDraws.forEach(draw => {
+                const date = draw.date.replace(' (DP)', ''); // Remove DP suffix if present
+                if (!drawMap.has(date)) {
+                    drawMap.set(date, []);
+                }
+                drawMap.get(date).push({...draw, type: 'double'});
+            });
+            
+            // Process all draws in order
+            const allProcessedDraws = [];
+            
+            // Process main draws
+            const sortedMainDraws = [...allMainDraws].sort((a, b) => new Date(b.date) - new Date(a.date));
+            for (let i = 0; i < sortedMainDraws.length - 1; i++) {
+                allProcessedDraws.push({
+                    current: sortedMainDraws[i],
+                    next: sortedMainDraws[i + 1]
+                });
+            }
+            
+            // Process double play draws
+            const sortedDoublePlayDraws = [...allDoublePlayDraws].sort((a, b) => new Date(b.date) - new Date(a.date));
+            for (let i = 0; i < sortedDoublePlayDraws.length - 1; i++) {
+                allProcessedDraws.push({
+                    current: sortedDoublePlayDraws[i],
+                    next: sortedDoublePlayDraws[i + 1]
+                });
+            }
+            
+            // Sort all processed draws by date (newest first)
+            allProcessedDraws.sort((a, b) => new Date(b.current.date) - new Date(a.current.date));
+            
+            // Flatten the array for backward compatibility
+            allProcessedDraws.forEach(pair => {
+                allDraws.push(pair.current, pair.next);
+            });
+            
+            console.log(`Analyzing ${allDraws.length} draws (${allMainDraws.length} main + ${allDoublePlayDraws.length} double play)`);
+            if (allDraws.length < 2) {
                 resultsDiv.innerHTML = `
                     <div class="error-message" style="color: #e74c3c; padding: 15px; background-color: #fde8e8; border-radius: 4px; text-align: center;">
                         <i class="fas fa-exclamation-triangle"></i> Not enough valid draw data available for analysis.
-                        <p>Found ${uniqueDraws.length} valid draws. At least 2 are needed.</p>
+                        <p>Found ${allDraws.length} valid draws (${allMainDraws.length} main + ${allDoublePlayDraws.length} double play). At least 2 are needed.</p>
                     </div>
                 `;
                 loadingDiv.style.display = 'none';
                 return;
             }
-            
-            console.log(`Analyzing ${uniqueDraws.length} unique draws`);
             
             // Process draws to extract numbers and calculate differences
             const processedDraws = [];
@@ -5782,18 +5869,43 @@ function analyzeDrawDifferences() {
             // Track combination frequencies
             const combinationFrequency = new Map();
             
-            // Process each draw and compare with the next one
-            for (let i = 0; i < uniqueDraws.length - 1; i++) {
-                const currentDraw = uniqueDraws[i];
-                const nextDraw = uniqueDraws[i + 1];
+            // First pass: count all combinations
+            for (let i = 0; i < allDraws.length - 1; i++) {
+                const currentDraw = allDraws[i];
+                const nextDraw = allDraws[i + 1];
+                const currentNums = currentDraw.mainArr || [];
+                const nextNums = nextDraw.mainArr || [];
                 
-                // Get numbers from current draw
+                if (currentNums.length !== 5 || nextNums.length !== 5) continue;
+                
+                const signedDiffs = [];
+                for (let j = 0; j < 5; j++) {
+                    const diff = currentNums[j] - nextNums[j];
+                    const sign = diff > 0 ? '+' : '';
+                    signedDiffs.push(sign + diff);
+                }
+                
+                const comboKey = signedDiffs.join(',');
+                combinationFrequency.set(comboKey, (combinationFrequency.get(comboKey) || 0) + 1);
+            }
+            
+            // Process each draw and compare with the next one
+            for (let i = 0; i < allDraws.length - 1; i++) {
+                const currentDraw = allDraws[i];
+                const nextDraw = allDraws[i + 1];
+                
+                // Get numbers from current and next draw
                 const currentNums = currentDraw.mainArr || [];
                 const nextNums = nextDraw.mainArr || [];
                 
                 // Skip if either draw doesn't have exactly 5 numbers
                 if (currentNums.length !== 5 || nextNums.length !== 5) {
                     console.log(`Skipping draw pair ${currentDraw.date} - ${nextDraw.date}: Invalid number count`);
+                    continue;
+                }
+                
+                // Skip if both are double play draws (we only want main-to-main, main-to-double, and double-to-main)
+                if (currentDraw.type === 'double' && nextDraw.type === 'double') {
                     continue;
                 }
                 
@@ -5804,7 +5916,8 @@ function analyzeDrawDifferences() {
                 let hasInvalidDiff = false;
                 
                 for (let j = 0; j < 5; j++) {
-                    const diff = nextNums[j] - currentNums[j];
+                    // Calculate current number minus next number (reverse of before)
+                    const diff = currentNums[j] - nextNums[j];
                     const absDiff = Math.abs(diff);
                     const sign = diff > 0 ? '+' : ''; // Single + for positive, empty string for negative (which will show -)
                     const isEven = absDiff % 2 === 0;
@@ -5828,29 +5941,27 @@ function analyzeDrawDifferences() {
                     differenceStats.differenceCounts[absDiff] = (differenceStats.differenceCounts[absDiff] || 0) + 1;
                 }
                 
-                // Track this combination
+// No need for draw type in the display
+                
+                // Get the combo key and count
                 const comboKey = signedDifferences.join(',');
-                combinationFrequency.set(comboKey, (combinationFrequency.get(comboKey) || 0) + 1);
+                const comboCount = combinationFrequency.get(comboKey) || 0;
                 
                 if (hasInvalidDiff) continue;
                 
                 // Add to processed draws with combination info
-                const comboCount = combinationFrequency.get(comboKey);
-                
                 processedDraws.push({
-                    date: currentDraw.date || 'Unknown date',
+                    date: currentDraw.displayDate || 'Unknown date',
                     currentNums: [...currentNums].sort((a, b) => a - b),
-                    nextDate: nextDraw.date || 'Unknown date',
+                    nextDate: nextDraw.displayDate || 'Unknown date',
                     nextNums: [...nextNums].sort((a, b) => a - b),
                     differences,
                     signedDifferences,
                     evenOddIndicators,
                     comboKey,
-                    comboCount: comboCount + 1 // Increment count for this combo
+                    comboCount: comboCount, // Use the updated count
+                    isDoublePlay: currentDraw.type === 'double' || nextDraw.type === 'double'
                 });
-                
-                // Update the frequency map with the incremented count
-                combinationFrequency.set(comboKey, comboCount + 1);
                 
                 differenceStats.totalComparisons++;
             }
@@ -5893,9 +6004,9 @@ function analyzeDrawDifferences() {
                 html += `
                     <tr style="${rowStyle}">
                         <td>${draw.date}</td>
-                        <td>${draw.currentNums.map(n => `<span class="difference-number" style="background-color: #e74c3c;">${n}</span>`).join(' ')}</td>
+                        <td>${draw.currentNums.map(n => `<span class="difference-number" style="background-color: ${draw.date.includes('DP') ? '#9b59b6' : '#e74c3c'};">${n}</span>`).join(' ')}</td>
                         <td>${draw.nextDate}</td>
-                        <td>${draw.nextNums.map(n => `<span class="difference-number" style="background-color: #3498db;">${n}</span>`).join(' ')}</td>
+                        <td>${draw.nextNums.map(n => `<span class="difference-number" style="background-color: ${draw.nextDate.includes('DP') ? '#9b59b6' : '#3498db'};">${n}</span>`).join(' ')}</td>
                         <td>
                             <div style="margin-bottom: 4px;">
                                 ${draw.signedDifferences.map((d, idx) => {
@@ -5906,17 +6017,23 @@ function analyzeDrawDifferences() {
                                     return `<span class="difference-value" style="color: ${color}; font-weight: bold; margin-right: 4px;">${displayNum}</span>`;
                                 }).join('')}
                             </div>
-                            <div style="font-size: 0.9em; color: #7f8c8d;">
-                                ${draw.evenOddIndicators.map(eo => 
-                                    `<span style="margin-right: 4px;">${eo}</span>`
-                                ).join('')}
+                            <div style="display: flex; align-items: center; gap: 10px; margin-top: 4px;">
+                                <div style="font-size: 0.9em; color: #7f8c8d;">
+                                    ${draw.evenOddIndicators.map(eo => 
+                                        `<span style="margin-right: 4px;">${eo}</span>`
+                                    ).join('')}
+                                </div>
+                                ${draw.comboCount > 1 ? 
+                                    `<div style="font-size: 0.85em; color: white; background: #9b59b6; padding: 2px 6px; border-radius: 10px; font-weight: bold; display: flex; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                                        <span>${draw.comboCount}x</span>
+                                    </div>` 
+                                    : draw.comboCount === 1 ?
+                                    `<div style="font-size: 0.8em; color: white; background: #2ecc71; padding: 2px 8px; border-radius: 10px; font-weight: bold; display: flex; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                                        <span>New</span>
+                                    </div>`
+                                    : ''
+                                }
                             </div>
-                            ${draw.comboCount > 1 ? 
-                                `<div style="font-size: 0.85em; color: #9b59b6; margin-top: 4px; font-weight: bold;">
-                                    Combo appeared ${draw.comboCount}x
-                                </div>` : 
-                                ''
-                            }
                         </td>
                     </tr>
                 `;
