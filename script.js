@@ -5717,6 +5717,577 @@ function togglePatternDetails(index) {
 
 // --- DRAW DIFFERENCES FUNCTIONALITY ---
 
+// Function to analyze differences between consecutive Double Play draws
+function analyzeDoublePlayDifferences() {
+    const resultsDiv = document.getElementById('double-play-differences-results');
+    const loadingDiv = document.getElementById('double-play-differences-loading');
+    const statsDiv = document.getElementById('double-play-differences-stats');
+    const statsContent = document.getElementById('double-play-differences-stats-content');
+    
+    // Show loading state
+    loadingDiv.style.display = 'block';
+    resultsDiv.innerHTML = '';
+    statsDiv.style.display = 'none';
+    
+    // Use setTimeout to allow UI to update
+    setTimeout(() => {
+        try {
+            // Get all draws from the global draws array
+            const allDraws = window.allDraws || [];
+            const doublePlayDraws = [];
+            
+            // Process the draws array to extract Double Play data
+            for (let i = 0; i < allDraws.length; i++) {
+                const draw = allDraws[i];
+                
+                // Check if this draw has Double Play data
+                if (draw && draw.doublePlayArr && Array.isArray(draw.doublePlayArr) && draw.doublePlayArr.length === 5) {
+                    const numbers = draw.doublePlayArr.map(Number).filter(n => !isNaN(n) && n >= 1 && n <= 69);
+                    
+                    if (numbers.length === 5) {
+                        doublePlayDraws.push({
+                            date: draw.date || '',
+                            numbers: numbers,
+                            powerball: draw.doublePlayPowerball ? parseInt(draw.doublePlayPowerball, 10) : null,
+                            type: 'double',
+                            displayDate: draw.date ? `${draw.date} (DP)` : 'Unknown Date (DP)',
+                            displayNums: [...numbers].sort((a, b) => a - b)
+                        });
+                    }
+                }
+            }
+            
+            // Sort draws by date (newest first)
+            const sortedDraws = [...doublePlayDraws].sort((a, b) => {
+                return new Date(b.date) - new Date(a.date);
+            });
+            
+            console.log(`Analyzing ${sortedDraws.length} Double Play draws`);
+            if (sortedDraws.length < 2) {
+                resultsDiv.innerHTML = `
+                    <div class="error-message" style="color: #e74c3c; padding: 15px; background-color: #fde8e8; border-radius: 4px; text-align: center;">
+                        <i class="fas fa-exclamation-triangle"></i> Not enough valid Double Play draw data available for analysis.
+                        <p>Found ${sortedDraws.length} valid draws. At least 2 are needed.</p>
+                        <p>Double Play data found: ${JSON.stringify(sortedDraws)}</p>
+                    </div>
+                `;
+                loadingDiv.style.display = 'none';
+                return;
+            }
+            
+            // Use the sortedDraws variable that we already created
+            console.log(`Analyzing ${sortedDraws.length} Double Play draws`);
+            if (sortedDraws.length < 2) {
+                resultsDiv.innerHTML = `
+                    <div class="error-message" style="color: #e74c3c; padding: 15px; background-color: #fde8e8; border-radius: 4px; text-align: center;">
+                        <i class="fas fa-exclamation-triangle"></i> Not enough valid Double Play draw data available for analysis.
+                        <p>Found ${sortedDraws.length} valid draws. At least 2 are needed.</p>
+                    </div>
+                `;
+                loadingDiv.style.display = 'none';
+                return;
+            }
+            
+            // Process draws to extract numbers and calculate differences
+            const processedDraws = [];
+            const allDifferences = [];
+            const differenceStats = {
+                totalComparisons: 0,
+                maxDifference: 0,
+                minDifference: 69, // Max possible difference between 1 and 69
+                averageDifference: 0,
+                differenceCounts: {},
+                positionStats: Array(5).fill().map(() => ({
+                    max: 0,
+                    min: 69,
+                    sum: 0,
+                    count: 0,
+                    differences: []
+                }))
+            };
+            
+            // Process each pair of consecutive draws
+            for (let i = 0; i < sortedDraws.length - 1; i++) {
+                const currentDraw = sortedDraws[i];
+                const nextDraw = sortedDraws[i + 1];
+                
+                const currentNums = currentDraw.numbers || [];
+                const nextNums = nextDraw.numbers || [];
+                
+                // Skip if either draw doesn't have exactly 5 numbers
+                if (currentNums.length !== 5 || nextNums.length !== 5) {
+                    console.log(`Skipping draw pair ${currentDraw.date} - ${nextDraw.date}: Invalid number count`);
+                    continue;
+                }
+                
+                // Calculate differences for each position
+                const differences = [];
+                let hasValidDifference = false;
+                
+                for (let j = 0; j < 5; j++) {
+                    const diff = Math.abs(currentNums[j] - nextNums[j]);
+                    differences.push(diff);
+                    allDifferences.push(diff);
+                    
+                    // Update position stats
+                    if (j < differenceStats.positionStats.length) {
+                        const posStat = differenceStats.positionStats[j];
+                        posStat.max = Math.max(posStat.max, diff);
+                        posStat.min = Math.min(posStat.min, diff);
+                        posStat.sum += diff;
+                        posStat.count++;
+                        posStat.differences.push(diff);
+                    }
+                    
+                    // Update global stats
+                    differenceStats.maxDifference = Math.max(differenceStats.maxDifference, diff);
+                    differenceStats.minDifference = Math.min(differenceStats.minDifference, diff);
+                    
+                    // Update difference counts
+                    differenceStats.differenceCounts[diff] = (differenceStats.differenceCounts[diff] || 0) + 1;
+                    
+                    hasValidDifference = true;
+                }
+                
+                if (hasValidDifference) {
+                    differenceStats.totalComparisons++;
+                    
+                    processedDraws.push({
+                        currentDate: currentDraw.displayDate,
+                        nextDate: nextDraw.displayDate,
+                        currentNums: [...currentNums],
+                        nextNums: [...nextNums],
+                        differences: differences,
+                        type: 'double'
+                    });
+                }
+            }
+            
+            // Calculate average difference
+            if (allDifferences.length > 0) {
+                differenceStats.averageDifference = 
+                    Math.round((allDifferences.reduce((a, b) => a + b, 0) / allDifferences.length) * 100) / 100;
+                
+                // Calculate average difference per position
+                differenceStats.positionStats.forEach(posStat => {
+                    if (posStat.count > 0) {
+                        posStat.avg = Math.round((posStat.sum / posStat.count) * 100) / 100;
+                    }
+                });
+            }
+            
+            console.log('Difference stats:', differenceStats);
+            
+            // Render results
+            renderDoublePlayDifferencesResults(processedDraws, differenceStats);
+            
+        } catch (error) {
+            console.error('Error analyzing draw differences:', error);
+            const resultsDiv = document.getElementById('double-play-differences-results');
+            if (resultsDiv) {
+                resultsDiv.innerHTML = `
+                    <div class="error-message" style="color: #e74c3c; padding: 15px; background-color: #fde8e8; border-radius: 4px;">
+                        <i class="fas fa-exclamation-circle"></i> An error occurred while analyzing draw differences:
+                        <pre style="white-space: pre-wrap; margin: 5px 0 0 0; font-family: monospace;">${error.message || 'Unknown error'}</pre>
+                    </div>
+                `;
+            }
+        } finally {
+            loadingDiv.style.display = 'none';
+        }
+    }, 50);
+}
+
+// Function to render Double Play differences results
+function renderDoublePlayDifferencesResults(processedDraws, stats) {
+    const resultsDiv = document.getElementById('double-play-differences-results');
+    const loadingDiv = document.getElementById('double-play-differences-loading');
+    const statsDiv = document.getElementById('double-play-differences-stats');
+    const statsContent = document.getElementById('double-play-differences-stats-content');
+    
+    if (!resultsDiv) return;
+    
+    // Clear previous results
+    resultsDiv.innerHTML = '';
+    
+    if (processedDraws.length === 0) {
+        resultsDiv.innerHTML = `
+            <div style="color: #666; text-align: center; padding: 20px;">
+                <p>No Double Play draw differences found for the selected criteria.</p>
+            </div>
+        `;
+        loadingDiv.style.display = 'none';
+        return;
+    }
+    
+    // Generate HTML for the results
+    let html = `
+        <div class="results-summary" style="margin-bottom: 20px;">
+            <p>Analyzed <strong>${processedDraws.length}</strong> consecutive Double Play draw pairs.</p>
+        </div>
+        <div style="overflow-x: auto;">
+            <table class="difference-table" style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="background-color: #f8f9fa; border-bottom: 2px solid #dee2e6;">
+                        <th style="padding: 12px; text-align: left; border-bottom: 1px solid #dee2e6;">Draw Date</th>
+                        <th style="padding: 12px; text-align: left; border-bottom: 1px solid #dee2e6;">Numbers</th>
+                        <th style="padding: 12px; text-align: left; border-bottom: 1px solid #dee2e6;">Next Draw</th>
+                        <th style="padding: 12px; text-align: left; border-bottom: 1px solid #dee2e6;">Next Numbers</th>
+                        <th style="padding: 12px; text-align: left; border-bottom: 1px solid #dee2e6;">Differences</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+    
+    // Add rows for each draw pair
+    processedDraws.forEach((draw, index) => {
+        const isEven = index % 2 === 0;
+        const rowStyle = isEven ? 'background-color: #f9f9f9;' : '';
+        
+        // Calculate signed differences and even/odd indicators
+        const signedDiffs = [];
+        const evenOddIndicators = [];
+        
+        for (let i = 0; i < 5; i++) {
+            const currentNum = draw.currentNums[i];
+            const nextNum = draw.nextNums[i];
+            // Calculate as draw date - next draw (current - next)
+            const diff = currentNum - nextNum;
+            const absDiff = Math.abs(diff);
+            const sign = diff > 0 ? '+' : ''; // Single + for positive, empty string for negative
+            const isEven = absDiff % 2 === 0;
+            
+            signedDiffs.push({
+                value: diff,
+                display: sign + diff, // Keep the sign for display
+                absValue: absDiff,
+                isEven: isEven,
+                currentNum: currentNum,
+                nextNum: nextNum
+            });
+            
+            evenOddIndicators.push(isEven ? 'E' : 'O');
+        }
+        
+        // Check if this pattern has been seen before (for highlighting)
+        const patternKey = signedDiffs.map(d => d.display).join(',');
+        const patternCount = processedDraws.filter(d => {
+            const dPattern = d.currentNums.map((n, i) => {
+                const dDiff = n - d.nextNums[i];
+                return (dDiff > 0 ? '+' : '') + dDiff;
+            }).join(',');
+            return dPattern === patternKey;
+        }).length;
+        
+        const patternHighlight = patternCount > 1 ? 'border-left: 4px solid #f39c12;' : '';
+        
+        html += `
+            <tr style="${rowStyle} ${patternHighlight}">
+                <td style="padding: 10px; border-bottom: 1px solid #eee;">
+                    ${draw.currentDate}
+                </td>
+                <td style="padding: 10px; border-bottom: 1px solid #eee;">
+                    ${draw.currentNums.map(n => 
+                        `<span class="number-badge" style="display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; background-color: #9b59b6; color: white; border-radius: 50%; font-size: 14px; font-weight: bold; margin: 2px;">${n}</span>`
+                    ).join(' ')}
+                </td>
+                <td style="padding: 10px; border-bottom: 1px solid #eee;">
+                    ${draw.nextDate}
+                </td>
+                <td style="padding: 10px; border-bottom: 1px solid #eee;">
+                    ${draw.nextNums.map(n => 
+                        `<span class="number-badge" style="display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; background-color: #9b59b6; color: white; border-radius: 50%; font-size: 14px; font-weight: bold; margin: 2px;">${n}</span>`
+                    ).join(' ')}
+                </td>
+                <td style="padding: 10px; border-bottom: 1px solid #eee;">
+                    <div style="margin-bottom: 4px; font-size: 15px; white-space: nowrap;">
+                        ${signedDiffs.map(diff => {
+                            const color = diff.value > 0 ? '#27ae60' : diff.value < 0 ? '#e74c3c' : '#7f8c8d';
+                            return `<span class="difference-value" style="color: ${color}; font-weight: bold; margin-right: 12px;">${diff.display}</span>`;
+                        }).join('')}
+                    </div>
+                    <div style="font-size: 0.9em; color: #7f8c8d; margin-top: 4px;">
+                        ${evenOddIndicators.map(eo => 
+                            `<span style="margin-right: 8px;">${eo}</span>`
+                        ).join('')}
+                    </div>
+                    ${patternCount > 1 ? 
+                        `<div style="font-size: 0.85em; color: #f39c12; margin-top: 4px; font-weight: bold;">
+                            Pattern appeared ${patternCount}x
+                        </div>` : 
+                        ''
+                    }
+                </td>
+            </tr>
+        `;
+    });
+    
+    // Add statistics section
+    if (stats) {
+        html += `
+            <div id="double-play-differences-stats" style="margin-top: 30px;">
+                <h3 style="color: #2c3e50; margin-bottom: 15px;">Difference Statistics</h3>
+                <div id="double-play-differences-stats-content" style="display: flex; flex-wrap: wrap; gap: 20px;">
+                    <div class="stat-box" style="background-color: #f8f9fa; border-radius: 5px; padding: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+                        <h4 style="color: #2c3e50; margin-top: 0; margin-bottom: 10px; border-bottom: 1px solid #dee2e6; padding-bottom: 5px;">Overall Statistics</h4>
+                        <p style="margin: 5px 0;"><strong>Total Comparisons:</strong> ${stats.totalComparisons || 0}</p>
+                        <p style="margin: 5px 0;"><strong>Max Difference:</strong> ${stats.maxDifference || 0}</p>
+                        <p style="margin: 5px 0;"><strong>Min Difference:</strong> ${stats.minDifference || 0}</p>
+                        <p style="margin: 5px 0;"><strong>Avg Difference:</strong> ${stats.averageDifference ? stats.averageDifference.toFixed(2) : 0}</p>
+                    </div>
+        `;
+        
+        // Add position-specific statistics if available
+        if (stats.positionStats && stats.positionStats.length > 0) {
+            stats.positionStats.forEach((posStat, index) => {
+                html += `
+                    <div class="stat-box" style="background-color: #f8f9fa; border-radius: 5px; padding: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+                        <h4 style="color: #2c3e50; margin-top: 0; margin-bottom: 10px; border-bottom: 1px solid #dee2e6; padding-bottom: 5px;">Position ${index + 1}</h4>
+                        <p style="margin: 5px 0;"><strong>Max:</strong> ${posStat.max || 0}</p>
+                        <p style="margin: 5px 0;"><strong>Min:</strong> ${posStat.min || 0}</p>
+                        <p style="margin: 5px 0;"><strong>Avg:</strong> ${posStat.avg ? posStat.avg.toFixed(2) : 0}</p>
+                    </div>
+                `;
+            });
+        }
+        
+        html += `
+                </div>
+            </div>
+        `;
+    }
+    
+    // Close the main container div
+    html += `
+            </div>
+        </div>
+    `;
+    
+    // Update the DOM
+    resultsDiv.innerHTML = html;
+    
+    // Hide loading indicator
+    if (loadingDiv) {
+        loadingDiv.style.display = 'none';
+    }
+    
+    // Show stats div if it exists
+    if (statsDiv) {
+        statsDiv.style.display = 'block';
+    }
+}
+
+// Function to render Double Play differences statistics
+function renderDoublePlayDifferencesStats(stats) {
+    const statsDiv = document.getElementById('double-play-differences-stats');
+    const statsContent = document.getElementById('double-play-differences-stats-content');
+    
+    if (!statsDiv || !statsContent) return;
+    
+    statsContent.innerHTML = '';
+    
+    // Overall statistics
+    let html = `
+        <div style="flex: 1; min-width: 300px; background: #f8f9fa; border-radius: 8px; padding: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+            <h4 style="margin-top: 0; color: #2c3e50; border-bottom: 1px solid #e0e0e0; padding-bottom: 8px;">Overall Statistics</h4>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px;">
+                <div>Total Comparisons:</div>
+                <div><strong>${stats.totalComparisons}</strong></div>
+                
+                <div>Max Difference:</div>
+                <div><strong>${stats.maxDifference}</strong></div>
+                
+                <div>Min Difference:</div>
+                <div><strong>${stats.minDifference}</strong></div>
+                
+                <div>Avg Difference:</div>
+                <div><strong>${stats.averageDifference.toFixed(2)}</strong></div>
+            </div>
+        </div>
+        
+        <div style="flex: 1; min-width: 300px; background: #f8f9fa; border-radius: 8px; padding: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+            <h4 style="margin-top: 0; color: #2c3e50; border-bottom: 1px solid #e0e0e0; padding-bottom: 8px;">Most Common Differences</h4>
+            <div style="margin-top: 10px;">
+    `;
+    
+    // Sort differences by frequency
+    const sortedDifferences = Object.entries(stats.differenceCounts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5); // Top 5 most common differences
+    
+    if (sortedDifferences.length > 0) {
+        sortedDifferences.forEach(([diff, count]) => {
+            const percentage = ((count / (stats.totalComparisons * 5)) * 100).toFixed(1);
+            html += `
+                <div style="margin-bottom: 5px;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 3px;">
+                        <span>Difference of ${diff}:</span>
+                        <span><strong>${count}</strong> (${percentage}%)</span>
+                    </div>
+                    <div style="height: 8px; background: #e0e0e0; border-radius: 4px; overflow: hidden;">
+                        <div style="width: ${percentage}%; height: 100%; background: #3498db;"></div>
+                    </div>
+                </div>
+            `;
+        });
+    } else {
+        html += '<p>No difference data available.</p>';
+    }
+    
+    html += `
+            </div>
+        </div>
+    `;
+    
+    // Position statistics
+    html += `
+        <div style="flex: 1 100%; min-width: 300px; background: #f8f9fa; border-radius: 8px; padding: 15px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-top: 15px;">
+            <h4 style="margin-top: 0; color: #2c3e50; border-bottom: 1px solid #e0e0e0; padding-bottom: 8px;">Position Statistics</h4>
+            <div style="overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
+                    <thead>
+                        <tr>
+                            <th style="text-align: left; padding: 8px; border-bottom: 1px solid #e0e0e0;">Position</th>
+                            <th style="text-align: right; padding: 8px; border-bottom: 1px solid #e0e0e0;">Avg Diff</th>
+                            <th style="text-align: right; padding: 8px; border-bottom: 1px solid #e0e0e0;">Max</th>
+                            <th style="text-align: right; padding: 8px; border-bottom: 1px solid #e0e0e0;">Min</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+    `;
+    
+    stats.positionStats.forEach((posStat, index) => {
+        html += `
+            <tr>
+                <td style="padding: 8px; border-bottom: 1px solid #f0f0f0;">Position ${index + 1}</td>
+                <td style="text-align: right; padding: 8px; border-bottom: 1px solid #f0f0f0;">${posStat.avg ? posStat.avg.toFixed(2) : 'N/A'}</td>
+                <td style="text-align: right; padding: 8px; border-bottom: 1px solid #f0f0f0;">${posStat.max}</td>
+                <td style="text-align: right; padding: 8px; border-bottom: 1px solid #f0f0f0;">${posStat.min}</td>
+            </tr>
+        `;
+    });
+    
+    html += `
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    `;
+    
+    statsContent.innerHTML = html;
+    statsDiv.style.display = 'block';
+}
+
+// Function to export Double Play differences to CSV
+function exportDoublePlayDifferencesToCSV() {
+    try {
+        // Get all draws from the global draws array
+        const allDraws = window.allDraws || [];
+        const doublePlayDraws = [];
+        
+        // Process the draws array to extract Double Play data
+        for (let i = 0; i < allDraws.length; i++) {
+            const draw = allDraws[i];
+            
+            // Skip if this is a Double Play row (it will be processed with the previous row)
+            if (draw && draw['Winning Numbers '] && draw['Winning Numbers '].includes('Double Play® Numbers')) {
+                continue;
+            }
+            
+            // Check if the next row is a Double Play row
+            if (i < allDraws.length - 1) {
+                const nextDraw = allDraws[i + 1];
+                if (nextDraw && nextDraw['Winning Numbers '] && nextDraw['Winning Numbers '].includes('Double Play® Numbers')) {
+                    // Extract Double Play numbers from the next row
+                    const dpNumbersMatch = nextDraw['Winning Numbers '].match(/Double Play® Numbers\s+([\d\s-]+)/);
+                    
+                    if (dpNumbersMatch && dpNumbersMatch[1]) {
+                        const numbers = dpNumbersMatch[1].trim().split(/\s*-\s*/).map(num => parseInt(num, 10));
+                        
+                        if (numbers.length === 5 && numbers.every(n => !isNaN(n))) {
+                            doublePlayDraws.push({
+                                date: draw['Date '] ? draw['Date '].trim() : '',
+                                numbers: [...numbers].sort((a, b) => a - b)
+                            });
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Sort draws by date (newest first)
+        doublePlayDraws.sort((a, b) => new Date(b.date) - new Date(a.date));
+        
+        if (doublePlayDraws.length < 2) {
+            alert('Not enough Double Play draw data available to export.');
+            return;
+        }
+        
+        // Prepare CSV content
+        let csvContent = 'Draw Date,Number 1,Number 2,Number 3,Number 4,Number 5,Next Draw Date,Next Number 1,Next Number 2,Next Number 3,Next Number 4,Next Number 5,Diff 1,Diff 2,Diff 3,Diff 4,Diff 5\r\n';
+        
+        // Process each pair of consecutive draws
+        for (let i = 0; i < doublePlayDraws.length - 1; i++) {
+            const current = doublePlayDraws[i];
+            const next = doublePlayDraws[i + 1];
+            
+            // Calculate differences
+            const diffs = [];
+            for (let j = 0; j < 5; j++) {
+                diffs.push(Math.abs(current.numbers[j] - next.numbers[j]));
+            }
+            
+            // Add row to CSV
+            csvContent += `"${current.date}",`;
+            csvContent += `${current.numbers.join(',')},`;
+            csvContent += `"${next.date}",`;
+            csvContent += `${next.numbers.join(',')},`;
+            csvContent += `${diffs.join(',')}\r\n`;
+        }
+        
+        // Create and trigger download
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.setAttribute('href', url);
+        link.setAttribute('download', `powerball_double_play_draw_differences_${new Date().toISOString().split('T')[0]}.csv`);
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+    } catch (error) {
+        console.error('Error exporting Double Play differences to CSV:', error);
+        alert('An error occurred while exporting the data. Please try again.');
+    }
+}
+
+// Initialize the Double Play Differences tab
+document.addEventListener('DOMContentLoaded', function() {
+    // Add event listener for the Analyze Double Play Differences button
+    const analyzeBtn = document.getElementById('analyze-double-play-differences-btn');
+    if (analyzeBtn) {
+        analyzeBtn.addEventListener('click', analyzeDoublePlayDifferences);
+    }
+    
+    // Add event listener for the Export to CSV button
+    const exportBtn = document.getElementById('export-double-play-differences-csv');
+    if (exportBtn) {
+        exportBtn.addEventListener('click', exportDoublePlayDifferencesToCSV);
+    }
+    
+    // Add tab click handler for the Double Play Differences tab
+    const tabButtons = document.querySelectorAll('.tab-btn');
+    tabButtons.forEach(btn => {
+        if (btn.getAttribute('data-tab') === 'double-play-differences') {
+            btn.addEventListener('click', function() {
+                // This ensures the tab content is shown before analyzing
+                setTimeout(analyzeDoublePlayDifferences, 100);
+            });
+        }
+    });
+});
+
 // Function to analyze differences between consecutive draws
 function analyzeDrawDifferences() {
     const resultsDiv = document.getElementById('differences-results');
