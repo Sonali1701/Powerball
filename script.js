@@ -6550,35 +6550,129 @@ function analyzeDrawDifferences() {
                         <tbody>
             `;
             
-            // Track all occurrences of each sign pattern with their dates
+            // Track all occurrences of each exact difference pattern with their dates
             const patternOccurrences = new Map();
             
-            // First pass: collect all occurrences of each pattern
+            // First pass: collect all occurrences of each exact difference pattern
             processedDraws.forEach(draw => {
-                const signPattern = draw.signedDifferences.map(d => d.startsWith('-') ? '-' : '+').join('');
-                draw.signPattern = signPattern;
-                draw.patternCount = signPatternFrequency.get(signPattern) || 0;
+                // Ensure we have valid differences
+                if (!draw.signedDifferences || !Array.isArray(draw.signedDifferences)) {
+                    console.warn('Invalid or missing signedDifferences for draw:', draw);
+                    draw.signedDifferences = [];
+                }
                 
-                // Initialize pattern in the map if it doesn't exist
-                if (!patternOccurrences.has(signPattern)) {
-                    patternOccurrences.set(signPattern, []);
+                // Create a clean array of differences with proper formatting
+                const cleanDiffs = draw.signedDifferences.map(d => {
+                    // Handle both string (with +) and number types
+                    if (typeof d === 'string') {
+                        // Remove any non-digit characters except minus
+                        const numStr = d.replace(/[^0-9-]/g, '');
+                        const num = parseInt(numStr, 10);
+                        return isNaN(num) ? 0 : num;
+                    }
+                    return isNaN(d) ? 0 : Number(d);
+                });
+                
+                // Create a consistent string key for the pattern
+                const diffKey = cleanDiffs.join(',');
+                draw.diffPattern = diffKey;
+                
+                // Also create a pattern that ignores the sign (absolute values)
+                const absPattern = cleanDiffs.map(Math.abs).join(',');
+                draw.absPattern = absPattern;
+                
+                // Initialize pattern in the maps if they don't exist
+                if (!patternOccurrences.has(diffKey)) {
+                    patternOccurrences.set(diffKey, []);
                 }
                 
                 // Add this occurrence to the pattern's list
-                patternOccurrences.get(signPattern).push({
-                    date: draw.date,
-                    nextDate: draw.nextDate,
-                    numbers: draw.currentNums,
-                    nextNumbers: draw.nextNums,
-                    differences: draw.signedDifferences
+                patternOccurrences.get(diffKey).push({
+                    date: draw.date || 'Unknown date',
+                    nextDate: draw.nextDate || 'Unknown date',
+                    numbers: Array.isArray(draw.currentNums) ? [...draw.currentNums] : [],
+                    nextNumbers: Array.isArray(draw.nextNums) ? [...draw.nextNums] : [],
+                    differences: [...cleanDiffs], // Store a copy of the clean differences
+                    signedPattern: diffKey,
+                    absPattern: absPattern
                 });
+            });
+            
+            // Create a map to track absolute pattern frequencies
+            const absPatternFrequencies = new Map();
+            
+            // Count frequencies of absolute patterns
+            processedDraws.forEach(draw => {
+                const absPattern = draw.absPattern;
+                absPatternFrequencies.set(absPattern, (absPatternFrequencies.get(absPattern) || 0) + 1);
+            });
+            
+            // Debug log to check pattern occurrences
+            console.log('Pattern occurrences:', patternOccurrences);
+            console.log('Absolute pattern frequencies:', absPatternFrequencies);
+            
+            // Second pass: set pattern counts after all occurrences are collected
+            processedDraws.forEach(draw => {
+                // Check for exact signed pattern matches first
+                if (draw.diffPattern && patternOccurrences.has(draw.diffPattern)) {
+                    const occurrences = patternOccurrences.get(draw.diffPattern);
+                    draw.patternCount = occurrences.length;
+                    draw.patternType = 'exact';
+                    console.log(`Exact pattern ${draw.diffPattern} appears ${draw.patternCount} times`);
+                } 
+                // Then check for absolute value pattern matches
+                else if (draw.absPattern && absPatternFrequencies.get(draw.absPattern) > 1) {
+                    draw.patternCount = absPatternFrequencies.get(draw.absPattern);
+                    draw.patternType = 'absolute';
+                    console.log(`Absolute pattern ${draw.absPattern} appears ${draw.patternCount} times`);
+                }
+                else {
+                    draw.patternCount = 0; // No matches found
+                    draw.patternType = 'none';
+                    console.log('No pattern match for draw:', draw);
+                }
+                
+                // Store the pattern matches for display
+                if (draw.patternCount > 1) {
+                    if (draw.patternType === 'exact') {
+                        draw.patternMatches = patternOccurrences.get(draw.diffPattern)
+                            .filter(match => match.date !== draw.date) // Exclude self
+                            .map(match => ({
+                                date: match.date,
+                                numbers: match.numbers,
+                                nextNumbers: match.nextNumbers,
+                                differences: match.differences
+                            }));
+                    } else if (draw.patternType === 'absolute') {
+                        // Find all draws with the same absolute pattern
+                        draw.patternMatches = Array.from(patternOccurrences.values())
+                            .flat()
+                            .filter(match => {
+                                const matchAbsPattern = match.differences.map(Math.abs).join(',');
+                                return matchAbsPattern === draw.absPattern && match.date !== draw.date;
+                            })
+                            .map(match => ({
+                                date: match.date,
+                                numbers: match.numbers,
+                                nextNumbers: match.nextNumbers,
+                                differences: match.differences,
+                                isAbsoluteMatch: true
+                            }));
+                    }
+                }
             });
             
             // Add rows for each draw comparison
             processedDraws.forEach((draw, index) => {
                 const isEven = index % 2 === 0;
                 const rowStyle = isEven ? 'background-color: #f9f9f9;' : '';
-                const patternHighlight = draw.patternCount > 1 ? 'border-left: 4px solid #f39c12;' : '';
+                const hasPattern = draw.patternCount > 1;
+                const patternHighlight = hasPattern ? 'border-left: 4px solid #f39c12;' : '';
+                
+                // Debug log for pattern data
+                if (hasPattern) {
+                    console.log(`Draw ${index} (${draw.date}) has pattern ${draw.diffPattern} appearing ${draw.patternCount} times`);
+                }
                 
                 html += `
                     <tr style="${rowStyle} ${patternHighlight}">
@@ -6598,6 +6692,12 @@ function analyzeDrawDifferences() {
                                     const displayNum = diff > 0 ? `+${diff}` : diff;
                                     return `<span class="difference-value" style="color: ${color}; font-weight: bold; margin-right: 4px;">${displayNum}</span>`;
                                 }).join('')}
+                                ${draw.patternCount > 0 ? 
+                                    `<div style="font-size: 0.8em; color: #f39c12; margin-top: 4px; font-weight: bold;">
+                                        Exact appearance ${draw.patternCount}x
+                                    </div>` 
+                                    : ''
+                                }
                             </div>
                             <div style="font-size: 0.9em; color: #7f8c8d; margin-top: 4px;">
                                 ${draw.evenOddIndicators.map(eo => 
@@ -6605,23 +6705,40 @@ function analyzeDrawDifferences() {
                                 ).join('')}
                             </div>
                             ${draw.patternCount > 1 ? `
-                                <div id="pattern-${index}" style="font-size: 0.85em; color: #f39c12; margin-top: 4px; font-weight: bold; cursor: pointer; display: inline-block;">
-                                    Pattern appeared ${draw.patternCount}x ▼
-                                </div>
-                                <div id="pattern-${index}-dates" style="display: none; margin-top: 8px; padding: 8px; background: #f8f9fa; border-radius: 4px; font-size: 0.8em; color: #2c3e50;">
-                                    <div style="font-weight: bold; margin-bottom: 5px; border-bottom: 1px solid #eee; padding-bottom: 3px;">Pattern appeared on:</div>
-                                    ${patternOccurrences.get(draw.signPattern).map(occurrence => 
-                                        `<div style="margin-bottom: 4px; padding: 3px 0; border-bottom: 1px dashed #eee;">
-                                            <div>${occurrence.date} → ${occurrence.nextDate}</div>
-                                            <div style="font-family: monospace; font-size: 0.9em; color: #7f8c8d;">
-                                                ${occurrence.differences.map(d => 
-                                                    `<span style="color: ${d > 0 ? '#27ae60' : d < 0 ? '#e74c3c' : '#7f8c8d'}; margin-right: 8px; font-weight: bold;">
-                                                        ${d > 0 ? '+' : ''}${d}
-                                                    </span>`
-                                                ).join('')}
-                                            </div>
-                                        </div>`
-                                    ).join('')}
+                                <div style="margin-top: 8px;">
+                                    <div id="pattern-${index}" class="pattern-toggle" style="color: #f39c12; font-weight: bold; cursor: pointer; display: inline-block; padding: 6px 12px; background: #fef5e9; border-radius: 4px; border: 1px solid #f39c12; transition: all 0.2s; font-size: 0.95em;">
+                                        <i class="fas fa-search"></i> ${draw.patternType === 'exact' ? 'Exact' : 'Similar'} difference appeared ${draw.patternCount}x ▼
+                                    </div>
+                                    <div id="pattern-${index}-dates" class="pattern-dates" style="display: none; margin-top: 8px; padding: 12px; background: #f8f9fa; border-radius: 4px; border: 1px solid #eee; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                                        <div style="font-weight: bold; margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid #eee; color: #2c3e50; display: flex; justify-content: space-between; align-items: center;">
+                                            <span>Exact difference appeared on:</span>
+                                            <span class="close-pattern" style="cursor: pointer; color: #95a5a6; font-size: 1.1em;">×</span>
+                                        </div>
+                                        <div style="max-height: 300px; overflow-y: auto; padding-right: 5px;">
+                                            ${(() => {
+                                                const occurrences = patternOccurrences.get(draw.diffPattern) || [];
+                                                return occurrences.map((occurrence, idx) => {
+                                                    const diffs = Array.isArray(occurrence.differences) ? occurrence.differences : [];
+                                                    const isCurrent = occurrence.date === draw.date;
+                                                    return `
+                                                    <div style="margin-bottom: 8px; padding: 8px; background: ${isCurrent ? '#fff8e1' : '#fff'}; border-radius: 4px; border-left: 3px solid ${isCurrent ? '#f39c12' : '#e0e0e0'};">
+                                                        <div style="font-weight: 500; margin-bottom: 4px; color: ${isCurrent ? '#e67e22' : '#2c3e50'};">
+                                                            ${occurrence.date} → ${occurrence.nextDate}
+                                                            ${isCurrent ? '<span style="margin-left: 8px; font-size: 0.9em; color: #f39c12;">(Current)</span>' : ''}
+                                                        </div>
+                                                        <div style="font-family: 'Courier New', monospace; font-size: 0.95em; color: #34495e; padding: 4px 0;">
+                                                            ${diffs.map(d => {
+                                                                const diffValue = parseInt(d) || 0;
+                                                                const color = diffValue > 0 ? '#27ae60' : diffValue < 0 ? '#e74c3c' : '#7f8c8d';
+                                                                const displayValue = diffValue > 0 ? `+${diffValue}` : diffValue;
+                                                                return `<span style="color: ${color}; margin-right: 10px; font-weight: bold; min-width: 24px; display: inline-block; text-align: center;">${displayValue}</span>`;
+                                                            }).join('')}
+                                                        </div>
+                                                    </div>`;
+                                                }).join('');
+                                            })()}
+                                        </div>
+                                    </div>
                                 </div>
                             ` : ''}
                         </td>
@@ -6692,23 +6809,64 @@ function analyzeDrawDifferences() {
             statsDiv.style.display = 'block';
             loadingDiv.style.display = 'none';
             
-            // Add click handlers for pattern toggles
-            processedDraws.forEach((draw, index) => {
-                if (draw.patternCount > 1) {
-                    const patternElement = document.getElementById(`pattern-${index}`);
-                    if (patternElement) {
-                        patternElement.addEventListener('click', function(e) {
-                            e.stopPropagation();
-                            const datesElement = document.getElementById(`pattern-${index}-dates`);
-                            if (datesElement) {
+            // Add click handlers for pattern toggles after DOM is updated
+            setTimeout(() => {
+                console.log('Initializing pattern toggles...');
+                let toggleCount = 0;
+                
+                processedDraws.forEach((draw, index) => {
+                    if (draw.patternCount > 1) {
+                        const patternElement = document.getElementById(`pattern-${index}`);
+                        const datesElement = document.getElementById(`pattern-${index}-dates`);
+                        
+                        if (patternElement && datesElement) {
+                            toggleCount++;
+                            const patternType = draw.patternType === 'exact' ? 'exact' : 'similar';
+                            console.log(`Initialized toggle for ${patternType} pattern ${index} (${draw.diffPattern})`);
+                            // Toggle pattern details
+                            patternElement.addEventListener('click', function(e) {
+                                e.stopPropagation();
                                 const isVisible = datesElement.style.display === 'block';
                                 datesElement.style.display = isVisible ? 'none' : 'block';
-                                patternElement.innerHTML = `Pattern appeared ${draw.patternCount}x ${isVisible ? '▼' : '▲'}`;
+                                patternElement.innerHTML = `<i class="fas fa-search"></i> Exact difference appeared ${draw.patternCount}x ${isVisible ? '▼' : '▲'}`;
+                            });
+                            
+                            // Close button in the dates panel
+                            const closeButton = datesElement.querySelector('.close-pattern');
+                            if (closeButton) {
+                                closeButton.addEventListener('click', function(e) {
+                                    e.stopPropagation();
+                                    datesElement.style.display = 'none';
+                                    patternElement.innerHTML = `<i class="fas fa-search"></i> Exact difference appeared ${draw.patternCount}x ▼`;
+                                });
                             }
-                        });
+                            
+                            // Hover effects
+                            patternElement.addEventListener('mouseover', () => {
+                                patternElement.style.backgroundColor = '#fef0e0';
+                                patternElement.style.borderColor = '#e67e22';
+                            });
+                            
+                            patternElement.addEventListener('mouseout', () => {
+                                patternElement.style.backgroundColor = '#fef5e9';
+                                patternElement.style.borderColor = '#f39c12';
+                            });
+                            
+                            // Click outside to close
+                            document.addEventListener('click', function closeOnOutsideClick(e) {
+                                if (!patternElement.contains(e.target) && !datesElement.contains(e.target)) {
+                                    datesElement.style.display = 'none';
+                                    patternElement.innerHTML = `<i class="fas fa-search"></i> Exact difference appeared ${draw.patternCount}x ▼`;
+                                }
+                            });
+                        }
                     }
-                }
-            });
+                });
+                
+                // Add some console logging for debugging
+                console.log('Pattern toggles initialized');
+                console.log('Processed draws with patterns:', processedDraws.filter(d => d.patternCount > 1).length);
+            }, 200);
             
             // Scroll to results
             resultsDiv.scrollIntoView({ behavior: 'smooth' });
