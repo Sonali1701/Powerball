@@ -6432,12 +6432,72 @@ function analyzeDrawDifferences() {
                 }))
             };
             
-            // Track combination frequencies
-            const combinationFrequency = new Map();
-            // Track sign patterns
-            const signPatternFrequency = new Map();
+            // First pass: Calculate all pattern frequencies
+            const patternFrequencies = {
+                signPatterns: new Map(),
+                evenOddPatterns: new Map(),
+                combinations: new Map(),
+                absoluteValuePatterns: new Map()  // Track patterns of absolute values
+            };
             
-            // Process each draw and compare with the next one
+            // Debug: Track all absolute value patterns for verification
+            const allAbsPatterns = [];
+            
+            // First pass: calculate all frequencies
+            for (let i = 0; i < allDraws.length - 1; i++) {
+                const currentDraw = allDraws[i];
+                const nextDraw = allDraws[i + 1];
+                
+                // Skip invalid draw pairs
+                if ((currentDraw.mainArr?.length !== 5) || (nextDraw.mainArr?.length !== 5) || 
+                    (currentDraw.type === 'double' && nextDraw.type === 'double')) {
+                    continue;
+                }
+                
+                // Calculate differences and patterns
+                const signedDifferences = [];
+                const absoluteDifferences = [];
+                const evenOddIndicators = [];
+                
+                for (let j = 0; j < 5; j++) {
+                    const diff = currentDraw.mainArr[j] - nextDraw.mainArr[j];
+                    const absDiff = Math.abs(diff);
+                    signedDifferences.push(diff > 0 ? `+${diff}` : `${diff}`);
+                    absoluteDifferences.push(absDiff);
+                    evenOddIndicators.push(absDiff % 2 === 0 ? 'E' : 'O');
+                }
+                
+                // Update pattern frequencies
+                const signPattern = signedDifferences.map(d => d.startsWith('-') ? '-' : '+').join('');
+                const evenOddPattern = evenOddIndicators.join('');
+                const comboKey = signedDifferences.join(',');
+                
+                // Create absolute value pattern (sorted absolute values, ascending order)
+                // Use absoluteDifferences which already contains the absolute values
+                const absPatternKey = [...absoluteDifferences].sort((a, b) => a - b).join(',');
+                
+                // Debug log for pattern tracking
+                console.log(`Draw ${i}: Pattern ${absPatternKey}`);
+                
+                // Update pattern frequencies
+                patternFrequencies.signPatterns.set(signPattern, (patternFrequencies.signPatterns.get(signPattern) || 0) + 1);
+                patternFrequencies.evenOddPatterns.set(evenOddPattern, (patternFrequencies.evenOddPatterns.get(evenOddPattern) || 0) + 1);
+                patternFrequencies.combinations.set(comboKey, (patternFrequencies.combinations.get(comboKey) || 0) + 1);
+                
+                // Track absolute value patterns (using the same key generation as above)
+                allAbsPatterns.push(absPatternKey);
+                patternFrequencies.absoluteValuePatterns.set(
+                    absPatternKey, 
+                    (patternFrequencies.absoluteValuePatterns.get(absPatternKey) || 0) + 1
+                );
+                
+                // Debug: Log the pattern and its count
+                if (i < 3) { // Only log first few for debugging
+                    console.log(`Draw ${i}: Pattern ${absPatternKey} count: ${patternFrequencies.absoluteValuePatterns.get(absPatternKey)}`);
+                }
+            }
+            
+            // Second pass: process draws with pre-calculated frequencies
             for (let i = 0; i < allDraws.length - 1; i++) {
                 const currentDraw = allDraws[i];
                 const nextDraw = allDraws[i + 1];
@@ -6448,11 +6508,10 @@ function analyzeDrawDifferences() {
                 
                 // Skip if either draw doesn't have exactly 5 numbers
                 if (currentNums.length !== 5 || nextNums.length !== 5) {
-                    console.log(`Skipping draw pair ${currentDraw.date} - ${nextDraw.date}: Invalid number count`);
                     continue;
                 }
                 
-                // Skip if both are double play draws (we only want main-to-main, main-to-double, and double-to-main)
+                // Skip if both are double play draws
                 if (currentDraw.type === 'double' && nextDraw.type === 'double') {
                     continue;
                 }
@@ -6461,16 +6520,15 @@ function analyzeDrawDifferences() {
                 const differences = [];
                 const signedDifferences = [];
                 const evenOddIndicators = [];
-                let hasInvalidDiff = false;
                 
                 for (let j = 0; j < 5; j++) {
-                    const diff = currentNums[j] - nextNums[j]; // Changed to current - next
+                    const diff = currentNums[j] - nextNums[j];
                     const absDiff = Math.abs(diff);
-                    const sign = diff > 0 ? '+' : ''; // Single + for positive, empty string for negative (which will show -)
+                    const sign = diff > 0 ? '+' : '';
                     const isEven = absDiff % 2 === 0;
                     
                     differences.push(absDiff);
-                    signedDifferences.push(sign + diff); // This will show as +5 or -3
+                    signedDifferences.push(sign + diff);
                     evenOddIndicators.push(isEven ? 'E' : 'O');
                     
                     // Update position stats (using absolute values for stats)
@@ -6488,20 +6546,14 @@ function analyzeDrawDifferences() {
                     differenceStats.differenceCounts[absDiff] = (differenceStats.differenceCounts[absDiff] || 0) + 1;
                 }
                 
-                // Track this combination
-                const comboKey = signedDifferences.join(',');
-                combinationFrequency.set(comboKey, (combinationFrequency.get(comboKey) || 0) + 1);
-                
-                // Track sign pattern (just + and - signs)
+                // Get patterns and their counts
                 const signPattern = signedDifferences.map(d => d.startsWith('-') ? '-' : '+').join('');
-                const patternCount = (signPatternFrequency.get(signPattern) || 0) + 1;
-                signPatternFrequency.set(signPattern, patternCount);
+                const evenOddPattern = evenOddIndicators.join('');
+                const comboKey = signedDifferences.join(',');
+                // Create a consistent pattern key using absolute values
+                const absPatternKey = differences.map(Math.abs).sort((a, b) => a - b).join(',');
                 
-                if (hasInvalidDiff) continue;
-                
-                // Add to processed draws with combination info
-                const comboCount = combinationFrequency.get(comboKey);
-                
+                // Add to processed draws with pre-calculated counts
                 processedDraws.push({
                     date: currentDraw.date || 'Unknown date',
                     currentNums: [...currentNums].sort((a, b) => a - b),
@@ -6510,15 +6562,54 @@ function analyzeDrawDifferences() {
                     differences,
                     signedDifferences,
                     evenOddIndicators,
+                    evenOddPattern,
+                    evenOddCount: patternFrequencies.evenOddPatterns.get(evenOddPattern) || 0,
+                    signPattern,
+                    signPatternCount: patternFrequencies.signPatterns.get(signPattern) || 0,
+                    absPatternKey,
+                    // Get the count from our pre-calculated frequencies
+                    // Use the absolute value pattern count from the frequencies map
+                    absPatternCount: patternFrequencies.absoluteValuePatterns.get(absPatternKey) || 1,
                     comboKey,
-                    comboCount: comboCount + 1 // Increment count for this combo
+                    comboCount: patternFrequencies.combinations.get(comboKey) || 0
                 });
-                
-                // Update the frequency map with the incremented count
-                combinationFrequency.set(comboKey, comboCount + 1);
                 
                 differenceStats.totalComparisons++;
             }
+            
+            // Debug: Log the absolute value patterns and their counts
+            console.log('=== Absolute Value Pattern Analysis ===');
+            const sortedPatterns = Array.from(patternFrequencies.absoluteValuePatterns.entries())
+                .sort((a, b) => b[1] - a[1]); // Sort by count descending
+                
+            // Log top 10 most common patterns
+            console.log('Top 10 most common patterns:');
+            sortedPatterns.slice(0, 10).forEach(([pattern, count], index) => {
+                console.log(`#${index + 1}: [${pattern}] - ${count} occurrence${count !== 1 ? 's' : ''}`);
+            });
+            
+            // Log total unique patterns
+            console.log(`Total unique patterns: ${sortedPatterns.length}`);
+            
+            // Log some statistics
+            const totalPatterns = allAbsPatterns.length;
+            const uniquePatterns = new Set(allAbsPatterns).size;
+            const mostCommonPattern = sortedPatterns[0] || [];
+            
+            console.log(`Total pattern instances: ${totalPatterns}`);
+            console.log(`Unique patterns: ${uniquePatterns}`);
+            if (mostCommonPattern.length) {
+                console.log(`Most common pattern: [${mostCommonPattern[0]}] (${mostCommonPattern[1]} occurrences)`);
+            }
+            
+            // Update all draws with their absolute pattern counts
+            processedDraws.forEach(draw => {
+                if (draw.absPatternKey) {
+                    draw.absPatternCount = patternFrequencies.absoluteValuePatterns.get(draw.absPatternKey) || 1;
+                } else {
+                    draw.absPatternCount = 1;
+                }
+            });
             
             // Calculate average difference for each position
             differenceStats.positionStats.forEach(stat => {
@@ -6693,8 +6784,13 @@ function analyzeDrawDifferences() {
                                     return `<span class="difference-value" style="color: ${color}; font-weight: bold; margin-right: 4px;">${displayNum}</span>`;
                                 }).join('')}
                                 ${draw.patternCount > 0 ? 
-                                    `<div style="font-size: 0.8em; color: #f39c12; margin-top: 4px; font-weight: bold;">
-                                        Exact appearance ${draw.patternCount}x
+                                    `<div>
+                                        <div style="font-size: 0.8em; color: #3498db; margin-top: 4px; font-weight: bold;">
+                                            Pattern of odd/even ${draw.evenOddCount}x (${draw.evenOddPattern})
+                                        </div>
+                                        <div style="font-size: 0.8em; color: #9b59b6; margin-top: 4px; font-weight: bold;">
+                                            Appearance with same values: ${draw.absPatternCount}x
+                                        </div>
                                     </div>` 
                                     : ''
                                 }
