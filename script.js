@@ -5973,8 +5973,11 @@ function renderDoublePlayDifferencesResults(processedDraws, stats) {
         const numberPatternKey = signedDiffs.map(d => d.display).join(',');
         const signPattern = signedDiffs.map(d => d.value > 0 ? '+' : (d.value < 0 ? '-' : '0')).join('');
         
-        // Track both number and sign patterns
-        const patternCount = processedDraws.filter(d => {
+        // Track both number and sign patterns and collect matching dates
+        const matchingDraws = [];
+        const matchingDates = [];
+        
+        processedDraws.forEach(d => {
             // Check if number patterns match
             const dNumberPattern = d.currentNums.map((n, i) => {
                 const dDiff = n - d.nextNums[i];
@@ -5987,11 +5990,23 @@ function renderDoublePlayDifferencesResults(processedDraws, stats) {
                 return dDiff > 0 ? '+' : (dDiff < 0 ? '-' : '0');
             }).join('');
             
-            return dNumberPattern === numberPatternKey || dSignPattern === signPattern;
-        }).length;
+            if (dNumberPattern === numberPatternKey || dSignPattern === signPattern) {
+                matchingDraws.push({
+                    date: d.currentDate,
+                    nextDate: d.nextDate,
+                    signPattern: dSignPattern,
+                    numberPattern: dNumberPattern
+                });
+                matchingDates.push(d.currentDate);
+            }
+        });
         
-        // Store the sign pattern for display
+        const patternCount = matchingDraws.length;
+        
+        // Store pattern information for display
         draw.signPattern = signPattern;
+        draw.matchingDates = matchingDates;
+        draw.patternId = `pattern-${signPattern}-${index}`; // Unique ID for each pattern instance
         
         const patternHighlight = patternCount > 1 ? 'border-left: 4px solid #f39c12;' : '';
         
@@ -6029,11 +6044,17 @@ function renderDoublePlayDifferencesResults(processedDraws, stats) {
                         <div style="color: #7f8c8d; font-family: monospace; margin-bottom: 2px;">
                             ${draw.signPattern}
                         </div>
-                        ${patternCount > 1 ? 
-                            `<div style="color: #f39c12; font-weight: bold;">
-                                Pattern appeared ${patternCount}x
-                            </div>` : ''
-                        }
+                        ${patternCount > 1 ? `
+                            <div id="${draw.patternId}" style="color: #f39c12; font-weight: bold; cursor: pointer; display: inline-block;">
+                                Pattern appeared ${patternCount}x ▼
+                            </div>
+                            <div id="${draw.patternId}-dates" style="display: none; margin-top: 5px; padding: 5px; background: #f8f9fa; border-radius: 4px; font-size: 0.8em; color: #2c3e50;">
+                                <div style="font-weight: bold; margin-bottom: 3px;">Appeared on dates:</div>
+                                ${matchingDraws.map(d => 
+                                    `<div>${d.date} → ${d.nextDate} (${d.signPattern})</div>`
+                                ).join('')}
+                            </div>
+                        ` : ''}
                     </div>
                 </td>
             </tr>
@@ -6083,6 +6104,24 @@ function renderDoublePlayDifferencesResults(processedDraws, stats) {
     
     // Update the DOM
     resultsDiv.innerHTML = html;
+    
+    // Add click handlers for pattern toggles
+    processedDraws.forEach((draw, index) => {
+        if (draw.patternId) {
+            const patternElement = document.getElementById(draw.patternId);
+            if (patternElement) {
+                patternElement.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    const datesElement = document.getElementById(`${draw.patternId}-dates`);
+                    if (datesElement) {
+                        const isVisible = datesElement.style.display === 'block';
+                        datesElement.style.display = isVisible ? 'none' : 'block';
+                        patternElement.innerHTML = `Pattern appeared ${draw.matchingDates.length}x ${isVisible ? '▼' : '▲'}`;
+                    }
+                });
+            }
+        }
+    });
     
     // Hide loading indicator
     if (loadingDiv) {
@@ -6511,11 +6550,28 @@ function analyzeDrawDifferences() {
                         <tbody>
             `;
             
-            // Add pattern frequency information to each draw
+            // Track all occurrences of each sign pattern with their dates
+            const patternOccurrences = new Map();
+            
+            // First pass: collect all occurrences of each pattern
             processedDraws.forEach(draw => {
                 const signPattern = draw.signedDifferences.map(d => d.startsWith('-') ? '-' : '+').join('');
                 draw.signPattern = signPattern;
                 draw.patternCount = signPatternFrequency.get(signPattern) || 0;
+                
+                // Initialize pattern in the map if it doesn't exist
+                if (!patternOccurrences.has(signPattern)) {
+                    patternOccurrences.set(signPattern, []);
+                }
+                
+                // Add this occurrence to the pattern's list
+                patternOccurrences.get(signPattern).push({
+                    date: draw.date,
+                    nextDate: draw.nextDate,
+                    numbers: draw.currentNums,
+                    nextNumbers: draw.nextNums,
+                    differences: draw.signedDifferences
+                });
             });
             
             // Add rows for each draw comparison
@@ -6548,12 +6604,26 @@ function analyzeDrawDifferences() {
                                     `<span style="margin-right: 4px;">${eo}</span>`
                                 ).join('')}
                             </div>
-                            ${draw.patternCount > 1 ? 
-                                `<div style="font-size: 0.85em; color: #f39c12; margin-top: 4px; font-weight: bold;">
-                                    Pattern appeared ${draw.patternCount}x
-                                </div>` : 
-                                ''
-                            }
+                            ${draw.patternCount > 1 ? `
+                                <div id="pattern-${index}" style="font-size: 0.85em; color: #f39c12; margin-top: 4px; font-weight: bold; cursor: pointer; display: inline-block;">
+                                    Pattern appeared ${draw.patternCount}x ▼
+                                </div>
+                                <div id="pattern-${index}-dates" style="display: none; margin-top: 8px; padding: 8px; background: #f8f9fa; border-radius: 4px; font-size: 0.8em; color: #2c3e50;">
+                                    <div style="font-weight: bold; margin-bottom: 5px; border-bottom: 1px solid #eee; padding-bottom: 3px;">Pattern appeared on:</div>
+                                    ${patternOccurrences.get(draw.signPattern).map(occurrence => 
+                                        `<div style="margin-bottom: 4px; padding: 3px 0; border-bottom: 1px dashed #eee;">
+                                            <div>${occurrence.date} → ${occurrence.nextDate}</div>
+                                            <div style="font-family: monospace; font-size: 0.9em; color: #7f8c8d;">
+                                                ${occurrence.differences.map(d => 
+                                                    `<span style="color: ${d > 0 ? '#27ae60' : d < 0 ? '#e74c3c' : '#7f8c8d'}; margin-right: 8px; font-weight: bold;">
+                                                        ${d > 0 ? '+' : ''}${d}
+                                                    </span>`
+                                                ).join('')}
+                                            </div>
+                                        </div>`
+                                    ).join('')}
+                                </div>
+                            ` : ''}
                         </td>
                     </tr>
                 `;
@@ -6621,6 +6691,24 @@ function analyzeDrawDifferences() {
             statsContent.innerHTML = statsHtml + freqHtml;
             statsDiv.style.display = 'block';
             loadingDiv.style.display = 'none';
+            
+            // Add click handlers for pattern toggles
+            processedDraws.forEach((draw, index) => {
+                if (draw.patternCount > 1) {
+                    const patternElement = document.getElementById(`pattern-${index}`);
+                    if (patternElement) {
+                        patternElement.addEventListener('click', function(e) {
+                            e.stopPropagation();
+                            const datesElement = document.getElementById(`pattern-${index}-dates`);
+                            if (datesElement) {
+                                const isVisible = datesElement.style.display === 'block';
+                                datesElement.style.display = isVisible ? 'none' : 'block';
+                                patternElement.innerHTML = `Pattern appeared ${draw.patternCount}x ${isVisible ? '▼' : '▲'}`;
+                            }
+                        });
+                    }
+                }
+            });
             
             // Scroll to results
             resultsDiv.scrollIntoView({ behavior: 'smooth' });
