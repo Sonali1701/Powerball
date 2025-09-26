@@ -5969,15 +5969,29 @@ function renderDoublePlayDifferencesResults(processedDraws, stats) {
             evenOddIndicators.push(isEven ? 'E' : 'O');
         }
         
-        // Check if this pattern has been seen before (for highlighting)
-        const patternKey = signedDiffs.map(d => d.display).join(',');
+        // Create pattern keys for both number differences and sign patterns
+        const numberPatternKey = signedDiffs.map(d => d.display).join(',');
+        const signPattern = signedDiffs.map(d => d.value > 0 ? '+' : (d.value < 0 ? '-' : '0')).join('');
+        
+        // Track both number and sign patterns
         const patternCount = processedDraws.filter(d => {
-            const dPattern = d.currentNums.map((n, i) => {
+            // Check if number patterns match
+            const dNumberPattern = d.currentNums.map((n, i) => {
                 const dDiff = n - d.nextNums[i];
                 return (dDiff > 0 ? '+' : '') + dDiff;
             }).join(',');
-            return dPattern === patternKey;
+            
+            // Check if sign patterns match
+            const dSignPattern = d.currentNums.map((n, i) => {
+                const dDiff = n - d.nextNums[i];
+                return dDiff > 0 ? '+' : (dDiff < 0 ? '-' : '0');
+            }).join('');
+            
+            return dNumberPattern === numberPatternKey || dSignPattern === signPattern;
         }).length;
+        
+        // Store the sign pattern for display
+        draw.signPattern = signPattern;
         
         const patternHighlight = patternCount > 1 ? 'border-left: 4px solid #f39c12;' : '';
         
@@ -6011,12 +6025,16 @@ function renderDoublePlayDifferencesResults(processedDraws, stats) {
                             `<span style="margin-right: 8px;">${eo}</span>`
                         ).join('')}
                     </div>
-                    ${patternCount > 1 ? 
-                        `<div style="font-size: 0.85em; color: #f39c12; margin-top: 4px; font-weight: bold;">
-                            Pattern appeared ${patternCount}x
-                        </div>` : 
-                        ''
-                    }
+                    <div style="font-size: 0.85em; margin-top: 4px;">
+                        <div style="color: #7f8c8d; font-family: monospace; margin-bottom: 2px;">
+                            ${draw.signPattern}
+                        </div>
+                        ${patternCount > 1 ? 
+                            `<div style="color: #f39c12; font-weight: bold;">
+                                Pattern appeared ${patternCount}x
+                            </div>` : ''
+                        }
+                    </div>
                 </td>
             </tr>
         `;
